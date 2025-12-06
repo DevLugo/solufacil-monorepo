@@ -70,13 +70,17 @@ export const routeResolvers = {
   },
 
   Route: {
+    isActive: (parent: { isActive?: boolean | null }) => {
+      return parent.isActive ?? true
+    },
+
     employees: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       const route = await context.prisma.route.findUnique({
         where: { id: parent.id },
         include: {
           employees: {
             include: {
-              personalData: true,
+              personalDataRelation: true,
             },
           },
         },

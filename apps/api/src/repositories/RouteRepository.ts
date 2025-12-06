@@ -9,7 +9,7 @@ export class RouteRepository {
       include: {
         employees: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
         accounts: true,
@@ -32,7 +32,7 @@ export class RouteRepository {
       include: {
         employees: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
         accounts: true,

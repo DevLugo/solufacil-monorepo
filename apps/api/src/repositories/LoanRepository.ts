@@ -10,12 +10,12 @@ export class LoanRepository {
       include: {
         borrower: {
           include: {
-            personalData: {
+            personalDataRelation: {
               include: {
                 phones: true,
                 addresses: {
                   include: {
-                    location: true,
+                    locationRelation: true,
                   },
                 },
               },
@@ -25,12 +25,12 @@ export class LoanRepository {
         loantype: true,
         grantor: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
         lead: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
             routes: true,
           },
         },
@@ -92,13 +92,13 @@ export class LoanRepository {
         include: {
           borrower: {
             include: {
-              personalData: true,
+              personalDataRelation: true,
             },
           },
           loantype: true,
           lead: {
             include: {
-              personalData: true,
+              personalDataRelation: true,
             },
           },
         },
@@ -155,18 +155,18 @@ export class LoanRepository {
       include: {
         borrower: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
         loantype: true,
         grantor: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
         lead: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
         collaterals: true,
@@ -194,13 +194,13 @@ export class LoanRepository {
       include: {
         borrower: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
         loantype: true,
         lead: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
       },
@@ -232,12 +232,12 @@ export class LoanRepository {
       include: {
         borrower: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
         lead: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
       },

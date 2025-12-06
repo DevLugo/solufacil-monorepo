@@ -23,7 +23,6 @@ export interface CreateEmployeeInput {
 
 export interface UpdateEmployeeInput {
   type?: EmployeeType
-  isActive?: boolean
   routeIds?: string[]
 }
 
@@ -47,7 +46,6 @@ export class EmployeeService {
   async findMany(options?: {
     type?: EmployeeType
     routeId?: string
-    isActive?: boolean
   }) {
     return this.employeeRepository.findMany(options)
   }

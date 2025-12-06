@@ -13,7 +13,7 @@ export class PortfolioCleanupRepository {
           include: {
             borrower: {
               include: {
-                personalData: true,
+                personalDataRelation: true,
               },
             },
           },
@@ -58,7 +58,7 @@ export class PortfolioCleanupRepository {
             pendingAmountStored: true,
             borrower: {
               include: {
-                personalData: {
+                personalDataRelation: {
                   select: {
                     fullName: true,
                   },
@@ -114,7 +114,7 @@ export class PortfolioCleanupRepository {
           include: {
             borrower: {
               include: {
-                personalData: true,
+                personalDataRelation: true,
               },
             },
           },

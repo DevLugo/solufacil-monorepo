@@ -139,7 +139,7 @@ export const transactionResolvers = {
       return context.prisma.employee.findUnique({
         where: { id: parent.leadId },
         include: {
-          personalData: true,
+          personalDataRelation: true,
         },
       })
     },

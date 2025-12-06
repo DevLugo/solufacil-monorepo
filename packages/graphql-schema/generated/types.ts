@@ -237,7 +237,6 @@ export type Employee = {
   commissionPayments: Array<CommissionPayment>;
   createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
-  isActive: Scalars['Boolean']['output'];
   loansGranted: Array<Loan>;
   loansManagedAsLead: Array<Loan>;
   personalData: PersonalData;
@@ -706,7 +705,6 @@ export type QueryEmployeeArgs = {
 
 
 export type QueryEmployeesArgs = {
-  isActive?: InputMaybe<Scalars['Boolean']['input']>;
   routeId?: InputMaybe<Scalars['ID']['input']>;
   type?: InputMaybe<EmployeeType>;
 };
@@ -887,7 +885,6 @@ export type UpdateDocumentInput = {
 };
 
 export type UpdateEmployeeInput = {
-  isActive?: InputMaybe<Scalars['Boolean']['input']>;
   routeIds?: InputMaybe<Array<Scalars['ID']['input']>>;
   type?: InputMaybe<EmployeeType>;
 };
@@ -1299,7 +1296,6 @@ export type EmployeeResolvers<ContextType = GraphQLContext, ParentType extends R
   commissionPayments?: Resolver<Array<ResolversTypes['CommissionPayment']>, ParentType, ContextType>;
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
-  isActive?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   loansGranted?: Resolver<Array<ResolversTypes['Loan']>, ParentType, ContextType>;
   loansManagedAsLead?: Resolver<Array<ResolversTypes['Loan']>, ParentType, ContextType>;
   personalData?: Resolver<ResolversTypes['PersonalData'], ParentType, ContextType>;

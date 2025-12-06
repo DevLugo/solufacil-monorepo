@@ -98,7 +98,7 @@ export const paymentResolvers = {
       return context.prisma.employee.findUnique({
         where: { id: parent.leadId },
         include: {
-          personalData: true,
+          personalDataRelation: true,
         },
       })
     },
@@ -107,7 +107,7 @@ export const paymentResolvers = {
       return context.prisma.employee.findUnique({
         where: { id: parent.agentId },
         include: {
-          personalData: true,
+          personalDataRelation: true,
         },
       })
     },

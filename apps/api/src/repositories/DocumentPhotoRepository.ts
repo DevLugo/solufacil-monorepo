@@ -7,12 +7,12 @@ export class DocumentPhotoRepository {
     return this.prisma.documentPhoto.findUnique({
       where: { id },
       include: {
-        personalData: true,
+        personalDataRelation: true,
         loan: {
           include: {
             borrower: {
               include: {
-                personalData: true,
+                personalDataRelation: true,
               },
             },
           },
@@ -59,12 +59,12 @@ export class DocumentPhotoRepository {
       skip: options?.offset ?? 0,
       orderBy: { createdAt: 'desc' },
       include: {
-        personalData: true,
+        personalDataRelation: true,
         loan: {
           include: {
             borrower: {
               include: {
-                personalData: true,
+                personalDataRelation: true,
               },
             },
           },
@@ -102,7 +102,7 @@ export class DocumentPhotoRepository {
         isMissing: data.isMissing ?? false,
       },
       include: {
-        personalData: true,
+        personalDataRelation: true,
         loan: true,
         uploadedBy: true,
       },
@@ -123,7 +123,7 @@ export class DocumentPhotoRepository {
       where: { id },
       data,
       include: {
-        personalData: true,
+        personalDataRelation: true,
         loan: true,
         uploadedBy: true,
       },
@@ -156,17 +156,17 @@ export class DocumentPhotoRepository {
           : {}),
       },
       include: {
-        personalData: true,
+        personalDataRelation: true,
         loan: {
           include: {
             borrower: {
               include: {
-                personalData: true,
+                personalDataRelation: true,
               },
             },
             lead: {
               include: {
-                personalData: true,
+                personalDataRelation: true,
                 routes: true,
               },
             },

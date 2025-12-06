@@ -15,7 +15,7 @@ export class TransactionRepository {
         route: true,
         lead: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
       },
@@ -70,7 +70,7 @@ export class TransactionRepository {
           loan: true,
           lead: {
             include: {
-              personalData: true,
+              personalDataRelation: true,
             },
           },
         },

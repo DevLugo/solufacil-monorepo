@@ -12,7 +12,7 @@ export class PaymentRepository {
           include: {
             borrower: {
               include: {
-                personalData: true,
+                personalDataRelation: true,
               },
             },
             loantype: true,
@@ -90,12 +90,12 @@ export class PaymentRepository {
       include: {
         lead: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
         agent: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
         payments: true,

@@ -7,12 +7,12 @@ export class BorrowerRepository {
     return this.prisma.borrower.findUnique({
       where: { id },
       include: {
-        personalData: {
+        personalDataRelation: {
           include: {
             phones: true,
             addresses: {
               include: {
-                location: {
+                locationRelation: {
                   include: {
                     municipality: {
                       include: {
@@ -38,7 +38,7 @@ export class BorrowerRepository {
       take: options?.limit,
       skip: options?.offset,
       include: {
-        personalData: {
+        personalDataRelation: {
           include: {
             phones: true,
           },
@@ -65,7 +65,7 @@ export class BorrowerRepository {
   }) {
     return this.prisma.borrower.create({
       data: {
-        personalData: {
+        personalDataRelation: {
           create: {
             fullName: data.personalData.fullName,
             clientCode: data.personalData.clientCode,
@@ -80,12 +80,12 @@ export class BorrowerRepository {
         },
       },
       include: {
-        personalData: {
+        personalDataRelation: {
           include: {
             phones: true,
             addresses: {
               include: {
-                location: true,
+                locationRelation: true,
               },
             },
           },
@@ -131,12 +131,12 @@ export class BorrowerRepository {
     return this.prisma.borrower.findUnique({
       where: { id },
       include: {
-        personalData: {
+        personalDataRelation: {
           include: {
             phones: true,
             addresses: {
               include: {
-                location: true,
+                locationRelation: true,
               },
             },
           },

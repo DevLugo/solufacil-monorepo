@@ -59,7 +59,7 @@ export const borrowerResolvers = {
           phones: true,
           addresses: {
             include: {
-              location: {
+              locationRelation: {
                 include: {
                   municipality: {
                     include: {

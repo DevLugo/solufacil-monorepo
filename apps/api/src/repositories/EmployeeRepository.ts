@@ -7,12 +7,12 @@ export class EmployeeRepository {
     return this.prisma.employee.findUnique({
       where: { id },
       include: {
-        personalData: {
+        personalDataRelation: {
           include: {
             phones: true,
             addresses: {
               include: {
-                location: {
+                locationRelation: {
                   include: {
                     municipality: {
                       include: {
@@ -26,7 +26,7 @@ export class EmployeeRepository {
           },
         },
         routes: true,
-        user: true,
+        userRelation: true,
       },
     })
   }
@@ -34,29 +34,27 @@ export class EmployeeRepository {
   async findMany(options?: {
     type?: EmployeeType
     routeId?: string
-    isActive?: boolean
   }) {
     return this.prisma.employee.findMany({
       where: {
         ...(options?.type ? { type: options.type } : {}),
-        ...(options?.isActive !== undefined ? { isActive: options.isActive } : {}),
         ...(options?.routeId
           ? { routes: { some: { id: options.routeId } } }
           : {}),
       },
       include: {
-        personalData: {
+        personalDataRelation: {
           include: {
             phones: true,
             addresses: {
               include: {
-                location: true,
+                locationRelation: true,
               },
             },
           },
         },
         routes: true,
-        user: true,
+        userRelation: true,
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -82,7 +80,7 @@ export class EmployeeRepository {
     return this.prisma.employee.create({
       data: {
         type: data.type,
-        personalData: {
+        personalDataRelation: {
           create: {
             fullName: data.personalData.fullName,
             clientCode: data.personalData.clientCode,
@@ -100,12 +98,12 @@ export class EmployeeRepository {
           : undefined,
       },
       include: {
-        personalData: {
+        personalDataRelation: {
           include: {
             phones: true,
             addresses: {
               include: {
-                location: true,
+                locationRelation: true,
               },
             },
           },
@@ -119,7 +117,6 @@ export class EmployeeRepository {
     id: string,
     data: {
       type?: EmployeeType
-      isActive?: boolean
       routeIds?: string[]
     }
   ) {
@@ -127,18 +124,17 @@ export class EmployeeRepository {
       where: { id },
       data: {
         ...(data.type ? { type: data.type } : {}),
-        ...(data.isActive !== undefined ? { isActive: data.isActive } : {}),
         ...(data.routeIds
           ? { routes: { set: data.routeIds.map((id) => ({ id })) } }
           : {}),
       },
       include: {
-        personalData: {
+        personalDataRelation: {
           include: {
             phones: true,
             addresses: {
               include: {
-                location: true,
+                locationRelation: true,
               },
             },
           },
@@ -153,7 +149,7 @@ export class EmployeeRepository {
       where: { id },
       data: { type: 'LEAD' },
       include: {
-        personalData: true,
+        personalDataRelation: true,
         routes: true,
       },
     })

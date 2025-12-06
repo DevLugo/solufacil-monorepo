@@ -103,7 +103,6 @@ type Employee {
   loansManagedAsLead: [Loan!]!
   transactions: [Transaction!]!
   commissionPayments: [CommissionPayment!]!
-  isActive: Boolean!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -384,7 +383,7 @@ type Query {
   user(id: ID!): User @auth
   users(role: UserRole, limit: Int, offset: Int): [User!]! @requireRole(roles: [ADMIN])
   employee(id: ID!): Employee @auth
-  employees(type: EmployeeType, routeId: ID, isActive: Boolean): [Employee!]! @auth
+  employees(type: EmployeeType, routeId: ID): [Employee!]! @auth
 
   # Loans
   loan(id: ID!): Loan @auth
@@ -465,7 +464,6 @@ input CreateEmployeeInput {
 
 input UpdateEmployeeInput {
   type: EmployeeType
-  isActive: Boolean
   routeIds: [ID!]
 }
 

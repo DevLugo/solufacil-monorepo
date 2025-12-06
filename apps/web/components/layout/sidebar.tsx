@@ -7,7 +7,6 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   Wallet,
-  Receipt,
   Users,
   FileText,
   Settings,
@@ -23,6 +22,8 @@ import {
   ScrollText,
   ChevronDown,
   ChevronRight,
+  BookOpen,
+  CalendarDays,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -51,9 +52,14 @@ const navigation: NavItem[] = [
     ],
   },
   {
-    title: 'Transacciones',
+    title: 'Operaciones del Día',
     href: '/transacciones',
-    icon: Receipt,
+    icon: CalendarDays,
+  },
+  {
+    title: 'Movimientos',
+    href: '/movimientos',
+    icon: BookOpen,
   },
   {
     title: 'Clientes',

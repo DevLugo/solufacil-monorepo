@@ -203,12 +203,12 @@ export class PortfolioCleanupService {
       include: {
         borrower: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
         lead: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
       },

@@ -11,6 +11,7 @@ import { accountResolvers } from './accounts'
 import { routeResolvers } from './routes'
 import { reportResolvers } from './reports'
 import { documentResolvers } from './documents'
+import { personalDataResolvers } from './personalData'
 
 export const resolvers = {
   ...scalars,
@@ -57,4 +58,7 @@ export const resolvers = {
   Municipality: routeResolvers.Municipality,
   State: routeResolvers.State,
   DocumentPhoto: documentResolvers.DocumentPhoto,
+  PersonalData: personalDataResolvers.PersonalData,
+  Address: personalDataResolvers.Address,
+  Phone: personalDataResolvers.Phone,
 }

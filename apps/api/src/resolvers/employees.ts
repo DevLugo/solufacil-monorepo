@@ -19,7 +19,7 @@ export const employeeResolvers = {
 
     employees: async (
       _parent: unknown,
-      args: { type?: EmployeeType; routeId?: string; isActive?: boolean },
+      args: { type?: EmployeeType; routeId?: string },
       context: GraphQLContext
     ) => {
       authenticateUser(context)
@@ -28,7 +28,6 @@ export const employeeResolvers = {
       return employeeService.findMany({
         type: args.type ?? undefined,
         routeId: args.routeId ?? undefined,
-        isActive: args.isActive ?? undefined,
       })
     },
   },
@@ -69,7 +68,6 @@ export const employeeResolvers = {
         id: string
         input: {
           type?: EmployeeType
-          isActive?: boolean
           routeIds?: string[]
         }
       },
@@ -108,7 +106,7 @@ export const employeeResolvers = {
           phones: true,
           addresses: {
             include: {
-              location: {
+              locationRelation: {
                 include: {
                   municipality: {
                     include: {

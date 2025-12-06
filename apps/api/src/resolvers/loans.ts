@@ -176,7 +176,7 @@ export const loanResolvers = {
       return context.prisma.borrower.findUnique({
         where: { id: parent.borrowerId },
         include: {
-          personalData: {
+          personalDataRelation: {
             include: {
               phones: true,
             },
@@ -195,7 +195,7 @@ export const loanResolvers = {
       return context.prisma.employee.findUnique({
         where: { id: parent.grantorId },
         include: {
-          personalData: true,
+          personalDataRelation: true,
         },
       })
     },
@@ -204,7 +204,7 @@ export const loanResolvers = {
       return context.prisma.employee.findUnique({
         where: { id: parent.leadId },
         include: {
-          personalData: true,
+          personalDataRelation: true,
           routes: true,
         },
       })

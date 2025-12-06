@@ -143,7 +143,7 @@ export const documentResolvers = {
           phones: true,
           addresses: {
             include: {
-              location: true,
+              locationRelation: true,
             },
           },
         },
@@ -157,7 +157,7 @@ export const documentResolvers = {
         include: {
           borrower: {
             include: {
-              personalData: true,
+              personalDataRelation: true,
             },
           },
           loantype: true,
