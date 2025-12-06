@@ -15,7 +15,7 @@ export class UserRepository {
       include: {
         employee: {
           include: {
-            personalData: true,
+            personalDataRelation: true,
           },
         },
       },

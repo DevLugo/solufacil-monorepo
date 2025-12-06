@@ -13,7 +13,7 @@ export const authResolvers = {
         include: {
           employee: {
             include: {
-              personalData: true,
+              personalDataRelation: true,
             },
           },
         },

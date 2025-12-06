@@ -1,0 +1,265 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* === LIGHT MODE - Solufacil Brand === */
+    /* Logo colors: Naranja #F26522, Azul Marino #1A1A3E */
+
+    /* Primary - Naranja Solufacil */
+    --primary: 18 87% 54%;           /* #F26522 */
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary - Azul Marino */
+    --secondary: 240 38% 17%;        /* #1A1A3E */
+    --secondary-foreground: 0 0% 100%;
+
+    /* Accent - Naranja más claro para hovers */
+    --accent: 24 95% 58%;            /* #FF7A33 */
+    --accent-foreground: 240 38% 17%;
+
+    /* Background & Surface */
+    --background: 0 0% 100%;
+    --foreground: 240 38% 17%;       /* Azul Marino para texto */
+    --card: 0 0% 100%;
+    --card-foreground: 240 38% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 38% 17%;
+
+    /* Muted */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+
+    /* Borders & Input */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 18 87% 54%;              /* Naranja */
+
+    /* Status Colors */
+    --success: 142 76% 36%;          /* Verde */
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;           /* Amarillo */
+    --warning-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;        /* Rojo */
+    --destructive-foreground: 0 0% 100%;
+    --info: 199 89% 48%;             /* Azul claro */
+    --info-foreground: 0 0% 100%;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 38% 17%;
+    --sidebar-primary: 18 87% 54%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 18 90% 96%;    /* Naranja muy claro */
+    --sidebar-accent-foreground: 18 87% 45%;
+    --sidebar-border: 220 13% 91%;
+
+    /* Chart Colors */
+    --chart-1: 18 87% 54%;           /* Naranja */
+    --chart-2: 240 38% 17%;          /* Azul Marino */
+    --chart-3: 142 76% 36%;          /* Verde */
+    --chart-4: 38 92% 50%;           /* Amarillo */
+    --chart-5: 199 89% 48%;          /* Azul claro */
+
+    /* Radius */
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* === DARK MODE - Solufacil Brand === */
+
+    /* Primary - Naranja más brillante para dark */
+    --primary: 18 90% 58%;
+    --primary-foreground: 240 38% 10%;
+
+    /* Secondary - Blanco/Gris claro en dark */
+    --secondary: 220 14% 90%;
+    --secondary-foreground: 240 38% 17%;
+
+    /* Accent */
+    --accent: 24 95% 62%;
+    --accent-foreground: 240 38% 10%;
+
+    /* Background & Surface - Azul Marino profundo */
+    --background: 240 40% 9%;        /* Más oscuro que #1A1A3E */
+    --foreground: 220 14% 96%;
+    --card: 240 35% 12%;
+    --card-foreground: 220 14% 96%;
+    --popover: 240 35% 12%;
+    --popover-foreground: 220 14% 96%;
+
+    /* Muted */
+    --muted: 240 30% 18%;
+    --muted-foreground: 220 9% 60%;
+
+    /* Borders & Input */
+    --border: 240 25% 22%;
+    --input: 240 25% 22%;
+    --ring: 18 90% 58%;
+
+    /* Status Colors - Brighter for dark mode */
+    --success: 142 76% 46%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-foreground: 240 38% 10%;
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 0 0% 100%;
+    --info: 199 89% 58%;
+    --info-foreground: 240 38% 10%;
+
+    /* Sidebar */
+    --sidebar-background: 240 42% 7%;
+    --sidebar-foreground: 220 14% 96%;
+    --sidebar-primary: 18 90% 58%;
+    --sidebar-primary-foreground: 240 38% 10%;
+    --sidebar-accent: 240 30% 15%;
+    --sidebar-accent-foreground: 18 90% 65%;
+    --sidebar-border: 240 25% 22%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+
+  /* Focus styles */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@layer components {
+  /* Glass morphism effect */
+  .glass {
+    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-white/20 dark:border-slate-700/30;
+  }
+
+  /* Gradient backgrounds using brand colors */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(18 87% 54%) 0%, hsl(24 95% 58%) 100%);
+  }
+
+  .gradient-secondary {
+    background: linear-gradient(135deg, hsl(240 38% 17%) 0%, hsl(240 38% 25%) 100%);
+  }
+
+  .gradient-brand {
+    background: linear-gradient(135deg, hsl(18 87% 50%) 0%, hsl(18 87% 54%) 50%, hsl(24 95% 58%) 100%);
+  }
+
+  /* Gradient text - Naranja */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(18 87% 54%) 0%, hsl(24 95% 58%) 100%);
+  }
+
+  /* Glow effects */
+  .glow-primary {
+    box-shadow: 0 0 20px hsla(18, 87%, 54%, 0.35);
+  }
+
+  .glow-secondary {
+    box-shadow: 0 0 20px hsla(240, 38%, 17%, 0.25);
+  }
+
+  .glow-success {
+    box-shadow: 0 0 20px hsla(142, 76%, 36%, 0.3);
+  }
+
+  /* Fintech card styles */
+  .fintech-card {
+    @apply bg-card border border-border rounded-lg shadow-sm transition-all duration-200;
+  }
+
+  .fintech-card:hover {
+    @apply shadow-md border-primary/30;
+  }
+
+  .dark .fintech-card:hover {
+    @apply shadow-lg shadow-primary/15;
+  }
+
+  /* Stats card with gradient border */
+  .stats-card {
+    @apply relative overflow-hidden rounded-xl bg-card p-6;
+  }
+
+  .stats-card::before {
+    content: '';
+    @apply absolute inset-0 rounded-xl;
+    padding: 1px;
+    background: linear-gradient(135deg, hsl(18 87% 54% / 0.4), hsl(24 95% 58% / 0.2));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  /* Shimmer loading effect */
+  .shimmer {
+    @apply relative overflow-hidden bg-muted;
+  }
+
+  .shimmer::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--primary) / 0.1),
+      transparent
+    );
+  }
+
+  /* Brand icon container (rombo naranja del logo) */
+  .brand-icon {
+    @apply flex items-center justify-center rounded-xl bg-gradient-primary text-white;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+}

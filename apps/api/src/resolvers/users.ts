@@ -83,9 +83,9 @@ export const userResolvers = {
   User: {
     employee: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.employee.findUnique({
-        where: { userId: parent.id },
+        where: { user: parent.id },
         include: {
-          personalData: true,
+          personalDataRelation: true,
         },
       })
     },

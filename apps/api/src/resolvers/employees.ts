@@ -95,9 +95,15 @@ export const employeeResolvers = {
   },
 
   Employee: {
-    personalData: async (parent: { personalDataId: string }, _args: unknown, context: GraphQLContext) => {
+    personalData: async (parent: { personalData: string; personalDataRelation?: unknown }, _args: unknown, context: GraphQLContext) => {
+      // If personalDataRelation is already included, return it
+      if (parent.personalDataRelation) {
+        return parent.personalDataRelation
+      }
+
+      // Otherwise fetch it
       return context.prisma.personalData.findUnique({
-        where: { id: parent.personalDataId },
+        where: { id: parent.personalData },
         include: {
           phones: true,
           addresses: {
