@@ -8,12 +8,12 @@ export class TransactionRepository {
     return this.prisma.transaction.findUnique({
       where: { id },
       include: {
-        sourceAccount: true,
-        destinationAccount: true,
-        loan: true,
-        loanPayment: true,
-        route: true,
-        lead: {
+        sourceAccountRelation: true,
+        destinationAccountRelation: true,
+        loanRelation: true,
+        loanPaymentRelation: true,
+        routeRelation: true,
+        leadRelation: {
           include: {
             personalDataRelation: true,
           },
@@ -38,13 +38,13 @@ export class TransactionRepository {
     }
 
     if (options?.routeId) {
-      where.routeId = options.routeId
+      where.route = options.routeId
     }
 
     if (options?.accountId) {
       where.OR = [
-        { sourceAccountId: options.accountId },
-        { destinationAccountId: options.accountId },
+        { sourceAccount: options.accountId },
+        { destinationAccount: options.accountId },
       ]
     }
 
@@ -65,10 +65,19 @@ export class TransactionRepository {
         skip: options?.offset ?? 0,
         orderBy: { date: 'desc' },
         include: {
-          sourceAccount: true,
-          destinationAccount: true,
-          loan: true,
-          lead: {
+          sourceAccountRelation: true,
+          destinationAccountRelation: true,
+          loanRelation: {
+            include: {
+              borrowerRelation: {
+                include: {
+                  personalDataRelation: true,
+                },
+              },
+            },
+          },
+          routeRelation: true,
+          leadRelation: {
             include: {
               personalDataRelation: true,
             },
@@ -109,16 +118,16 @@ export class TransactionRepository {
         expenseSource: data.expenseSource,
         profitAmount: data.profitAmount,
         returnToCapital: data.returnToCapital,
-        sourceAccountId: data.sourceAccountId,
-        destinationAccountId: data.destinationAccountId,
-        loanId: data.loanId,
-        loanPaymentId: data.loanPaymentId,
-        routeId: data.routeId,
-        leadId: data.leadId,
+        sourceAccount: data.sourceAccountId,
+        destinationAccount: data.destinationAccountId,
+        loan: data.loanId,
+        loanPayment: data.loanPaymentId,
+        route: data.routeId,
+        lead: data.leadId,
       },
       include: {
-        sourceAccount: true,
-        destinationAccount: true,
+        sourceAccountRelation: true,
+        destinationAccountRelation: true,
       },
     })
   }

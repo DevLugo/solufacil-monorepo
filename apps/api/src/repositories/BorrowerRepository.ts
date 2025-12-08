@@ -14,9 +14,9 @@ export class BorrowerRepository {
               include: {
                 locationRelation: {
                   include: {
-                    municipality: {
+                    municipalityRelation: {
                       include: {
-                        state: true,
+                        stateRelation: true,
                       },
                     },
                   },
@@ -103,10 +103,10 @@ export class BorrowerRepository {
       }
     }
   ) {
-    // Obtener el borrower para conseguir el personalDataId
+    // Obtener el borrower para conseguir el personalData
     const borrower = await this.prisma.borrower.findUnique({
       where: { id },
-      select: { personalDataId: true },
+      select: { personalData: true },
     })
 
     if (!borrower) {
@@ -116,7 +116,7 @@ export class BorrowerRepository {
     // Actualizar personalData si se proporciona
     if (data.personalData) {
       await this.prisma.personalData.update({
-        where: { id: borrower.personalDataId },
+        where: { id: borrower.personalData },
         data: {
           ...(data.personalData.fullName
             ? { fullName: data.personalData.fullName }

@@ -82,13 +82,13 @@ export class PaymentService {
           receivedAt: input.receivedAt,
           paymentMethod: input.paymentMethod,
           type: 'PAYMENT',
-          loanId: input.loanId,
+          loan: input.loanId,
         },
         tx
       )
 
       // Obtener cuenta del lead
-      const leadAccount = await this.getLeadAccount(loan.leadId, tx)
+      const leadAccount = await this.getLeadAccount(loan.lead || '', tx)
 
       // Crear transacción de ingreso
       const incomeSource = input.paymentMethod === 'CASH'
@@ -106,7 +106,7 @@ export class PaymentService {
           sourceAccountId: leadAccount.id,
           loanId: loan.id,
           loanPaymentId: payment.id,
-          leadId: loan.leadId,
+          leadId: loan.lead || undefined,
           routeId: loan.snapshotRouteId || undefined,
         },
         tx
@@ -122,7 +122,7 @@ export class PaymentService {
             expenseSource: 'LOAN_PAYMENT_COMISSION',
             sourceAccountId: leadAccount.id,
             loanPaymentId: payment.id,
-            leadId: loan.leadId,
+            leadId: loan.lead || undefined,
           },
           tx
         )
@@ -176,8 +176,8 @@ export class PaymentService {
         bankPaidAmount,
         falcoAmount,
         paymentStatus,
-        leadId: input.leadId,
-        agentId: input.agentId,
+        lead: input.leadId,
+        agent: input.agentId,
       })
 
       // Crear los pagos individuales
@@ -192,8 +192,8 @@ export class PaymentService {
             receivedAt: new Date(),
             paymentMethod: paymentInput.paymentMethod,
             type: 'PAYMENT',
-            loanId: paymentInput.loanId,
-            leadPaymentReceivedId: leadPaymentReceived.id,
+            loan: paymentInput.loanId,
+            leadPaymentReceived: leadPaymentReceived.id,
           },
           tx
         )

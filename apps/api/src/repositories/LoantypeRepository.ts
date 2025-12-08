@@ -10,9 +10,9 @@ export class LoantypeRepository {
     })
   }
 
-  async findMany(options?: { isActive?: boolean }): Promise<Loantype[]> {
+  async findMany(): Promise<Loantype[]> {
+    // Note: isActive field doesn't exist in Loantype schema
     return this.prisma.loantype.findMany({
-      where: options?.isActive !== undefined ? { isActive: options.isActive } : undefined,
       orderBy: { name: 'asc' },
     })
   }

@@ -27,6 +27,36 @@ Migrar el sistema de gestión de microcréditos de Keystone 6 a una arquitectura
 2. Copiar/adaptar la lógica existente en lugar de reinventar
 3. Validar que el comportamiento sea idéntico al original
 
+### ⚠️ REGLA CRÍTICA: NO ASUMIR - SIEMPRE VERIFICAR
+
+**NUNCA asumir nombres de campos, parámetros o estructuras**. Siempre verificar contra los archivos fuente:
+
+1. **Schema GraphQL** (`packages/graphql-schema/src/schema.graphql`):
+   - Verificar nombres exactos de queries/mutations
+   - Verificar parámetros disponibles (ej: `isActive` podría no existir)
+   - Verificar tipos de retorno y campos disponibles
+
+2. **Schema Prisma** (`packages/database/prisma/schema.prisma`):
+   - Verificar nombres exactos de campos (ej: `lead` vs `leadId`)
+   - Verificar nombres de relaciones (ej: `borrowerRelation` vs `borrower`)
+   - Verificar campos que existen vs campos asumidos
+
+3. **Resolvers existentes** (`apps/api/src/resolvers/`):
+   - Verificar qué parámetros acepta cada resolver
+   - Verificar qué includes/relaciones están disponibles
+
+**Ejemplo de errores por asumir**:
+- ❌ Asumir que existe `loantypes(isActive: true)` → El campo `isActive` no existe en Loantype
+- ❌ Asumir `where.leadId` → En Prisma el campo es `lead`, no `leadId`
+- ❌ Asumir `include: { borrower: ... }` → La relación es `borrowerRelation`
+
+**Antes de crear queries GraphQL**:
+```bash
+# Siempre revisar el schema primero
+cat packages/graphql-schema/src/schema.graphql | grep -A 20 "type Query"
+cat packages/database/prisma/schema.prisma | grep -A 30 "model Loan"
+```
+
 ---
 
 ## Decisiones Arquitectónicas

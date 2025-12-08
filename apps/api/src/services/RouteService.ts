@@ -8,7 +8,6 @@ export interface CreateRouteInput {
 
 export interface UpdateRouteInput {
   name?: string
-  isActive?: boolean
 }
 
 export class RouteService {
@@ -28,8 +27,8 @@ export class RouteService {
     return route
   }
 
-  async findMany(options?: { isActive?: boolean }) {
-    return this.routeRepository.findMany(options)
+  async findMany() {
+    return this.routeRepository.findMany()
   }
 
   async create(input: CreateRouteInput) {

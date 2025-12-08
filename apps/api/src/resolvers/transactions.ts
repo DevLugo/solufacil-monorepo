@@ -96,48 +96,48 @@ export const transactionResolvers = {
   },
 
   Transaction: {
-    loan: async (parent: { loanId?: string }, _args: unknown, context: GraphQLContext) => {
-      if (!parent.loanId) return null
+    loan: async (parent: { loan?: string }, _args: unknown, context: GraphQLContext) => {
+      if (!parent.loan) return null
       return context.prisma.loan.findUnique({
-        where: { id: parent.loanId },
+        where: { id: parent.loan },
       })
     },
 
-    loanPayment: async (parent: { loanPaymentId?: string }, _args: unknown, context: GraphQLContext) => {
-      if (!parent.loanPaymentId) return null
+    loanPayment: async (parent: { loanPayment?: string }, _args: unknown, context: GraphQLContext) => {
+      if (!parent.loanPayment) return null
       return context.prisma.loanPayment.findUnique({
-        where: { id: parent.loanPaymentId },
+        where: { id: parent.loanPayment },
       })
     },
 
-    sourceAccount: async (parent: { sourceAccountId: string }, _args: unknown, context: GraphQLContext) => {
+    sourceAccount: async (parent: { sourceAccount: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.account.findUnique({
-        where: { id: parent.sourceAccountId },
+        where: { id: parent.sourceAccount },
       })
     },
 
     destinationAccount: async (
-      parent: { destinationAccountId?: string },
+      parent: { destinationAccount?: string },
       _args: unknown,
       context: GraphQLContext
     ) => {
-      if (!parent.destinationAccountId) return null
+      if (!parent.destinationAccount) return null
       return context.prisma.account.findUnique({
-        where: { id: parent.destinationAccountId },
+        where: { id: parent.destinationAccount },
       })
     },
 
-    route: async (parent: { routeId?: string }, _args: unknown, context: GraphQLContext) => {
-      if (!parent.routeId) return null
+    route: async (parent: { route?: string }, _args: unknown, context: GraphQLContext) => {
+      if (!parent.route) return null
       return context.prisma.route.findUnique({
-        where: { id: parent.routeId },
+        where: { id: parent.route },
       })
     },
 
-    lead: async (parent: { leadId?: string }, _args: unknown, context: GraphQLContext) => {
-      if (!parent.leadId) return null
+    lead: async (parent: { lead?: string }, _args: unknown, context: GraphQLContext) => {
+      if (!parent.lead) return null
       return context.prisma.employee.findUnique({
-        where: { id: parent.leadId },
+        where: { id: parent.lead },
         include: {
           personalDataRelation: true,
         },

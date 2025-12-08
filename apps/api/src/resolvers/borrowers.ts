@@ -52,18 +52,23 @@ export const borrowerResolvers = {
   },
 
   Borrower: {
-    personalData: async (parent: { personalDataId: string }, _args: unknown, context: GraphQLContext) => {
+    personalData: async (parent: { personalData: string; personalDataRelation?: unknown }, _args: unknown, context: GraphQLContext) => {
+      // Si personalDataRelation ya está incluida, devolverla
+      if (parent.personalDataRelation) {
+        return parent.personalDataRelation
+      }
+      // Si no, buscarla
       return context.prisma.personalData.findUnique({
-        where: { id: parent.personalDataId },
+        where: { id: parent.personalData },
         include: {
           phones: true,
           addresses: {
             include: {
               locationRelation: {
                 include: {
-                  municipality: {
+                  municipalityRelation: {
                     include: {
-                      state: true,
+                      stateRelation: true,
                     },
                   },
                 },
@@ -76,7 +81,7 @@ export const borrowerResolvers = {
 
     loans: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.loan.findMany({
-        where: { borrowerId: parent.id },
+        where: { borrower: parent.id },
         orderBy: { signDate: 'desc' },
       })
     },

@@ -121,12 +121,8 @@ type Loantype {
   name: String!
   weekDuration: Int!
   rate: Decimal!
-  interestRate: Decimal!
   loanPaymentComission: Decimal!
   loanGrantedComission: Decimal!
-  maxAmount: Decimal
-  maxTerm: Int
-  isActive: Boolean!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -207,7 +203,6 @@ type Account {
   routes: [Route!]!
   transactionsSource: [Transaction!]!
   transactionsDestination: [Transaction!]!
-  isActive: Boolean!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -219,7 +214,6 @@ type Route {
   accounts: [Account!]!
   transactions: [Transaction!]!
   locations: [Location!]!
-  isActive: Boolean!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -418,7 +412,7 @@ type Query {
 
   # Routes & Geography
   route(id: ID!): Route @auth
-  routes(isActive: Boolean): [Route!]! @auth
+  routes: [Route!]! @auth
   locations(routeId: ID): [Location!]! @auth
 
   # Loan types

@@ -15,9 +15,9 @@ export class RouteRepository {
         accounts: true,
         locations: {
           include: {
-            municipality: {
+            municipalityRelation: {
               include: {
-                state: true,
+                stateRelation: true,
               },
             },
           },
@@ -26,9 +26,8 @@ export class RouteRepository {
     })
   }
 
-  async findMany(options?: { isActive?: boolean }) {
+  async findMany() {
     return this.prisma.route.findMany({
-      where: options?.isActive !== undefined ? { isActive: options.isActive } : undefined,
       include: {
         employees: {
           include: {
@@ -59,7 +58,6 @@ export class RouteRepository {
     id: string,
     data: {
       name?: string
-      isActive?: boolean
     }
   ) {
     return this.prisma.route.update({
@@ -82,14 +80,14 @@ export class RouteRepository {
 
   async findLocations(routeId?: string) {
     return this.prisma.location.findMany({
-      where: routeId ? { routeId } : undefined,
+      where: routeId ? { route: routeId } : undefined,
       include: {
-        municipality: {
+        municipalityRelation: {
           include: {
-            state: true,
+            stateRelation: true,
           },
         },
-        route: true,
+        routeRelation: true,
       },
       orderBy: { name: 'asc' },
     })

@@ -43,8 +43,9 @@ export class LoantypeService {
     return loantype
   }
 
-  async findMany(options?: { isActive?: boolean }) {
-    return this.loantypeRepository.findMany(options)
+  async findMany() {
+    // Note: isActive filter not supported - field doesn't exist in schema
+    return this.loantypeRepository.findMany()
   }
 
   async create(input: CreateLoantypeInput) {

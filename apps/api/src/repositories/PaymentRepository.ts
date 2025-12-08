@@ -8,25 +8,25 @@ export class PaymentRepository {
     return this.prisma.loanPayment.findUnique({
       where: { id },
       include: {
-        loan: {
+        loanRelation: {
           include: {
-            borrower: {
+            borrowerRelation: {
               include: {
                 personalDataRelation: true,
               },
             },
-            loantype: true,
+            loantypeRelation: true,
           },
         },
         transactions: true,
-        leadPaymentReceived: true,
+        leadPaymentReceivedRelation: true,
       },
     })
   }
 
   async findByLoanId(loanId: string, options?: { limit?: number; offset?: number }) {
     return this.prisma.loanPayment.findMany({
-      where: { loanId },
+      where: { loan: loanId },
       take: options?.limit,
       skip: options?.offset,
       orderBy: { receivedAt: 'desc' },
@@ -43,8 +43,8 @@ export class PaymentRepository {
       receivedAt: Date
       paymentMethod: PaymentMethod
       type?: string
-      loanId: string
-      leadPaymentReceivedId?: string
+      loan: string
+      leadPaymentReceived?: string
     },
     tx?: Prisma.TransactionClient
   ) {
@@ -56,11 +56,11 @@ export class PaymentRepository {
         receivedAt: data.receivedAt,
         paymentMethod: data.paymentMethod,
         type: data.type || 'PAYMENT',
-        loanId: data.loanId,
-        leadPaymentReceivedId: data.leadPaymentReceivedId,
+        loan: data.loan,
+        leadPaymentReceived: data.leadPaymentReceived,
       },
       include: {
-        loan: true,
+        loanRelation: true,
         transactions: true,
       },
     })
@@ -73,8 +73,8 @@ export class PaymentRepository {
     bankPaidAmount: Decimal
     falcoAmount?: Decimal
     paymentStatus: string
-    leadId: string
-    agentId: string
+    lead: string
+    agent: string
   }) {
     return this.prisma.leadPaymentReceived.create({
       data: {
@@ -84,16 +84,16 @@ export class PaymentRepository {
         bankPaidAmount: data.bankPaidAmount,
         falcoAmount: data.falcoAmount || new Decimal(0),
         paymentStatus: data.paymentStatus,
-        leadId: data.leadId,
-        agentId: data.agentId,
+        lead: data.lead,
+        agent: data.agent,
       },
       include: {
-        lead: {
+        leadRelation: {
           include: {
             personalDataRelation: true,
           },
         },
-        agent: {
+        agentRelation: {
           include: {
             personalDataRelation: true,
           },

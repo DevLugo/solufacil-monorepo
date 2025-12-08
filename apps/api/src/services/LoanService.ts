@@ -127,11 +127,11 @@ export class LoanService {
     }
 
     // Crear snapshot histórico
-    const routeId = lead.routes[0]?.id || null
-    const routeName = lead.routes[0]?.name || null
+    const routeId = lead.routes?.[0]?.id || undefined
+    const routeName = lead.routes?.[0]?.name || undefined
     const snapshot = createLoanSnapshot(
       lead.id,
-      lead.personalData.fullName,
+      lead.personalDataRelation?.fullName || '',
       routeId,
       routeName
     )
@@ -149,12 +149,12 @@ export class LoanService {
       totalDebtAcquired: finalTotalDebt,
       expectedWeeklyPayment: metrics.expectedWeeklyPayment,
       pendingAmountStored: finalTotalDebt,
-      borrowerId: input.borrowerId,
-      loantypeId: input.loantypeId,
-      grantorId: input.grantorId,
-      leadId: input.leadId,
+      borrower: input.borrowerId,
+      loantype: input.loantypeId,
+      grantor: input.grantorId,
+      lead: input.leadId,
       collateralIds: input.collateralIds,
-      previousLoanId: input.previousLoanId,
+      previousLoan: input.previousLoanId,
       ...snapshot,
     })
   }
@@ -179,7 +179,7 @@ export class LoanService {
       updateData.isDeceased = input.isDeceased
     }
     if (input.leadId !== undefined) {
-      updateData.leadId = input.leadId
+      updateData.lead = input.leadId
     }
     if (input.status !== undefined) {
       updateData.status = input.status
@@ -209,10 +209,10 @@ export class LoanService {
       requestedAmount: input.requestedAmount,
       amountGived: input.amountGived,
       signDate: input.signDate,
-      borrowerId: existingLoan.borrowerId,
+      borrowerId: existingLoan.borrower,
       loantypeId: input.loantypeId,
-      grantorId: existingLoan.grantorId,
-      leadId: existingLoan.leadId,
+      grantorId: existingLoan.grantor || '',
+      leadId: existingLoan.lead || '',
       previousLoanId: loanId,
     })
   }
@@ -237,7 +237,7 @@ export class LoanService {
     }
 
     // Actualizar contador de préstamos terminados del borrower
-    await this.borrowerRepository.incrementLoanFinishedCount(loan.borrowerId)
+    await this.borrowerRepository.incrementLoanFinishedCount(loan.borrower)
 
     return this.loanRepository.update(loanId, {
       status: 'FINISHED',

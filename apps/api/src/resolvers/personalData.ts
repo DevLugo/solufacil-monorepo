@@ -12,33 +12,46 @@ export const personalDataResolvers = {
 
     borrower: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.borrower.findFirst({
-        where: { personalDataId: parent.id },
+        where: { personalData: parent.id },
       })
     },
   },
 
   Address: {
     // Mapear locationRelation de Prisma a location de GraphQL
-    location: (parent: { locationRelation?: unknown; location?: string }) => {
+    location: async (parent: { locationRelation?: unknown; location?: string }, _args: unknown, context: GraphQLContext) => {
       // Si locationRelation ya está incluido, devolverlo
       if (parent.locationRelation) {
         return parent.locationRelation
       }
-      // Si no, devolver null (será resuelto por el DataLoader si es necesario)
+      // Si no está incluido pero tenemos el ID, buscarlo
+      if (parent.location) {
+        return context.prisma.location.findUnique({
+          where: { id: parent.location },
+          include: {
+            municipalityRelation: {
+              include: {
+                stateRelation: true,
+              },
+            },
+          },
+        })
+      }
+      // No debería llegar aquí ya que location es requerido
       return null
     },
 
-    personalData: async (parent: { personalDataId: string }, _args: unknown, context: GraphQLContext) => {
+    personalData: async (parent: { personalData: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.personalData.findUnique({
-        where: { id: parent.personalDataId },
+        where: { id: parent.personalData },
       })
     },
   },
 
   Phone: {
-    personalData: async (parent: { personalDataId: string }, _args: unknown, context: GraphQLContext) => {
+    personalData: async (parent: { personalData: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.personalData.findUnique({
-        where: { id: parent.personalDataId },
+        where: { id: parent.personalData },
       })
     },
   },

@@ -104,7 +104,6 @@ interface Account {
   type: string
   amount: string
   accountBalance: string
-  isActive: boolean
 }
 
 interface AccountsData {

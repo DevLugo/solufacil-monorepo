@@ -1,9 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { useQuery } from '@apollo/client'
-import { gql } from '@apollo/client'
-import { format } from 'date-fns'
+import { useState, useEffect, useMemo } from 'react'
+import { useQuery, useMutation } from '@apollo/client'
+import { format, startOfDay, endOfDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import {
   Plus,
@@ -14,8 +13,13 @@ import {
   User,
   MapPin,
   TrendingUp,
+  AlertCircle,
+  Check,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Card,
   CardContent,
@@ -31,107 +35,61 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { useTransactionContext } from './transaction-context'
 import { formatCurrency } from '@/lib/utils'
-import { ACCOUNTS_QUERY } from '@/graphql/queries/transactions'
-
-const TRANSFERS_QUERY = gql`
-  query TransfersByRouteAndDate($routeId: ID!, $date: DateTime!) {
-    transactions(routeId: $routeId, date: $date, type: TRANSFER) {
-      edges {
-        node {
-          id
-          amount
-          date
-          description
-          sourceAccount {
-            id
-            name
-            type
-          }
-          destinationAccount {
-            id
-            name
-            type
-          }
-          lead {
-            id
-            personalData {
-              fullName
-            }
-          }
-        }
-      }
-    }
-  }
-`
-
-const INVESTMENTS_QUERY = gql`
-  query InvestmentsByRouteAndDate($routeId: ID!, $date: DateTime!) {
-    transactions(routeId: $routeId, date: $date, type: INVESTMENT) {
-      edges {
-        node {
-          id
-          amount
-          date
-          description
-          destinationAccount {
-            id
-            name
-            type
-          }
-        }
-      }
-    }
-  }
-`
+import { ACCOUNTS_QUERY, TRANSFERS_BY_DATE_QUERY } from '@/graphql/queries/transactions'
+import { CREATE_TRANSACTION, TRANSFER_BETWEEN_ACCOUNTS } from '@/graphql/mutations/transactions'
+import { useToast } from '@/hooks/use-toast'
 
 interface Transfer {
   id: string
-  amount: number
+  amount: string
   date: string
-  description?: string
+  type: string
   sourceAccount: {
     id: string
     name: string
     type: string
-  }
+  } | null
   destinationAccount: {
     id: string
     name: string
     type: string
-  }
-  lead?: {
-    id: string
-    personalData?: {
-      fullName: string
-    }
-  }
-}
-
-interface Investment {
-  id: string
-  amount: number
-  date: string
-  description?: string
-  destinationAccount: {
+  } | null
+  route: {
     id: string
     name: string
-    type: string
-  }
+  } | null
 }
 
 interface Account {
   id: string
   name: string
   type: string
+  amount: string
   accountBalance: string
 }
 
 const accountTypeIcon: Record<string, typeof Wallet> = {
   BANK: Building2,
-  EMPLOYEE: User,
-  OFFICE: Wallet,
+  EMPLOYEE_CASH_FUND: User,
+  OFFICE_CASH_FUND: Wallet,
+  PREPAID_GAS: Wallet,
 }
 
 function EmptyState() {
@@ -155,36 +113,172 @@ function LoadingState() {
 }
 
 export function TransferenciasTab() {
-  const { selectedRouteId, selectedDate } = useTransactionContext()
-  const [activeSection, setActiveSection] = useState<'transfers' | 'investments'>('transfers')
+  const { selectedRouteId, selectedDate, selectedLeadId } = useTransactionContext()
+  const { toast } = useToast()
 
-  // TODO: Enable queries when transfer date filtering is implemented in the backend
-  // const { data: transfersData, loading: transfersLoading } = useQuery<{
-  //   transactions: { edges: Array<{ node: Transfer }> }
-  // }>(TRANSFERS_QUERY, {
-  //   variables: {
-  //     routeId: selectedRouteId,
-  //     date: format(selectedDate, 'yyyy-MM-dd'),
-  //   },
-  //   skip: !selectedRouteId,
-  // })
+  // Form state
+  const [isCapitalInvestment, setIsCapitalInvestment] = useState(false)
+  const [sourceAccountId, setSourceAccountId] = useState<string>('')
+  const [destinationAccountId, setDestinationAccountId] = useState<string>('')
+  const [amount, setAmount] = useState('')
+  const [description, setDescription] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
 
-  // const { data: investmentsData, loading: investmentsLoading } = useQuery<{
-  //   transactions: { edges: Array<{ node: Investment }> }
-  // }>(INVESTMENTS_QUERY, {
-  //   variables: {
-  //     routeId: selectedRouteId,
-  //     date: format(selectedDate, 'yyyy-MM-dd'),
-  //   },
-  //   skip: !selectedRouteId,
-  // })
-
-  const { data: accountsData, loading: accountsLoading } = useQuery<{ accounts: Account[] }>(
-    ACCOUNTS_QUERY,
+  // Query para obtener transfers del día
+  const { data: transfersData, loading: transfersLoading, refetch } = useQuery(
+    TRANSFERS_BY_DATE_QUERY,
     {
-      variables: { routeId: selectedRouteId },
+      variables: {
+        fromDate: startOfDay(selectedDate).toISOString(),
+        toDate: endOfDay(selectedDate).toISOString(),
+        routeId: selectedRouteId,
+      },
       skip: !selectedRouteId,
     }
+  )
+
+  // Query para obtener las cuentas de la ruta
+  const { data: accountsData, loading: accountsLoading } = useQuery(ACCOUNTS_QUERY, {
+    variables: { routeId: selectedRouteId },
+    skip: !selectedRouteId,
+  })
+
+  // Mutation para crear transferencia o inversión
+  const [createTransaction] = useMutation(CREATE_TRANSACTION)
+
+  const transfers: Transfer[] = transfersData?.transactions?.edges?.map(
+    (edge: { node: Transfer }) => edge.node
+  ) || []
+
+  const accounts: Account[] = accountsData?.accounts || []
+
+  // Reset form when route changes
+  useEffect(() => {
+    setSourceAccountId('')
+    setDestinationAccountId('')
+    setAmount('')
+    setDescription('')
+  }, [selectedRouteId])
+
+  // Reset source account when capital investment is toggled
+  useEffect(() => {
+    if (isCapitalInvestment) {
+      setSourceAccountId('')
+    }
+  }, [isCapitalInvestment])
+
+  // Get source account data
+  const sourceAccount = useMemo(() => {
+    return accounts.find((acc) => acc.id === sourceAccountId)
+  }, [accounts, sourceAccountId])
+
+  // Available balance from source account
+  const availableBalance = sourceAccount
+    ? parseFloat(sourceAccount.amount || '0')
+    : 0
+
+  // Validate amount against available balance (only for transfers)
+  const isAmountValid = useMemo(() => {
+    if (isCapitalInvestment) return true
+    if (!amount) return true
+    return parseFloat(amount) <= availableBalance
+  }, [amount, availableBalance, isCapitalInvestment])
+
+  // Filter destination accounts
+  const destinationOptions = useMemo(() => {
+    if (sourceAccountId) {
+      return accounts.filter((acc) => acc.id !== sourceAccountId)
+    }
+    return accounts
+  }, [accounts, sourceAccountId])
+
+  // Form validation
+  const isFormValid = useMemo(() => {
+    if (!selectedRouteId) return false
+    if (!destinationAccountId) return false
+    if (!amount || parseFloat(amount) <= 0) return false
+    if (!isCapitalInvestment && !sourceAccountId) return false
+    if (!isCapitalInvestment && !isAmountValid) return false
+    return true
+  }, [selectedRouteId, destinationAccountId, amount, isCapitalInvestment, sourceAccountId, isAmountValid])
+
+  // Handle transfer/investment submission
+  const handleSubmit = async () => {
+    if (!isFormValid || !selectedRouteId) return
+
+    setIsSubmitting(true)
+
+    try {
+      const numericAmount = parseFloat(amount)
+
+      if (isCapitalInvestment) {
+        // Create capital investment (INCOME transaction)
+        await createTransaction({
+          variables: {
+            input: {
+              amount: numericAmount.toString(),
+              date: selectedDate.toISOString(),
+              type: 'INCOME',
+              incomeSource: 'MONEY_INVESMENT',
+              destinationAccountId,
+              routeId: selectedRouteId,
+              leadId: selectedLeadId || undefined,
+            },
+          },
+        })
+
+        toast({
+          title: 'Inversión registrada',
+          description: `Se registró una inversión de ${formatCurrency(numericAmount)}.`,
+        })
+      } else {
+        // Create transfer between accounts
+        await createTransaction({
+          variables: {
+            input: {
+              amount: numericAmount.toString(),
+              date: selectedDate.toISOString(),
+              type: 'TRANSFER',
+              sourceAccountId,
+              destinationAccountId,
+              routeId: selectedRouteId,
+              leadId: selectedLeadId || undefined,
+            },
+          },
+        })
+
+        toast({
+          title: 'Transferencia registrada',
+          description: `Se transfirió ${formatCurrency(numericAmount)} entre cuentas.`,
+        })
+      }
+
+      // Reset form
+      setSourceAccountId('')
+      setDestinationAccountId('')
+      setAmount('')
+      setDescription('')
+      setShowSuccessDialog(true)
+
+      // Refetch transfers
+      refetch()
+    } catch (error) {
+      console.error('Error al crear transacción:', error)
+      toast({
+        title: 'Error',
+        description: 'No se pudo completar la operación. Intenta de nuevo.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Calculate totals
+  const totalTransfers = transfers.reduce(
+    (sum, t) => sum + parseFloat(t.amount || '0'),
+    0
   )
 
   if (!selectedRouteId) {
@@ -195,19 +289,11 @@ export function TransferenciasTab() {
     return <LoadingState />
   }
 
-  // Placeholder data until queries are implemented
-  const transfers: Transfer[] = []
-  const investments: Investment[] = []
-  const accounts = accountsData?.accounts || []
-
-  const totalTransfers = transfers.reduce((sum, t) => sum + t.amount, 0)
-  const totalInvestments = investments.reduce((sum, i) => sum + i.amount, 0)
-
   return (
     <div className="space-y-6">
       {/* Account Balances */}
-      <div className="grid gap-4 md:grid-cols-4">
-        {accounts.slice(0, 4).map((account) => {
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {accounts.map((account) => {
           const Icon = accountTypeIcon[account.type] || Wallet
           return (
             <Card key={account.id}>
@@ -216,9 +302,9 @@ export function TransferenciasTab() {
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                     <Icon className="h-5 w-5 text-muted-foreground" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">{account.name}</p>
-                    <p className="text-xl font-bold">{formatCurrency(parseFloat(account.accountBalance || '0'))}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-muted-foreground truncate">{account.name}</p>
+                    <p className="text-xl font-bold">{formatCurrency(parseFloat(account.amount || '0'))}</p>
                   </div>
                 </div>
               </CardContent>
@@ -227,181 +313,241 @@ export function TransferenciasTab() {
         })}
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card
-          className={`cursor-pointer transition-colors ${activeSection === 'transfers' ? 'border-primary' : ''}`}
-          onClick={() => setActiveSection('transfers')}
-        >
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-info/10">
-                  <ArrowRight className="h-5 w-5 text-info" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Transferencias</p>
-                  <p className="text-2xl font-bold">{transfers.length}</p>
-                </div>
-              </div>
-              <p className="text-lg font-medium">{formatCurrency(totalTransfers)}</p>
+      {/* Transfer Form */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {isCapitalInvestment ? 'Inversión de Capital' : 'Transferencia entre Cuentas'}
+          </CardTitle>
+          <CardDescription>
+            {isCapitalInvestment
+              ? 'Registra una inversión de capital externo al sistema'
+              : 'Transfiere fondos entre las cuentas de la ruta'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Capital Investment Checkbox */}
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="capital-investment"
+              checked={isCapitalInvestment}
+              onCheckedChange={(checked) => setIsCapitalInvestment(checked === true)}
+              disabled={isSubmitting}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label htmlFor="capital-investment" className="cursor-pointer">
+                Inversión de Capital
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                El dinero ingresa al sistema desde una fuente externa
+              </p>
             </div>
-          </CardContent>
-        </Card>
-        <Card
-          className={`cursor-pointer transition-colors ${activeSection === 'investments' ? 'border-primary' : ''}`}
-          onClick={() => setActiveSection('investments')}
-        >
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/10">
-                  <TrendingUp className="h-5 w-5 text-success" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Inversiones de Capital</p>
-                  <p className="text-2xl font-bold">{investments.length}</p>
-                </div>
-              </div>
-              <p className="text-lg font-medium text-success">+{formatCurrency(totalInvestments)}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
 
-      {/* Transfers Section */}
-      {activeSection === 'transfers' && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Transferencias entre Cuentas</CardTitle>
-                <CardDescription>
-                  {transfers.length} transferencias • {format(selectedDate, "d 'de' MMMM", { locale: es })}
-                </CardDescription>
+          <div className={`grid gap-4 ${isCapitalInvestment ? 'md:grid-cols-2' : 'md:grid-cols-2'}`}>
+            {/* Source Account (only for transfers) */}
+            {!isCapitalInvestment && (
+              <div className="space-y-2">
+                <Label>Cuenta de Origen</Label>
+                <Select
+                  value={sourceAccountId}
+                  onValueChange={(value) => {
+                    setSourceAccountId(value)
+                    if (value === destinationAccountId) {
+                      setDestinationAccountId('')
+                    }
+                  }}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar cuenta origen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.name} ({formatCurrency(parseFloat(account.amount))})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Nueva Transferencia
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {transfers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <ArrowRight className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No hay transferencias registradas</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Origen</TableHead>
-                    <TableHead></TableHead>
-                    <TableHead>Destino</TableHead>
-                    <TableHead>Responsable</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead className="text-right">Monto</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transfers.map((transfer) => {
-                    const SourceIcon = accountTypeIcon[transfer.sourceAccount.type] || Wallet
-                    const DestIcon = accountTypeIcon[transfer.destinationAccount.type] || Wallet
-                    return (
-                      <TableRow key={transfer.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <SourceIcon className="h-4 w-4 text-muted-foreground" />
-                            <span>{transfer.sourceAccount.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <DestIcon className="h-4 w-4 text-muted-foreground" />
-                            <span>{transfer.destinationAccount.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {transfer.lead?.personalData?.fullName || '-'}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {transfer.description || '-'}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(transfer.amount)}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
             )}
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Investments Section */}
-      {activeSection === 'investments' && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Inversiones de Capital</CardTitle>
-                <CardDescription>
-                  {investments.length} inversiones • {format(selectedDate, "d 'de' MMMM", { locale: es })}
-                </CardDescription>
-              </div>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Nueva Inversión
-              </Button>
+            {/* Destination Account */}
+            <div className="space-y-2">
+              <Label>Cuenta de Destino</Label>
+              <Select
+                value={destinationAccountId}
+                onValueChange={setDestinationAccountId}
+                disabled={(!sourceAccountId && !isCapitalInvestment) || isSubmitting}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar cuenta destino" />
+                </SelectTrigger>
+                <SelectContent>
+                  {destinationOptions.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name} ({formatCurrency(parseFloat(account.amount))})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </CardHeader>
-          <CardContent>
-            {investments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <TrendingUp className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground">No hay inversiones registradas</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cuenta Destino</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead className="text-right">Monto</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {investments.map((investment) => {
-                    const Icon = accountTypeIcon[investment.destinationAccount.type] || Wallet
-                    return (
-                      <TableRow key={investment.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Icon className="h-4 w-4 text-muted-foreground" />
-                            <span>{investment.destinationAccount.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {investment.description || 'Inversión de capital'}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-success">
-                          +{formatCurrency(investment.amount)}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {/* Amount */}
+            <div className="space-y-2">
+              <Label>
+                {isCapitalInvestment ? 'Monto de Inversión' : 'Monto a Transferir'}
+              </Label>
+              <Input
+                type="number"
+                placeholder="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                disabled={(!sourceAccountId && !isCapitalInvestment) || !destinationAccountId || isSubmitting}
+                className={!isAmountValid ? 'border-destructive' : ''}
+              />
+              {!isCapitalInvestment && sourceAccount && (
+                <p className="text-sm text-muted-foreground">
+                  Saldo disponible: {formatCurrency(availableBalance)}
+                </p>
+              )}
+              {!isAmountValid && (
+                <p className="text-sm text-destructive flex items-center gap-1">
+                  <AlertCircle className="h-4 w-4" />
+                  Monto excede el saldo disponible
+                </p>
+              )}
+            </div>
+
+            {/* Description */}
+            <div className="space-y-2">
+              <Label>Descripción (Opcional)</Label>
+              <Input
+                placeholder={isCapitalInvestment ? 'Descripción de la inversión' : 'Descripción de la transferencia'}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSubmit}
+              disabled={!isFormValid || isSubmitting}
+              className="gap-2"
+            >
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isCapitalInvestment ? (
+                <TrendingUp className="h-4 w-4" />
+              ) : (
+                <ArrowRight className="h-4 w-4" />
+              )}
+              {isSubmitting
+                ? 'Procesando...'
+                : isCapitalInvestment
+                ? 'Realizar Inversión'
+                : 'Realizar Transferencia'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Transfers List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Transferencias del Día</CardTitle>
+          <CardDescription>
+            {transfers.length} transferencias • {format(selectedDate, "d 'de' MMMM", { locale: es })}
+            {transfers.length > 0 && ` • Total: ${formatCurrency(totalTransfers)}`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {transfersLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : transfers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <ArrowRight className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">No hay transferencias registradas para esta fecha</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Origen</TableHead>
+                  <TableHead></TableHead>
+                  <TableHead>Destino</TableHead>
+                  <TableHead className="text-right">Monto</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transfers.map((transfer) => {
+                  const SourceIcon = transfer.sourceAccount
+                    ? accountTypeIcon[transfer.sourceAccount.type] || Wallet
+                    : TrendingUp
+                  const DestIcon = transfer.destinationAccount
+                    ? accountTypeIcon[transfer.destinationAccount.type] || Wallet
+                    : Wallet
+
+                  return (
+                    <TableRow key={transfer.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <SourceIcon className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {transfer.sourceAccount?.name || 'Inversión Externa'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <DestIcon className="h-4 w-4 text-muted-foreground" />
+                          <span>
+                            {transfer.destinationAccount?.name || '-'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatCurrency(parseFloat(transfer.amount))}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Success Dialog */}
+      <Dialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Check className="h-5 w-5 text-success" />
+              {isCapitalInvestment ? 'Inversión Completada' : 'Transferencia Completada'}
+            </DialogTitle>
+            <DialogDescription>
+              {isCapitalInvestment
+                ? 'La inversión de capital se ha registrado correctamente.'
+                : 'La transferencia se ha realizado correctamente.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setShowSuccessDialog(false)}>Aceptar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

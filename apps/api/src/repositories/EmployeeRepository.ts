@@ -14,9 +14,9 @@ export class EmployeeRepository {
               include: {
                 locationRelation: {
                   include: {
-                    municipality: {
+                    municipalityRelation: {
                       include: {
-                        state: true,
+                        stateRelation: true,
                       },
                     },
                   },

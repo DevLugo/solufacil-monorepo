@@ -17,15 +17,14 @@ export const loantypeResolvers = {
 
     loantypes: async (
       _parent: unknown,
-      args: { isActive?: boolean },
+      _args: { isActive?: boolean },
       context: GraphQLContext
     ) => {
       authenticateUser(context)
 
       const loantypeService = new LoantypeService(context.prisma)
-      return loantypeService.findMany({
-        isActive: args.isActive ?? undefined,
-      })
+      // Note: isActive filter ignored - field doesn't exist in Prisma schema
+      return loantypeService.findMany()
     },
   },
 

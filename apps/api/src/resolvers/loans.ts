@@ -172,82 +172,192 @@ export const loanResolvers = {
   },
 
   Loan: {
-    borrower: async (parent: { borrowerId: string }, _args: unknown, context: GraphQLContext) => {
+    borrower: async (
+      parent: { borrower: string; borrowerRelation?: unknown },
+      _args: unknown,
+      context: GraphQLContext
+    ) => {
+      // Si borrowerRelation ya está incluido, devolverlo
+      if (parent.borrowerRelation) {
+        return parent.borrowerRelation
+      }
+      // Si no, buscarlo
       return context.prisma.borrower.findUnique({
-        where: { id: parent.borrowerId },
+        where: { id: parent.borrower },
         include: {
           personalDataRelation: {
             include: {
               phones: true,
+              addresses: {
+                include: {
+                  locationRelation: {
+                    include: {
+                      municipalityRelation: {
+                        include: {
+                          stateRelation: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
         },
       })
     },
 
-    loantype: async (parent: { loantypeId: string }, _args: unknown, context: GraphQLContext) => {
+    loantype: async (
+      parent: { loantype: string; loantypeRelation?: unknown },
+      _args: unknown,
+      context: GraphQLContext
+    ) => {
+      // Si loantypeRelation ya está incluido, devolverlo
+      if (parent.loantypeRelation) {
+        return parent.loantypeRelation
+      }
       return context.prisma.loantype.findUnique({
-        where: { id: parent.loantypeId },
+        where: { id: parent.loantype },
       })
     },
 
-    grantor: async (parent: { grantorId: string }, _args: unknown, context: GraphQLContext) => {
+    grantor: async (
+      parent: { grantor?: string; grantorRelation?: unknown },
+      _args: unknown,
+      context: GraphQLContext
+    ) => {
+      // Si grantorRelation ya está incluido, devolverlo
+      if (parent.grantorRelation) {
+        return parent.grantorRelation
+      }
+      if (!parent.grantor) return null
       return context.prisma.employee.findUnique({
-        where: { id: parent.grantorId },
+        where: { id: parent.grantor },
         include: {
-          personalDataRelation: true,
+          personalDataRelation: {
+            include: {
+              phones: true,
+              addresses: {
+                include: {
+                  locationRelation: {
+                    include: {
+                      municipalityRelation: {
+                        include: {
+                          stateRelation: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       })
     },
 
-    lead: async (parent: { leadId: string }, _args: unknown, context: GraphQLContext) => {
+    lead: async (
+      parent: { lead?: string; leadRelation?: unknown },
+      _args: unknown,
+      context: GraphQLContext
+    ) => {
+      // Si leadRelation ya está incluido, devolverlo
+      if (parent.leadRelation) {
+        return parent.leadRelation
+      }
+      if (!parent.lead) return null
       return context.prisma.employee.findUnique({
-        where: { id: parent.leadId },
+        where: { id: parent.lead },
         include: {
-          personalDataRelation: true,
+          personalDataRelation: {
+            include: {
+              phones: true,
+              addresses: {
+                include: {
+                  locationRelation: {
+                    include: {
+                      municipalityRelation: {
+                        include: {
+                          stateRelation: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
           routes: true,
         },
       })
     },
 
-    collaterals: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
+    collaterals: async (
+      parent: { id: string; collaterals?: unknown[] },
+      _args: unknown,
+      context: GraphQLContext
+    ) => {
+      // Si collaterals ya está incluido, devolverlo
+      if (parent.collaterals) {
+        return parent.collaterals
+      }
+      // Si no, buscarlo
       const loan = await context.prisma.loan.findUnique({
         where: { id: parent.id },
-        include: { collaterals: true },
+        include: {
+          collaterals: {
+            include: {
+              phones: true,
+              addresses: {
+                include: {
+                  locationRelation: {
+                    include: {
+                      municipalityRelation: {
+                        include: {
+                          stateRelation: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       })
       return loan?.collaterals || []
     },
 
     payments: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.loanPayment.findMany({
-        where: { loanId: parent.id },
+        where: { loan: parent.id },
         orderBy: { receivedAt: 'desc' },
       })
     },
 
     transactions: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.transaction.findMany({
-        where: { loanId: parent.id },
+        where: { loan: parent.id },
         orderBy: { date: 'desc' },
       })
     },
 
     documentPhotos: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.documentPhoto.findMany({
-        where: { loanId: parent.id },
+        where: { loan: parent.id },
       })
     },
 
-    previousLoan: async (parent: { previousLoanId?: string }, _args: unknown, context: GraphQLContext) => {
-      if (!parent.previousLoanId) return null
+    previousLoan: async (parent: { previousLoan?: string }, _args: unknown, context: GraphQLContext) => {
+      if (!parent.previousLoan) return null
       return context.prisma.loan.findUnique({
-        where: { id: parent.previousLoanId },
+        where: { id: parent.previousLoan },
       })
     },
 
     renewedBy: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.loan.findFirst({
-        where: { previousLoanId: parent.id },
+        where: { previousLoan: parent.id },
       })
     },
   },

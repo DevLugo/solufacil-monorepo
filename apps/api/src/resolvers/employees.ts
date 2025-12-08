@@ -108,9 +108,9 @@ export const employeeResolvers = {
             include: {
               locationRelation: {
                 include: {
-                  municipality: {
+                  municipalityRelation: {
                     include: {
-                      state: true,
+                      stateRelation: true,
                     },
                   },
                 },
@@ -131,7 +131,7 @@ export const employeeResolvers = {
 
     loansGranted: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.loan.findMany({
-        where: { grantorId: parent.id },
+        where: { grantor: parent.id },
         orderBy: { signDate: 'desc' },
         take: 20,
       })
@@ -139,7 +139,7 @@ export const employeeResolvers = {
 
     loansManagedAsLead: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.loan.findMany({
-        where: { leadId: parent.id },
+        where: { lead: parent.id },
         orderBy: { signDate: 'desc' },
         take: 20,
       })
@@ -147,7 +147,7 @@ export const employeeResolvers = {
 
     transactions: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.transaction.findMany({
-        where: { leadId: parent.id },
+        where: { lead: parent.id },
         orderBy: { date: 'desc' },
         take: 50,
       })
@@ -155,7 +155,7 @@ export const employeeResolvers = {
 
     commissionPayments: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.commissionPayment.findMany({
-        where: { employeeId: parent.id },
+        where: { employee: parent.id },
         orderBy: { createdAt: 'desc' },
       })
     },

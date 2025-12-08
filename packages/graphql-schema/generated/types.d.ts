@@ -265,7 +265,6 @@ export type Employee = {
     commissionPayments: Array<CommissionPayment>;
     createdAt: Scalars['DateTime']['output'];
     id: Scalars['ID']['output'];
-    isActive: Scalars['Boolean']['output'];
     loansGranted: Array<Loan>;
     loansManagedAsLead: Array<Loan>;
     personalData: PersonalData;
@@ -1122,7 +1121,6 @@ export type EmployeeResolvers<ContextType = GraphQLContext, ParentType extends R
     commissionPayments?: Resolver<Array<ResolversTypes['CommissionPayment']>, ParentType, ContextType>;
     createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
     id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
-    isActive?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
     loansGranted?: Resolver<Array<ResolversTypes['Loan']>, ParentType, ContextType>;
     loansManagedAsLead?: Resolver<Array<ResolversTypes['Loan']>, ParentType, ContextType>;
     personalData?: Resolver<ResolversTypes['PersonalData'], ParentType, ContextType>;

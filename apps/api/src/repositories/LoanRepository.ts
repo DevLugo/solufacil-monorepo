@@ -8,7 +8,7 @@ export class LoanRepository {
     return this.prisma.loan.findUnique({
       where: { id },
       include: {
-        borrower: {
+        borrowerRelation: {
           include: {
             personalDataRelation: {
               include: {
@@ -22,13 +22,13 @@ export class LoanRepository {
             },
           },
         },
-        loantype: true,
-        grantor: {
+        loantypeRelation: true,
+        grantorRelation: {
           include: {
             personalDataRelation: true,
           },
         },
-        lead: {
+        leadRelation: {
           include: {
             personalDataRelation: true,
             routes: true,
@@ -39,7 +39,7 @@ export class LoanRepository {
           orderBy: { receivedAt: 'desc' },
           take: 20,
         },
-        previousLoan: true,
+        previousLoanRelation: true,
         renewedBy: true,
       },
     })
@@ -57,16 +57,24 @@ export class LoanRepository {
   }) {
     const where: Prisma.LoanWhereInput = {}
 
-    if (options?.status) {
+    // When status is ACTIVE, use the same filters as the original Keystone implementation:
+    // - finishedDate: null (not finished)
+    // - pendingAmountStored > 0 (has pending payments)
+    // - excludedByCleanup: null (not excluded by cleanup)
+    if (options?.status === 'ACTIVE') {
+      where.finishedDate = null
+      where.pendingAmountStored = { gt: 0 }
+      where.excludedByCleanup = null
+    } else if (options?.status) {
       where.status = options.status
     }
 
     if (options?.leadId) {
-      where.leadId = options.leadId
+      where.lead = options.leadId
     }
 
     if (options?.borrowerId) {
-      where.borrowerId = options.borrowerId
+      where.borrower = options.borrowerId
     }
 
     if (options?.routeId) {
@@ -88,17 +96,70 @@ export class LoanRepository {
         where,
         take: options?.limit ?? 50,
         skip: options?.offset ?? 0,
-        orderBy: { signDate: 'desc' },
+        orderBy: [{ signDate: 'asc' }, { id: 'asc' }],
         include: {
-          borrower: {
+          borrowerRelation: {
             include: {
-              personalDataRelation: true,
+              personalDataRelation: {
+                include: {
+                  phones: true,
+                  addresses: {
+                    include: {
+                      locationRelation: {
+                        include: {
+                          municipalityRelation: {
+                            include: {
+                              stateRelation: true,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
-          loantype: true,
-          lead: {
+          loantypeRelation: true,
+          leadRelation: {
             include: {
-              personalDataRelation: true,
+              personalDataRelation: {
+                include: {
+                  phones: true,
+                  addresses: {
+                    include: {
+                      locationRelation: {
+                        include: {
+                          municipalityRelation: {
+                            include: {
+                              stateRelation: true,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+              routes: true,
+            },
+          },
+          collaterals: {
+            include: {
+              phones: true,
+              addresses: {
+                include: {
+                  locationRelation: {
+                    include: {
+                      municipalityRelation: {
+                        include: {
+                          stateRelation: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -117,12 +178,12 @@ export class LoanRepository {
     totalDebtAcquired: Decimal
     expectedWeeklyPayment: Decimal
     pendingAmountStored: Decimal
-    borrowerId: string
-    loantypeId: string
-    grantorId: string
-    leadId: string
+    borrower: string
+    loantype: string
+    grantor: string
+    lead: string
     collateralIds?: string[]
-    previousLoanId?: string
+    previousLoan?: string
     snapshotLeadId?: string
     snapshotLeadName?: string
     snapshotLeadAssignedAt?: Date
@@ -138,11 +199,11 @@ export class LoanRepository {
         totalDebtAcquired: data.totalDebtAcquired,
         expectedWeeklyPayment: data.expectedWeeklyPayment,
         pendingAmountStored: data.pendingAmountStored,
-        borrowerId: data.borrowerId,
-        loantypeId: data.loantypeId,
-        grantorId: data.grantorId,
-        leadId: data.leadId,
-        previousLoanId: data.previousLoanId,
+        borrower: data.borrower,
+        loantype: data.loantype,
+        grantor: data.grantor,
+        lead: data.lead,
+        previousLoan: data.previousLoan,
         snapshotLeadId: data.snapshotLeadId,
         snapshotLeadName: data.snapshotLeadName,
         snapshotLeadAssignedAt: data.snapshotLeadAssignedAt,
@@ -153,18 +214,18 @@ export class LoanRepository {
           : undefined,
       },
       include: {
-        borrower: {
+        borrowerRelation: {
           include: {
             personalDataRelation: true,
           },
         },
-        loantype: true,
-        grantor: {
+        loantypeRelation: true,
+        grantorRelation: {
           include: {
             personalDataRelation: true,
           },
         },
-        lead: {
+        leadRelation: {
           include: {
             personalDataRelation: true,
           },
@@ -180,7 +241,7 @@ export class LoanRepository {
       amountGived?: Decimal
       badDebtDate?: Date | null
       isDeceased?: boolean
-      leadId?: string
+      lead?: string
       status?: LoanStatus
       totalPaid?: Decimal
       pendingAmountStored?: Decimal
@@ -192,13 +253,13 @@ export class LoanRepository {
       where: { id },
       data,
       include: {
-        borrower: {
+        borrowerRelation: {
           include: {
             personalDataRelation: true,
           },
         },
-        loantype: true,
-        lead: {
+        loantypeRelation: true,
+        leadRelation: {
           include: {
             personalDataRelation: true,
           },
@@ -217,7 +278,7 @@ export class LoanRepository {
   async findActiveByBorrowerId(borrowerId: string) {
     return this.prisma.loan.findFirst({
       where: {
-        borrowerId,
+        borrower: borrowerId,
         status: 'ACTIVE',
       },
     })
@@ -230,12 +291,12 @@ export class LoanRepository {
         ...(routeId ? { snapshotRouteId: routeId } : {}),
       },
       include: {
-        borrower: {
+        borrowerRelation: {
           include: {
             personalDataRelation: true,
           },
         },
-        lead: {
+        leadRelation: {
           include: {
             personalDataRelation: true,
           },

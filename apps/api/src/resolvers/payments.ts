@@ -69,43 +69,43 @@ export const paymentResolvers = {
   },
 
   LoanPayment: {
-    loan: async (parent: { loanId: string }, _args: unknown, context: GraphQLContext) => {
+    loan: async (parent: { loan: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.loan.findUnique({
-        where: { id: parent.loanId },
+        where: { id: parent.loan },
       })
     },
 
     leadPaymentReceived: async (
-      parent: { leadPaymentReceivedId?: string },
+      parent: { leadPaymentReceived?: string },
       _args: unknown,
       context: GraphQLContext
     ) => {
-      if (!parent.leadPaymentReceivedId) return null
+      if (!parent.leadPaymentReceived) return null
       return context.prisma.leadPaymentReceived.findUnique({
-        where: { id: parent.leadPaymentReceivedId },
+        where: { id: parent.leadPaymentReceived },
       })
     },
 
     transactions: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.transaction.findMany({
-        where: { loanPaymentId: parent.id },
+        where: { loanPayment: parent.id },
       })
     },
   },
 
   LeadPaymentReceived: {
-    lead: async (parent: { leadId: string }, _args: unknown, context: GraphQLContext) => {
+    lead: async (parent: { lead: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.employee.findUnique({
-        where: { id: parent.leadId },
+        where: { id: parent.lead },
         include: {
           personalDataRelation: true,
         },
       })
     },
 
-    agent: async (parent: { agentId: string }, _args: unknown, context: GraphQLContext) => {
+    agent: async (parent: { agent: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.employee.findUnique({
-        where: { id: parent.agentId },
+        where: { id: parent.agent },
         include: {
           personalDataRelation: true,
         },
@@ -114,7 +114,7 @@ export const paymentResolvers = {
 
     payments: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.loanPayment.findMany({
-        where: { leadPaymentReceivedId: parent.id },
+        where: { leadPaymentReceived: parent.id },
       })
     },
   },

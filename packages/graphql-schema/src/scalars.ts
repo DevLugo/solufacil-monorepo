@@ -2,12 +2,28 @@ import { GraphQLScalarType, Kind } from 'graphql'
 import { DateTimeResolver, JSONResolver } from 'graphql-scalars'
 import { Decimal } from 'decimal.js'
 
+// Helper to check if value is a Decimal-like object (handles both decimal.js and Prisma.Decimal)
+function isDecimalLike(value: unknown): value is { toString(): string } {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    'toString' in value &&
+    typeof (value as { toString: unknown }).toString === 'function' &&
+    // Check for decimal-specific methods
+    ('toFixed' in value || 'd' in value || 's' in value)
+  )
+}
+
 // Custom Decimal scalar
 export const DecimalScalar = new GraphQLScalarType({
   name: 'Decimal',
   description: 'Decimal custom scalar type for precise numeric calculations',
   serialize(value: unknown): string {
     if (value instanceof Decimal) {
+      return value.toString()
+    }
+    // Handle Prisma.Decimal and other Decimal-like objects
+    if (isDecimalLike(value)) {
       return value.toString()
     }
     if (typeof value === 'string' || typeof value === 'number') {

@@ -89,20 +89,20 @@ export class AccountRepository {
   async calculateBalance(id: string): Promise<Decimal> {
     // Suma de transacciones donde es cuenta origen (salidas)
     const outgoing = await this.prisma.transaction.aggregate({
-      where: { sourceAccountId: id },
+      where: { sourceAccount: id },
       _sum: { amount: true },
     })
 
     // Suma de transacciones donde es cuenta destino (entradas)
     const incoming = await this.prisma.transaction.aggregate({
-      where: { destinationAccountId: id },
+      where: { destinationAccount: id },
       _sum: { amount: true },
     })
 
     // También considerar ingresos (INCOME aumenta el balance)
     const incomes = await this.prisma.transaction.aggregate({
       where: {
-        sourceAccountId: id,
+        sourceAccount: id,
         type: 'INCOME',
       },
       _sum: { amount: true },

@@ -15,17 +15,11 @@ export const routeResolvers = {
       return routeService.findById(args.id)
     },
 
-    routes: async (
-      _parent: unknown,
-      args: { isActive?: boolean },
-      context: GraphQLContext
-    ) => {
+    routes: async (_parent: unknown, _args: unknown, context: GraphQLContext) => {
       authenticateUser(context)
 
       const routeService = new RouteService(context.prisma)
-      return routeService.findMany({
-        isActive: args.isActive ?? undefined,
-      })
+      return routeService.findMany()
     },
 
     locations: async (
@@ -57,7 +51,7 @@ export const routeResolvers = {
       _parent: unknown,
       args: {
         id: string
-        input: { name?: string; isActive?: boolean }
+        input: { name?: string }
       },
       context: GraphQLContext
     ) => {
@@ -70,10 +64,6 @@ export const routeResolvers = {
   },
 
   Route: {
-    isActive: (parent: { isActive?: boolean | null }) => {
-      return parent.isActive ?? true
-    },
-
     employees: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       const route = await context.prisma.route.findUnique({
         where: { id: parent.id },
@@ -98,7 +88,7 @@ export const routeResolvers = {
 
     transactions: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.transaction.findMany({
-        where: { routeId: parent.id },
+        where: { route: parent.id },
         orderBy: { date: 'desc' },
         take: 50,
       })
@@ -106,11 +96,11 @@ export const routeResolvers = {
 
     locations: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.location.findMany({
-        where: { routeId: parent.id },
+        where: { route: parent.id },
         include: {
-          municipality: {
+          municipalityRelation: {
             include: {
-              state: true,
+              stateRelation: true,
             },
           },
         },
@@ -119,39 +109,46 @@ export const routeResolvers = {
   },
 
   Location: {
-    route: async (parent: { routeId?: string }, _args: unknown, context: GraphQLContext) => {
-      if (!parent.routeId) return null
+    route: async (parent: { route?: string; routeRelation?: unknown }, _args: unknown, context: GraphQLContext) => {
+      if (parent.routeRelation) return parent.routeRelation
+      if (!parent.route) return null
       return context.prisma.route.findUnique({
-        where: { id: parent.routeId },
+        where: { id: parent.route },
       })
     },
 
-    municipality: async (parent: { municipalityId: string }, _args: unknown, context: GraphQLContext) => {
+    municipality: async (parent: { municipality: string; municipalityRelation?: unknown }, _args: unknown, context: GraphQLContext) => {
+      // Si ya está incluida la relación, devolverla
+      if (parent.municipalityRelation) return parent.municipalityRelation
+      // Si no, buscarla
       return context.prisma.municipality.findUnique({
-        where: { id: parent.municipalityId },
+        where: { id: parent.municipality },
         include: {
-          state: true,
+          stateRelation: true,
         },
       })
     },
 
     addresses: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.address.findMany({
-        where: { locationId: parent.id },
+        where: { location: parent.id },
       })
     },
   },
 
   Municipality: {
-    state: async (parent: { stateId: string }, _args: unknown, context: GraphQLContext) => {
+    state: async (parent: { state: string; stateRelation?: unknown }, _args: unknown, context: GraphQLContext) => {
+      // Si ya está incluida la relación, devolverla
+      if (parent.stateRelation) return parent.stateRelation
+      // Si no, buscarla
       return context.prisma.state.findUnique({
-        where: { id: parent.stateId },
+        where: { id: parent.state },
       })
     },
 
     locations: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.location.findMany({
-        where: { municipalityId: parent.id },
+        where: { municipality: parent.id },
       })
     },
   },
@@ -159,7 +156,7 @@ export const routeResolvers = {
   State: {
     municipalities: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.municipality.findMany({
-        where: { stateId: parent.id },
+        where: { state: parent.id },
       })
     },
   },
