@@ -23,11 +23,34 @@ export interface CreateLeadPaymentReceivedInput {
   cashPaidAmount: string | number
   bankPaidAmount: string | number
   falcoAmount?: string | number
+  paymentDate: Date | string
   payments: {
     loanId: string
     amount: string | number
     comission?: string | number
     paymentMethod: PaymentMethod
+  }[]
+}
+
+export interface UpdateLoanPaymentInput {
+  amount?: string | number
+  comission?: string | number
+  paymentMethod?: PaymentMethod
+}
+
+export interface UpdateLeadPaymentReceivedInput {
+  expectedAmount?: string | number
+  paidAmount?: string | number
+  cashPaidAmount?: string | number
+  bankPaidAmount?: string | number
+  falcoAmount?: string | number
+  payments?: {
+    paymentId?: string
+    loanId: string
+    amount: string | number
+    comission?: string | number
+    paymentMethod: PaymentMethod
+    isDeleted?: boolean
   }[]
 }
 
@@ -162,13 +185,37 @@ export class PaymentService {
     const cashPaidAmount = new Decimal(input.cashPaidAmount)
     const bankPaidAmount = new Decimal(input.bankPaidAmount)
     const falcoAmount = input.falcoAmount ? new Decimal(input.falcoAmount) : new Decimal(0)
+    const paymentDate = new Date(input.paymentDate)
 
     const paymentStatus = paidAmount.greaterThanOrEqualTo(expectedAmount)
       ? 'COMPLETE'
       : 'PARTIAL'
 
     return this.prisma.$transaction(async (tx) => {
-      // Crear el registro de pago del lead
+      // 1. Obtener cuentas del agente (EMPLOYEE_CASH_FUND y BANK)
+      const agent = await tx.employee.findUnique({
+        where: { id: input.agentId },
+        include: {
+          routes: {
+            include: {
+              accounts: {
+                where: {
+                  type: { in: ['EMPLOYEE_CASH_FUND', 'BANK'] }
+                }
+              }
+            }
+          }
+        }
+      })
+
+      const agentAccounts = agent?.routes?.flatMap(r => r.accounts) || []
+      const cashAccount = agentAccounts.find(a => a.type === 'EMPLOYEE_CASH_FUND')
+      const bankAccount = agentAccounts.find(a => a.type === 'BANK')
+
+      // Obtener routeId para las transacciones
+      const routeId = agent?.routes?.[0]?.id
+
+      // 2. Crear el registro de pago del lead
       const leadPaymentReceived = await this.paymentRepository.createLeadPaymentReceived({
         expectedAmount,
         paidAmount,
@@ -178,18 +225,39 @@ export class PaymentService {
         paymentStatus,
         lead: input.leadId,
         agent: input.agentId,
+        createdAt: paymentDate,
       })
 
-      // Crear los pagos individuales
+      // 3. Acumuladores para cambios en cuentas
+      let cashAmountChange = new Decimal(0)
+      let bankAmountChange = new Decimal(0)
+
+      // 4. Crear los pagos individuales y transacciones
       for (const paymentInput of input.payments) {
         const loan = await this.loanRepository.findById(paymentInput.loanId)
         if (!loan) continue
 
-        await this.paymentRepository.create(
+        const paymentAmount = new Decimal(paymentInput.amount)
+        const comissionAmount = paymentInput.comission ? new Decimal(paymentInput.comission) : new Decimal(0)
+
+        // Calcular profit y return to capital
+        const totalProfit = new Decimal(loan.profitAmount.toString())
+        const totalDebt = new Decimal(loan.totalDebtAcquired.toString())
+        const isBadDebt = !!loan.badDebtDate
+
+        const { profitAmount, returnToCapital } = calculatePaymentProfit(
+          paymentAmount,
+          totalProfit,
+          totalDebt,
+          isBadDebt
+        )
+
+        // Crear el pago
+        const payment = await this.paymentRepository.create(
           {
-            amount: new Decimal(paymentInput.amount),
-            comission: paymentInput.comission ? new Decimal(paymentInput.comission) : undefined,
-            receivedAt: new Date(),
+            amount: paymentAmount,
+            comission: comissionAmount.greaterThan(0) ? comissionAmount : undefined,
+            receivedAt: paymentDate,
             paymentMethod: paymentInput.paymentMethod,
             type: 'PAYMENT',
             loan: paymentInput.loanId,
@@ -197,6 +265,112 @@ export class PaymentService {
           },
           tx
         )
+
+        // Determinar cuenta destino según método de pago
+        const isTransfer = paymentInput.paymentMethod === 'MONEY_TRANSFER'
+        const destinationAccountId = isTransfer ? bankAccount?.id : cashAccount?.id
+
+        // Crear transacción INCOME (suma a la cuenta)
+        if (destinationAccountId) {
+          await this.transactionRepository.create(
+            {
+              amount: paymentAmount,
+              date: paymentDate,
+              type: 'INCOME',
+              incomeSource: isTransfer ? 'BANK_LOAN_PAYMENT' : 'CASH_LOAN_PAYMENT',
+              profitAmount,
+              returnToCapital,
+              destinationAccountId,
+              loanId: loan.id,
+              loanPaymentId: payment.id,
+              leadId: input.leadId,
+              routeId,
+              leadPaymentReceivedId: leadPaymentReceived.id,
+            },
+            tx
+          )
+        }
+
+        // Acumular cambio según método de pago
+        if (isTransfer) {
+          bankAmountChange = bankAmountChange.plus(paymentAmount)
+        } else {
+          cashAmountChange = cashAmountChange.plus(paymentAmount)
+        }
+
+        // Crear transacción EXPENSE por comisión (resta de la cuenta de efectivo)
+        if (comissionAmount.greaterThan(0) && cashAccount) {
+          await this.transactionRepository.create(
+            {
+              amount: comissionAmount,
+              date: paymentDate,
+              type: 'EXPENSE',
+              expenseSource: 'LOAN_PAYMENT_COMISSION',
+              sourceAccountId: cashAccount.id,
+              loanPaymentId: payment.id,
+              leadId: input.leadId,
+              routeId,
+            },
+            tx
+          )
+          // La comisión siempre se descuenta de efectivo
+          cashAmountChange = cashAmountChange.minus(comissionAmount)
+        }
+
+        // Actualizar métricas del préstamo
+        const currentTotalPaid = new Decimal(loan.totalPaid.toString())
+        const currentPending = new Decimal(loan.pendingAmountStored.toString())
+        const updatedPending = currentPending.minus(paymentAmount)
+
+        await tx.loan.update({
+          where: { id: loan.id },
+          data: {
+            totalPaid: currentTotalPaid.plus(paymentAmount),
+            pendingAmountStored: updatedPending.isNegative() ? new Decimal(0) : updatedPending,
+            comissionAmount: { increment: comissionAmount },
+            ...(updatedPending.lessThanOrEqualTo(0) && {
+              status: 'FINISHED',
+              finishedDate: paymentDate,
+            }),
+          },
+        })
+      }
+
+      // 5. Si hay transferencia de efectivo a banco (bankPaidAmount del modal)
+      if (bankPaidAmount.greaterThan(0) && cashAccount && bankAccount) {
+        await this.transactionRepository.create(
+          {
+            amount: bankPaidAmount,
+            date: paymentDate,
+            type: 'TRANSFER',
+            sourceAccountId: cashAccount.id,
+            destinationAccountId: bankAccount.id,
+            leadId: input.leadId,
+            routeId,
+            leadPaymentReceivedId: leadPaymentReceived.id,
+          },
+          tx
+        )
+        // Ajustar el cambio: restar de efectivo, sumar a banco
+        cashAmountChange = cashAmountChange.minus(bankPaidAmount)
+        bankAmountChange = bankAmountChange.plus(bankPaidAmount)
+      }
+
+      // 6. Actualizar balances de cuentas
+      if (cashAccount && !cashAmountChange.isZero()) {
+        const currentAmount = new Decimal(cashAccount.amount.toString())
+        await tx.account.update({
+          where: { id: cashAccount.id },
+          data: { amount: currentAmount.plus(cashAmountChange) },
+        })
+      }
+
+      if (bankAccount && !bankAmountChange.isZero()) {
+        const currentAmount = new Decimal(bankAccount.amount.toString())
+        await tx.account.update({
+          where: { id: bankAccount.id },
+          data: { amount: currentAmount.plus(bankAmountChange) },
+        })
       }
 
       return leadPaymentReceived
@@ -236,5 +410,542 @@ export class PaymentService {
     }
 
     return account
+  }
+
+  async updateLoanPayment(id: string, input: UpdateLoanPaymentInput) {
+    // Obtener el pago existente
+    const existingPayment = await this.paymentRepository.findById(id)
+    if (!existingPayment) {
+      throw new GraphQLError('Payment not found', {
+        extensions: { code: 'NOT_FOUND' },
+      })
+    }
+
+    const loan = existingPayment.loanRelation
+    const oldAmount = new Decimal(existingPayment.amount.toString())
+    const newAmount = input.amount ? new Decimal(input.amount) : oldAmount
+    const amountDiff = newAmount.minus(oldAmount)
+
+    const oldComission = new Decimal(existingPayment.comission.toString())
+    const newComission = input.comission !== undefined ? new Decimal(input.comission) : oldComission
+    const comissionDiff = newComission.minus(oldComission)
+
+    return this.prisma.$transaction(async (tx) => {
+      // Actualizar el pago
+      const updatedPayment = await this.paymentRepository.update(
+        id,
+        {
+          amount: input.amount ? newAmount : undefined,
+          comission: input.comission !== undefined ? newComission : undefined,
+          paymentMethod: input.paymentMethod,
+        },
+        tx
+      )
+
+      // Actualizar métricas del préstamo si cambió el monto
+      if (!amountDiff.isZero()) {
+        const currentTotalPaid = new Decimal(loan.totalPaid.toString())
+        const currentPending = new Decimal(loan.pendingAmountStored.toString())
+
+        await tx.loan.update({
+          where: { id: loan.id },
+          data: {
+            totalPaid: currentTotalPaid.plus(amountDiff),
+            pendingAmountStored: currentPending.minus(amountDiff),
+          },
+        })
+      }
+
+      // Actualizar comisiones del préstamo si cambió
+      if (!comissionDiff.isZero()) {
+        const currentComission = new Decimal(loan.comissionAmount.toString())
+        await tx.loan.update({
+          where: { id: loan.id },
+          data: {
+            comissionAmount: currentComission.plus(comissionDiff),
+          },
+        })
+      }
+
+      // Actualizar transacciones asociadas
+      if (input.amount || input.paymentMethod) {
+        const incomeSource = (input.paymentMethod || existingPayment.paymentMethod) === 'CASH'
+          ? 'CASH_LOAN_PAYMENT'
+          : 'BANK_LOAN_PAYMENT'
+
+        await tx.transaction.updateMany({
+          where: {
+            loanPayment: id,
+            type: 'INCOME',
+          },
+          data: {
+            amount: newAmount,
+            incomeSource,
+          },
+        })
+      }
+
+      // Actualizar transacción de comisión
+      if (input.comission !== undefined) {
+        if (newComission.isZero()) {
+          // Eliminar transacción de comisión si existe
+          await tx.transaction.deleteMany({
+            where: {
+              loanPayment: id,
+              type: 'EXPENSE',
+              expenseSource: 'LOAN_PAYMENT_COMISSION',
+            },
+          })
+        } else {
+          // Actualizar o crear transacción de comisión
+          const existingComissionTx = await tx.transaction.findFirst({
+            where: {
+              loanPayment: id,
+              type: 'EXPENSE',
+              expenseSource: 'LOAN_PAYMENT_COMISSION',
+            },
+          })
+
+          if (existingComissionTx) {
+            await tx.transaction.update({
+              where: { id: existingComissionTx.id },
+              data: { amount: newComission },
+            })
+          }
+          // Note: If there was no comission tx before and now there is, we don't create it
+          // because the original payment flow handles that
+        }
+      }
+
+      return updatedPayment
+    })
+  }
+
+  async deleteLoanPayment(id: string) {
+    // Obtener el pago existente
+    const existingPayment = await this.paymentRepository.findById(id)
+    if (!existingPayment) {
+      throw new GraphQLError('Payment not found', {
+        extensions: { code: 'NOT_FOUND' },
+      })
+    }
+
+    const loan = existingPayment.loanRelation
+    const amount = new Decimal(existingPayment.amount.toString())
+    const comission = new Decimal(existingPayment.comission.toString())
+
+    return this.prisma.$transaction(async (tx) => {
+      // Eliminar transacciones asociadas primero
+      await tx.transaction.deleteMany({
+        where: { loanPayment: id },
+      })
+
+      // Eliminar el pago
+      const deletedPayment = await this.paymentRepository.delete(id, tx)
+
+      // Revertir métricas del préstamo
+      const currentTotalPaid = new Decimal(loan.totalPaid.toString())
+      const currentPending = new Decimal(loan.pendingAmountStored.toString())
+      const currentComission = new Decimal(loan.comissionAmount.toString())
+
+      await tx.loan.update({
+        where: { id: loan.id },
+        data: {
+          totalPaid: currentTotalPaid.minus(amount),
+          pendingAmountStored: currentPending.plus(amount),
+          comissionAmount: currentComission.minus(comission),
+          // Si estaba terminado, volver a activar
+          status: 'ACTIVE',
+          finishedDate: null,
+        },
+      })
+
+      return deletedPayment
+    })
+  }
+
+  async updateLeadPaymentReceived(id: string, input: UpdateLeadPaymentReceivedInput) {
+    // Obtener el LeadPaymentReceived existente
+    const existingRecord = await this.paymentRepository.findLeadPaymentReceivedById(id)
+    if (!existingRecord) {
+      throw new GraphQLError('LeadPaymentReceived not found', {
+        extensions: { code: 'NOT_FOUND' },
+      })
+    }
+
+    const expectedAmount = input.expectedAmount !== undefined
+      ? new Decimal(input.expectedAmount)
+      : new Decimal(existingRecord.expectedAmount.toString())
+    const paidAmount = input.paidAmount !== undefined
+      ? new Decimal(input.paidAmount)
+      : new Decimal(existingRecord.paidAmount.toString())
+    const cashPaidAmount = input.cashPaidAmount !== undefined
+      ? new Decimal(input.cashPaidAmount)
+      : new Decimal(existingRecord.cashPaidAmount.toString())
+    const bankPaidAmount = input.bankPaidAmount !== undefined
+      ? new Decimal(input.bankPaidAmount)
+      : new Decimal(existingRecord.bankPaidAmount.toString())
+    const falcoAmount = input.falcoAmount !== undefined
+      ? new Decimal(input.falcoAmount)
+      : new Decimal(existingRecord.falcoAmount.toString())
+
+    const paymentStatus = paidAmount.greaterThanOrEqualTo(expectedAmount)
+      ? 'COMPLETE'
+      : 'PARTIAL'
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Obtener cuentas del agente (EMPLOYEE_CASH_FUND y BANK)
+      const agent = await tx.employee.findUnique({
+        where: { id: existingRecord.agent },
+        include: {
+          routes: {
+            include: {
+              accounts: {
+                where: {
+                  type: { in: ['EMPLOYEE_CASH_FUND', 'BANK'] }
+                }
+              }
+            }
+          }
+        }
+      })
+
+      const agentAccounts = agent?.routes?.flatMap(r => r.accounts) || []
+      const cashAccount = agentAccounts.find(a => a.type === 'EMPLOYEE_CASH_FUND')
+      const bankAccount = agentAccounts.find(a => a.type === 'BANK')
+      const routeId = agent?.routes?.[0]?.id
+
+      // 2. Calcular el efecto previo en los balances de las transacciones existentes
+      const existingTransactions = await tx.transaction.findMany({
+        where: { leadPaymentReceived: id }
+      })
+
+      let oldCashChange = new Decimal(0)
+      let oldBankChange = new Decimal(0)
+
+      for (const t of existingTransactions) {
+        const amount = new Decimal(t.amount.toString())
+        if (t.type === 'INCOME') {
+          if (t.incomeSource === 'CASH_LOAN_PAYMENT') {
+            oldCashChange = oldCashChange.plus(amount)
+          } else if (t.incomeSource === 'BANK_LOAN_PAYMENT') {
+            oldBankChange = oldBankChange.plus(amount)
+          }
+        } else if (t.type === 'EXPENSE' && t.expenseSource === 'LOAN_PAYMENT_COMISSION') {
+          oldCashChange = oldCashChange.minus(amount)
+        }
+      }
+
+      // Guardar bankPaidAmount anterior para calcular el delta de transferencia
+      const oldBankPaidAmount = new Decimal(existingRecord.bankPaidAmount.toString())
+
+      // 3. Acumuladores para los nuevos cambios
+      let newCashChange = new Decimal(0)
+      let newBankChange = new Decimal(0)
+
+      // Track de IDs de pagos procesados en el input
+      const processedPaymentIds = new Set<string>()
+
+      // Procesar cada pago en el input
+      if (input.payments) {
+        for (const paymentInput of input.payments) {
+          const paymentAmount = new Decimal(paymentInput.amount)
+          const paymentComission = paymentInput.comission
+            ? new Decimal(paymentInput.comission)
+            : new Decimal(0)
+
+          if (paymentInput.paymentId) {
+            // Pago existente - actualizar o eliminar
+            const existingPayment = existingRecord.payments.find(
+              (p) => p.id === paymentInput.paymentId
+            )
+
+            if (existingPayment) {
+              const oldAmount = new Decimal(existingPayment.amount.toString())
+              const oldComission = new Decimal(existingPayment.comission.toString())
+
+              // Marcar como procesado
+              processedPaymentIds.add(paymentInput.paymentId)
+
+              if (paymentInput.isDeleted) {
+                // Eliminar el pago
+                await tx.transaction.deleteMany({
+                  where: { loanPayment: paymentInput.paymentId },
+                })
+
+                await tx.loanPayment.delete({
+                  where: { id: paymentInput.paymentId },
+                })
+
+                // Revertir métricas del préstamo
+                const loan = existingPayment.loanRelation
+                await tx.loan.update({
+                  where: { id: loan.id },
+                  data: {
+                    totalPaid: { decrement: oldAmount },
+                    pendingAmountStored: { increment: oldAmount },
+                    comissionAmount: { decrement: oldComission },
+                    status: 'ACTIVE',
+                    finishedDate: null,
+                  },
+                })
+                // No acumular nada en newCashChange/newBankChange porque el pago se eliminó
+              } else {
+                // Actualizar el pago
+                const amountDiff = paymentAmount.minus(oldAmount)
+                const comissionDiff = paymentComission.minus(oldComission)
+
+                await tx.loanPayment.update({
+                  where: { id: paymentInput.paymentId },
+                  data: {
+                    amount: paymentAmount,
+                    comission: paymentComission,
+                    paymentMethod: paymentInput.paymentMethod,
+                  },
+                })
+
+                // Actualizar transacciones
+                const incomeSource = paymentInput.paymentMethod === 'CASH'
+                  ? 'CASH_LOAN_PAYMENT'
+                  : 'BANK_LOAN_PAYMENT'
+
+                const isTransfer = paymentInput.paymentMethod === 'MONEY_TRANSFER'
+                const destinationAccountId = isTransfer ? bankAccount?.id : cashAccount?.id
+
+                await tx.transaction.updateMany({
+                  where: {
+                    loanPayment: paymentInput.paymentId,
+                    type: 'INCOME',
+                  },
+                  data: {
+                    amount: paymentAmount,
+                    incomeSource,
+                    destinationAccount: destinationAccountId,
+                  },
+                })
+
+                // Actualizar transacción de comisión si existe
+                if (!comissionDiff.isZero()) {
+                  await tx.transaction.updateMany({
+                    where: {
+                      loanPayment: paymentInput.paymentId,
+                      type: 'EXPENSE',
+                      expenseSource: 'LOAN_PAYMENT_COMISSION',
+                    },
+                    data: {
+                      amount: paymentComission,
+                    },
+                  })
+                }
+
+                // Actualizar métricas del préstamo si cambió el monto
+                if (!amountDiff.isZero() || !comissionDiff.isZero()) {
+                  const loan = existingPayment.loanRelation
+                  await tx.loan.update({
+                    where: { id: loan.id },
+                    data: {
+                      totalPaid: { increment: amountDiff },
+                      pendingAmountStored: { decrement: amountDiff },
+                      comissionAmount: { increment: comissionDiff },
+                    },
+                  })
+                }
+
+                // Acumular nuevos cambios
+                if (isTransfer) {
+                  newBankChange = newBankChange.plus(paymentAmount)
+                } else {
+                  newCashChange = newCashChange.plus(paymentAmount)
+                }
+                // Comisión siempre afecta efectivo
+                newCashChange = newCashChange.minus(paymentComission)
+              }
+            }
+          } else if (!paymentInput.isDeleted && paymentAmount.greaterThan(0)) {
+            // Nuevo pago - crear
+            const loan = await this.loanRepository.findById(paymentInput.loanId)
+            if (!loan) continue
+
+            const isTransfer = paymentInput.paymentMethod === 'MONEY_TRANSFER'
+            const destinationAccountId = isTransfer ? bankAccount?.id : cashAccount?.id
+
+            // Calcular profit del pago
+            const totalProfit = new Decimal(loan.profitAmount.toString())
+            const totalDebt = new Decimal(loan.totalDebtAcquired.toString())
+            const isBadDebt = !!loan.badDebtDate
+
+            const { profitAmount, returnToCapital } = calculatePaymentProfit(
+              paymentAmount,
+              totalProfit,
+              totalDebt,
+              isBadDebt
+            )
+
+            const payment = await this.paymentRepository.create(
+              {
+                amount: paymentAmount,
+                comission: paymentComission,
+                receivedAt: new Date(),
+                paymentMethod: paymentInput.paymentMethod,
+                type: 'PAYMENT',
+                loan: paymentInput.loanId,
+                leadPaymentReceived: id,
+              },
+              tx
+            )
+
+            // Crear transacción INCOME
+            if (destinationAccountId) {
+              await this.transactionRepository.create(
+                {
+                  amount: paymentAmount,
+                  date: new Date(),
+                  type: 'INCOME',
+                  incomeSource: isTransfer ? 'BANK_LOAN_PAYMENT' : 'CASH_LOAN_PAYMENT',
+                  profitAmount,
+                  returnToCapital,
+                  destinationAccountId,
+                  loanId: loan.id,
+                  loanPaymentId: payment.id,
+                  leadId: existingRecord.lead,
+                  routeId,
+                  leadPaymentReceivedId: id,
+                },
+                tx
+              )
+            }
+
+            // Crear transacción EXPENSE por comisión si aplica
+            if (paymentComission.greaterThan(0) && cashAccount) {
+              await this.transactionRepository.create(
+                {
+                  amount: paymentComission,
+                  date: new Date(),
+                  type: 'EXPENSE',
+                  expenseSource: 'LOAN_PAYMENT_COMISSION',
+                  sourceAccountId: cashAccount.id,
+                  loanPaymentId: payment.id,
+                  leadId: existingRecord.lead,
+                  routeId,
+                },
+                tx
+              )
+            }
+
+            // Acumular nuevos cambios
+            if (isTransfer) {
+              newBankChange = newBankChange.plus(paymentAmount)
+            } else {
+              newCashChange = newCashChange.plus(paymentAmount)
+            }
+            newCashChange = newCashChange.minus(paymentComission)
+
+            // Actualizar métricas del préstamo
+            const currentTotalPaid = new Decimal(loan.totalPaid.toString())
+            const currentPending = new Decimal(loan.pendingAmountStored.toString())
+            const updatedPending = currentPending.minus(paymentAmount)
+
+            await tx.loan.update({
+              where: { id: loan.id },
+              data: {
+                totalPaid: currentTotalPaid.plus(paymentAmount),
+                pendingAmountStored: updatedPending.isNegative() ? new Decimal(0) : updatedPending,
+                comissionAmount: { increment: paymentComission },
+                ...(updatedPending.lessThanOrEqualTo(0) && {
+                  status: 'FINISHED',
+                  finishedDate: new Date(),
+                }),
+              },
+            })
+          }
+        }
+      }
+
+      // 3.1 Contar pagos existentes que NO fueron procesados (siguen igual)
+      // Estos pagos no están en el input pero sus transacciones siguen existiendo
+      for (const existingPayment of existingRecord.payments) {
+        if (!processedPaymentIds.has(existingPayment.id)) {
+          // Este pago no fue modificado, agregar su efecto a newCashChange/newBankChange
+          const amount = new Decimal(existingPayment.amount.toString())
+          const comission = new Decimal(existingPayment.comission.toString())
+          const isTransfer = existingPayment.paymentMethod === 'MONEY_TRANSFER'
+
+          if (isTransfer) {
+            newBankChange = newBankChange.plus(amount)
+          } else {
+            newCashChange = newCashChange.plus(amount)
+          }
+          // Comisión siempre afecta efectivo
+          newCashChange = newCashChange.minus(comission)
+        }
+      }
+
+      // 4. Calcular delta de bankPaidAmount (transferencia automática efectivo → banco)
+      const bankPaidAmountDelta = bankPaidAmount.minus(oldBankPaidAmount)
+
+      // 5. Calcular deltas netos para los balances de cuentas
+      // Fórmula: (nuevo - viejo) ajustado por la transferencia automática
+      // Efectivo: pagos CASH - comisiones - transferencia a banco
+      // Banco: pagos TRANSFER + transferencia desde efectivo
+      const netCashDelta = newCashChange.minus(oldCashChange).minus(bankPaidAmountDelta)
+      const netBankDelta = newBankChange.minus(oldBankChange).plus(bankPaidAmountDelta)
+
+      // 6. Actualizar balances de cuentas
+      if (cashAccount && !netCashDelta.isZero()) {
+        const currentCashAmount = new Decimal(cashAccount.amount.toString())
+        await tx.account.update({
+          where: { id: cashAccount.id },
+          data: { amount: currentCashAmount.plus(netCashDelta) },
+        })
+      }
+
+      if (bankAccount && !netBankDelta.isZero()) {
+        const currentBankAmount = new Decimal(bankAccount.amount.toString())
+        await tx.account.update({
+          where: { id: bankAccount.id },
+          data: { amount: currentBankAmount.plus(netBankDelta) },
+        })
+      }
+
+      // 7. Manejar transacción de transferencia (bankPaidAmount)
+      // Eliminar transferencia anterior si existe
+      await tx.transaction.deleteMany({
+        where: {
+          leadPaymentReceived: id,
+          type: 'TRANSFER',
+        },
+      })
+
+      // Crear nueva transferencia si bankPaidAmount > 0
+      if (bankPaidAmount.greaterThan(0) && cashAccount && bankAccount) {
+        await this.transactionRepository.create(
+          {
+            amount: bankPaidAmount,
+            date: new Date(),
+            type: 'TRANSFER',
+            sourceAccountId: cashAccount.id,
+            destinationAccountId: bankAccount.id,
+            leadId: existingRecord.lead,
+            routeId,
+            leadPaymentReceivedId: id,
+          },
+          tx
+        )
+      }
+
+      // Actualizar el registro LeadPaymentReceived
+      return this.paymentRepository.updateLeadPaymentReceived(
+        id,
+        {
+          expectedAmount,
+          paidAmount,
+          cashPaidAmount,
+          bankPaidAmount,
+          falcoAmount,
+          paymentStatus,
+        },
+        tx
+      )
+    })
   }
 }

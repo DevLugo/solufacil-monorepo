@@ -305,6 +305,50 @@ export const LEAD_PAYMENTS_QUERY = gql`
   }
 `
 
+export const LEAD_PAYMENT_RECEIVED_BY_DATE_QUERY = gql`
+  query LeadPaymentReceivedByDate($leadId: ID!, $startDate: DateTime!, $endDate: DateTime!) {
+    leadPaymentReceivedByLeadAndDate(leadId: $leadId, startDate: $startDate, endDate: $endDate) {
+      id
+      expectedAmount
+      paidAmount
+      cashPaidAmount
+      bankPaidAmount
+      paymentStatus
+    }
+  }
+`
+
+// Query to get loan payments by lead and date (Keystone approach)
+// Gets payments directly with leadPaymentReceived included
+export const LOAN_PAYMENTS_BY_LEAD_AND_DATE_QUERY = gql`
+  query LoanPaymentsByLeadAndDate($leadId: ID!, $startDate: DateTime!, $endDate: DateTime!) {
+    loanPaymentsByLeadAndDate(leadId: $leadId, startDate: $startDate, endDate: $endDate) {
+      id
+      amount
+      comission
+      receivedAt
+      paymentMethod
+      type
+      loan {
+        id
+        borrower {
+          personalData {
+            fullName
+          }
+        }
+      }
+      leadPaymentReceived {
+        id
+        expectedAmount
+        paidAmount
+        cashPaidAmount
+        bankPaidAmount
+        paymentStatus
+      }
+    }
+  }
+`
+
 export const ACTIVE_LOANS_BY_LEAD_QUERY = gql`
   query ActiveLoansByLead($leadId: ID!) {
     loans(leadId: $leadId, status: ACTIVE, limit: 100) {
@@ -340,6 +384,16 @@ export const ACTIVE_LOANS_BY_LEAD_QUERY = gql`
               phones {
                 number
               }
+            }
+          }
+          payments {
+            id
+            amount
+            comission
+            receivedAt
+            paymentMethod
+            leadPaymentReceived {
+              id
             }
           }
         }

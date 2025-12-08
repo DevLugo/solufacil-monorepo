@@ -394,6 +394,8 @@ type Query {
 
   # Payments
   loanPayments(loanId: ID!, limit: Int, offset: Int): [LoanPayment!]! @auth
+  loanPaymentsByLeadAndDate(leadId: ID!, startDate: DateTime!, endDate: DateTime!): [LoanPayment!]! @auth
+  leadPaymentReceivedByLeadAndDate(leadId: ID!, startDate: DateTime!, endDate: DateTime!): LeadPaymentReceived @auth
 
   # Transactions
   transactions(
@@ -529,6 +531,12 @@ input CreateLoanPaymentInput {
   paymentMethod: PaymentMethod!
 }
 
+input UpdateLoanPaymentInput {
+  amount: Decimal
+  comission: Decimal
+  paymentMethod: PaymentMethod
+}
+
 input CreateLeadPaymentReceivedInput {
   leadId: ID!
   agentId: ID!
@@ -537,6 +545,7 @@ input CreateLeadPaymentReceivedInput {
   cashPaidAmount: Decimal!
   bankPaidAmount: Decimal!
   falcoAmount: Decimal
+  paymentDate: DateTime!
   payments: [PaymentForLeadInput!]!
 }
 
@@ -545,6 +554,24 @@ input PaymentForLeadInput {
   amount: Decimal!
   comission: Decimal
   paymentMethod: PaymentMethod!
+}
+
+input UpdateLeadPaymentReceivedInput {
+  expectedAmount: Decimal
+  paidAmount: Decimal
+  cashPaidAmount: Decimal
+  bankPaidAmount: Decimal
+  falcoAmount: Decimal
+  payments: [UpdatePaymentForLeadInput!]
+}
+
+input UpdatePaymentForLeadInput {
+  paymentId: ID
+  loanId: ID!
+  amount: Decimal!
+  comission: Decimal
+  paymentMethod: PaymentMethod!
+  isDeleted: Boolean
 }
 
 input CreateAccountInput {
@@ -664,7 +691,10 @@ type Mutation {
 
   # Payments
   createLoanPayment(input: CreateLoanPaymentInput!): LoanPayment! @auth
+  updateLoanPayment(id: ID!, input: UpdateLoanPaymentInput!): LoanPayment! @auth
+  deleteLoanPayment(id: ID!): LoanPayment! @auth
   createLeadPaymentReceived(input: CreateLeadPaymentReceivedInput!): LeadPaymentReceived! @auth
+  updateLeadPaymentReceived(id: ID!, input: UpdateLeadPaymentReceivedInput!): LeadPaymentReceived! @auth
 
   # Accounts
   createAccount(input: CreateAccountInput!): Account! @requireRole(roles: [ADMIN])

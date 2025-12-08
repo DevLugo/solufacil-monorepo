@@ -80,6 +80,38 @@ export const CREATE_LOAN_PAYMENT = gql`
   }
 `
 
+export const UPDATE_LOAN_PAYMENT = gql`
+  mutation UpdateLoanPayment($id: ID!, $input: UpdateLoanPaymentInput!) {
+    updateLoanPayment(id: $id, input: $input) {
+      id
+      amount
+      comission
+      receivedAt
+      paymentMethod
+      loan {
+        id
+        totalPaid
+        pendingAmountStored
+        status
+      }
+    }
+  }
+`
+
+export const DELETE_LOAN_PAYMENT = gql`
+  mutation DeleteLoanPayment($id: ID!) {
+    deleteLoanPayment(id: $id) {
+      id
+      loan {
+        id
+        totalPaid
+        pendingAmountStored
+        status
+      }
+    }
+  }
+`
+
 export const CREATE_LEAD_PAYMENT_RECEIVED = gql`
   mutation CreateLeadPaymentReceived($input: CreateLeadPaymentReceivedInput!) {
     createLeadPaymentReceived(input: $input) {
@@ -94,6 +126,31 @@ export const CREATE_LEAD_PAYMENT_RECEIVED = gql`
         amount
         loan {
           id
+        }
+      }
+    }
+  }
+`
+
+export const UPDATE_LEAD_PAYMENT_RECEIVED = gql`
+  mutation UpdateLeadPaymentReceived($id: ID!, $input: UpdateLeadPaymentReceivedInput!) {
+    updateLeadPaymentReceived(id: $id, input: $input) {
+      id
+      expectedAmount
+      paidAmount
+      cashPaidAmount
+      bankPaidAmount
+      paymentStatus
+      payments {
+        id
+        amount
+        comission
+        paymentMethod
+        loan {
+          id
+          totalPaid
+          pendingAmountStored
+          status
         }
       }
     }

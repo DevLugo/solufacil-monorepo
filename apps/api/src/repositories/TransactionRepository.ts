@@ -99,16 +99,22 @@ export class TransactionRepository {
       expenseSource?: string
       profitAmount?: Decimal
       returnToCapital?: Decimal
-      sourceAccountId: string
+      sourceAccountId?: string
       destinationAccountId?: string
       loanId?: string
       loanPaymentId?: string
       routeId?: string
       leadId?: string
+      leadPaymentReceivedId?: string
     },
     tx?: Prisma.TransactionClient
   ) {
     const client = tx || this.prisma
+
+    // Para transacciones INCOME que no tienen sourceAccount, usamos destinationAccount como source
+    // (el dinero "entra" a la cuenta destino desde una fuente externa/pago)
+    const sourceAccount = data.sourceAccountId || data.destinationAccountId || ''
+
     return client.transaction.create({
       data: {
         amount: data.amount,
@@ -118,12 +124,13 @@ export class TransactionRepository {
         expenseSource: data.expenseSource,
         profitAmount: data.profitAmount,
         returnToCapital: data.returnToCapital,
-        sourceAccount: data.sourceAccountId,
+        sourceAccount,
         destinationAccount: data.destinationAccountId,
         loan: data.loanId,
         loanPayment: data.loanPaymentId,
         route: data.routeId,
         lead: data.leadId,
+        leadPaymentReceived: data.leadPaymentReceivedId,
       },
       include: {
         sourceAccountRelation: true,
