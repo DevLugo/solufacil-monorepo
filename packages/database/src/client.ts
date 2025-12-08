@@ -23,8 +23,7 @@ export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     adapter,
-    // TEMPORAL: Desactivado 'query' para debug - reactivar después
-    log: ['error'],
+    log: ['error', 'warn'],
     transactionOptions: {
       maxWait: 5000,
       timeout: 10000,

@@ -420,59 +420,6 @@ export function AbonosTab() {
 
   return (
     <div className="space-y-4">
-      {/* DEBUG PANEL - REMOVER DESPUÉS */}
-      <Card className="bg-yellow-50 border-yellow-300">
-        <CardHeader className="py-2">
-          <CardTitle className="text-sm text-yellow-800">DEBUG INFO</CardTitle>
-        </CardHeader>
-        <CardContent className="py-2 text-xs font-mono">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <strong>selectedLeadId:</strong> {selectedLeadId || 'null'}
-            </div>
-            <div>
-              <strong>selectedDate:</strong> {selectedDate?.toISOString() || 'null'}
-            </div>
-            <div>
-              <strong>startDateUTC:</strong> {startDateUTC}
-            </div>
-            <div>
-              <strong>endDateUTC:</strong> {endDateUTC}
-            </div>
-            <div>
-              <strong>leadPaymentReceivedId:</strong>{' '}
-              <span className={leadPaymentReceivedId ? 'text-green-600' : 'text-red-600'}>
-                {leadPaymentReceivedId || 'NULL (este es el problema)'}
-              </span>
-            </div>
-            <div>
-              <strong>leadPaymentData:</strong>{' '}
-              {JSON.stringify(leadPaymentData?.leadPaymentReceivedByLeadAndDate || 'null')}
-            </div>
-            <div>
-              <strong>registeredPaymentsMap.size:</strong> {registeredPaymentsMap.size}
-            </div>
-            <div>
-              <strong>hasEdits:</strong> {Object.keys(editedPayments).length > 0 ? 'YES' : 'NO'}
-            </div>
-          </div>
-          {registeredPaymentsMap.size > 0 && (
-            <div className="mt-2 border-t border-yellow-300 pt-2">
-              <strong>Pagos registrados hoy:</strong>
-              <ul className="ml-4">
-                {Array.from(registeredPaymentsMap.entries()).slice(0, 3).map(([loanId, payment]) => (
-                  <li key={loanId}>
-                    loanId: {loanId.slice(0, 8)}..., paymentId: {payment.id.slice(0, 8)}...,
-                    leadPaymentReceived: {payment.leadPaymentReceived?.id || 'NULL'}
-                  </li>
-                ))}
-                {registeredPaymentsMap.size > 3 && <li>...y {registeredPaymentsMap.size - 3} más</li>}
-              </ul>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Loans Table */}
       <Card className="relative">
         <div className="sticky top-16 z-20 bg-card rounded-t-lg shadow-sm">

@@ -12,6 +12,11 @@ dist
 # Testing
 coverage
 
+# Playwright
+playwright-report/
+test-results/
+.playwright/
+
 # Misc
 .DS_Store
 *.pem
