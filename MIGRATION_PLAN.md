@@ -2458,13 +2458,463 @@ export class CloudinaryService {
 
 ---
 
+---
+
+## FASE 4: MIGRACIÓN FRONTEND (Next.js 15)
+
+### 4.1 Arquitectura de Componentes
+
+#### Estructura Modular por Feature
+
+Cada feature/tab debe seguir esta estructura modular para mantener archivos pequeños (~500 líneas máx) y facilitar el mantenimiento:
+
+```
+components/features/transactions/{feature-name}/
+├── index.tsx              # Componente principal/orquestador (máx ~600 líneas)
+├── types.ts               # TypeScript interfaces y types
+├── utils.ts               # Funciones utilitarias puras
+├── components/            # Sub-componentes de UI
+│   ├── index.ts          # Barrel export
+│   ├── ComponentA.tsx
+│   ├── ComponentB.tsx
+│   └── ...
+└── hooks/                 # Custom hooks
+    ├── index.ts          # Barrel export
+    ├── useFeatureQueries.ts   # Apollo queries
+    ├── useFeatureState.ts     # Estado local
+    └── useFeatureCalculations.ts  # Cálculos derivados
+```
+
+**Ejemplo real (abonos-tab):**
+```
+components/features/transactions/abonos/
+├── index.tsx              (574 líneas) - Orquestador principal
+├── types.ts               (119 líneas) - Interfaces TypeScript
+├── utils.ts               (105 líneas) - Funciones de utilidad
+├── components/
+│   ├── index.ts           - Barrel export
+│   ├── ActionBar.tsx      - Barra de acciones
+│   ├── KPIBadges.tsx      - Badges de métricas
+│   ├── LoanPaymentRow.tsx - Fila de tabla
+│   ├── ConfirmSaveModal.tsx
+│   ├── HeaderSection.tsx
+│   └── RouteLocalitySelector.tsx
+└── hooks/
+    ├── index.ts           - Barrel export
+    ├── useAbonosQueries.ts - Queries GraphQL
+    ├── usePayments.ts     - Estado de pagos
+    └── useTotals.ts       - Cálculos de totales
+```
+
+#### Barrel Exports
+
+Usar barrel exports para imports limpios:
+
+```typescript
+// components/index.ts
+export { ActionBar } from './ActionBar'
+export { KPIBadges } from './KPIBadges'
+export { LoanPaymentRow } from './LoanPaymentRow'
+// ...
+
+// hooks/index.ts
+export { useAbonosQueries } from './useAbonosQueries'
+export { usePayments } from './usePayments'
+export { useTotals } from './useTotals'
+```
+
+**Uso en index.tsx:**
+```typescript
+import { ActionBar, KPIBadges, LoanPaymentRow } from './components'
+import { useAbonosQueries, usePayments, useTotals } from './hooks'
+```
+
+---
+
+### 4.2 Separación de Responsabilidades
+
+#### types.ts - Definición de Tipos
+
+Incluir todas las interfaces y types del feature:
+
+```typescript
+// types.ts
+export interface ActiveLoan {
+  id: string
+  borrower: { personalData: { fullName: string, phones: Phone[] } }
+  loantype: { loanPaymentComission: string }
+  expectedWeeklyPayment: string
+  signDate: string | null
+  collaterals: Collateral[]
+}
+
+export interface PaymentEntry {
+  loanId: string
+  amount: string
+  commission: string
+  paymentMethod: 'CASH' | 'MONEY_TRANSFER'
+  isNoPayment: boolean
+}
+
+export interface CombinedTotals {
+  total: number
+  cash: number
+  bank: number
+  commission: number
+  noPayment: number
+  deleted: number
+}
+```
+
+#### utils.ts - Funciones Puras
+
+Funciones sin efectos secundarios, fáciles de testear:
+
+```typescript
+// utils.ts
+export function getRowStyle(params: RowStyleParams): RowStyle {
+  if (params.isMarkedForDeletion) return { className: 'bg-red-100', ... }
+  if (params.isEditing) return { className: 'bg-yellow-50', ... }
+  // ...
+}
+
+export function hasIncompleteAval(loan: ActiveLoan): boolean {
+  const aval = loan.collaterals?.[0]
+  return !aval || !aval.fullName
+}
+
+export function calculatePaymentTotals(payments: PaymentEntry[]): PaymentTotals {
+  return payments.reduce((acc, p) => ({
+    count: acc.count + 1,
+    total: acc.total + parseFloat(p.amount || '0'),
+    // ...
+  }), initialTotals)
+}
+```
+
+#### hooks/ - Lógica de Estado
+
+Separar queries, estado y cálculos en hooks especializados:
+
+**useFeatureQueries.ts** - Apollo queries:
+```typescript
+export function useAbonosQueries(routeId: string, localityId: string, date: string) {
+  const { data: activeLoans, loading, refetch } = useQuery(GET_ACTIVE_LOANS, {
+    variables: { routeId, localityId },
+    skip: !routeId || !localityId,
+  })
+
+  const { data: payments } = useQuery(GET_PAYMENTS_BY_DATE, {
+    variables: { date, leadId },
+    skip: !leadId,
+  })
+
+  return { activeLoans, payments, loading, refetch }
+}
+```
+
+**useFeatureState.ts** - Estado local:
+```typescript
+export function usePayments(initialPayments: LoanPayment[]) {
+  const [payments, setPayments] = useState<Map<string, PaymentEntry>>(new Map())
+  const [editedPayments, setEditedPayments] = useState<Map<string, EditedPayment>>(new Map())
+
+  const handlePaymentChange = useCallback((loanId: string, amount: string) => {
+    setPayments(prev => {
+      const next = new Map(prev)
+      next.set(loanId, { ...next.get(loanId), amount })
+      return next
+    })
+  }, [])
+
+  return { payments, editedPayments, handlePaymentChange, ... }
+}
+```
+
+**useFeatureCalculations.ts** - Derivados con useMemo:
+```typescript
+export function useTotals(payments: Map<string, PaymentEntry>, registeredPayments: LoanPayment[]) {
+  const paymentTotals = useMemo(() => {
+    return calculatePaymentTotals(Array.from(payments.values()))
+  }, [payments])
+
+  const combinedTotals = useMemo(() => {
+    return calculateCombinedTotals(payments, registeredPayments, editedPayments)
+  }, [payments, registeredPayments, editedPayments])
+
+  return { paymentTotals, combinedTotals }
+}
+```
+
+---
+
+### 4.3 Migración de GraphQL
+
+#### Paso 1: Analizar Queries del Original (Keystone)
+
+Revisar qué queries usa el componente original:
+
+```typescript
+// En keystone: SummaryTabNew.tsx
+const GET_TRANSACTIONS_SUMMARY = gql`
+  query GetTransactionsSummary($startDate: DateTime!, $endDate: DateTime!, $routeId: ID) {
+    transactionsSummary(startDate: $startDate, endDate: $endDate, routeId: $routeId) {
+      totalIncome
+      totalExpenses
+      // ...
+    }
+  }
+`
+```
+
+#### Paso 2: Verificar Schema en el Monorepo
+
+**SIEMPRE verificar** que la query/mutation exista en el schema actual:
+
+```bash
+# Buscar en schema.graphql
+cat packages/graphql-schema/src/schema.graphql | grep -A 20 "transactionsSummary"
+```
+
+Si no existe:
+1. Agregar al schema.graphql
+2. Regenerar types: `pnpm --filter @solufacil/graphql-schema codegen`
+3. Implementar resolver en apps/api
+
+#### Paso 3: Crear/Actualizar Query en Frontend
+
+```typescript
+// apps/web/graphql/queries/transactions.ts
+export const GET_TRANSACTIONS_SUMMARY = gql`
+  query GetTransactionsSummary($startDate: DateTime!, $endDate: DateTime!, $routeId: ID) {
+    transactionsSummary(startDate: $startDate, endDate: $endDate, routeId: $routeId) {
+      totalIncome
+      totalExpenses
+      byLocality {
+        localityId
+        localityName
+        income
+        expenses
+      }
+    }
+  }
+`
+```
+
+#### Errores Comunes y Soluciones
+
+| Error | Causa | Solución |
+|-------|-------|----------|
+| `Unknown field "X"` | Campo no existe en schema | Verificar schema.graphql |
+| `Variable "$X" is not defined` | Typo en nombre de variable | Comparar nombres exactos |
+| `Cannot query field on type` | Tipo incorrecto en response | Verificar types generados |
+| `Not authenticated` | Token faltante | Verificar ApolloProvider auth |
+
+---
+
+### 4.4 Flujo de Trabajo de Migración
+
+#### Paso a Paso para Migrar un Componente
+
+1. **Analizar componente original** en keystone
+   ```bash
+   cat /path/to/keystone/admin/components/transactions/SummaryTabNew.tsx
+   ```
+
+2. **Identificar dependencias**:
+   - Queries GraphQL usadas
+   - Tipos de datos
+   - Componentes UI
+   - Estado local
+
+3. **Crear estructura de carpetas**:
+   ```bash
+   mkdir -p apps/web/components/features/transactions/summary
+   mkdir -p apps/web/components/features/transactions/summary/components
+   mkdir -p apps/web/components/features/transactions/summary/hooks
+   touch apps/web/components/features/transactions/summary/{index.tsx,types.ts,utils.ts}
+   ```
+
+4. **Migrar en orden**:
+   1. `types.ts` - Interfaces primero
+   2. `utils.ts` - Funciones de utilidad
+   3. `hooks/` - Custom hooks
+   4. `components/` - Sub-componentes
+   5. `index.tsx` - Orquestador principal
+
+5. **Verificar GraphQL**:
+   - ¿Query existe en schema?
+   - ¿Resolver implementado?
+   - ¿Types generados?
+
+6. **Testing**:
+   - Escribir tests e2e para flujos críticos
+   - Verificar estados de loading/error
+   - Probar interacciones de usuario
+
+---
+
+### 4.5 Patrones de UI/UX Recomendados
+
+#### Estado de Carga
+
+```tsx
+import { Skeleton } from '@/components/ui/skeleton'
+
+if (loading) {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-64 w-full" />
+    </div>
+  )
+}
+```
+
+#### Manejo de Errores
+
+```tsx
+if (error) {
+  return (
+    <Alert variant="destructive">
+      <AlertCircle className="h-4 w-4" />
+      <AlertDescription>Error al cargar datos: {error.message}</AlertDescription>
+    </Alert>
+  )
+}
+```
+
+#### Optimistic Updates
+
+```tsx
+const [mutate] = useMutation(SAVE_PAYMENT, {
+  optimisticResponse: {
+    savePayment: { ...expectedResult }
+  },
+  update: (cache, { data }) => {
+    // Actualizar cache local
+  }
+})
+```
+
+#### Map-based Lookups para Performance
+
+```typescript
+// En vez de .find() repetido, usar Map
+const registeredPaymentsMap = useMemo(() => {
+  const map = new Map<string, LoanPayment>()
+  registeredPayments?.forEach(p => map.set(p.loan.id, p))
+  return map
+}, [registeredPayments])
+
+// Lookup O(1) en render
+const existingPayment = registeredPaymentsMap.get(loan.id)
+```
+
+---
+
+### 4.6 Convenciones de Código
+
+#### Imports
+
+```typescript
+// 1. React/Next imports
+import { useState, useCallback, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+
+// 2. Third-party imports
+import { useQuery, useMutation } from '@apollo/client'
+import { format } from 'date-fns'
+
+// 3. UI components
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+
+// 4. Feature components
+import { ActionBar, KPIBadges } from './components'
+import { useAbonosQueries, usePayments } from './hooks'
+
+// 5. Types and utils
+import type { ActiveLoan, PaymentEntry } from './types'
+import { calculateTotals, getRowStyle } from './utils'
+```
+
+#### Nombrado
+
+```typescript
+// Hooks: use + Nombre descriptivo
+useAbonosQueries, usePayments, useTotals
+
+// Handlers: handle + Acción
+handlePaymentChange, handleToggleNoPayment, handleSave
+
+// Computados: nombre descriptivo sin prefijo
+filteredLoans, combinedTotals, paymentTotals
+
+// Booleanos: is/has/should prefijo
+isLoading, hasChanges, isEditing, shouldRefetch
+```
+
+#### Props de Componentes
+
+```typescript
+interface LoanPaymentRowProps {
+  loan: ActiveLoan
+  index: number
+  payment: PaymentEntry | undefined
+  registeredPayment: LoanPayment | undefined
+  // Callbacks
+  onPaymentChange: (amount: string) => void
+  onToggleNoPayment: (shiftKey: boolean) => void
+  onStartEdit: () => void
+}
+```
+
+---
+
+### 4.7 Ejemplo: Migración de summary-tab
+
+**Componente original**: `solufacil-keystone/admin/components/transactions/SummaryTabNew.tsx`
+
+**Features a migrar**:
+- Estadísticas ejecutivas (totales por localidad)
+- Cards de localidades con transacciones
+- Modal de ingresos bancarios
+- Soporte de tema claro/oscuro
+
+**Estructura objetivo**:
+```
+components/features/transactions/summary/
+├── index.tsx              # Tab principal
+├── types.ts               # SummaryData, LocalityStats, etc.
+├── utils.ts               # formatCurrency, calculateTotals
+├── components/
+│   ├── index.ts
+│   ├── ExecutiveSummary.tsx  # Stats cards arriba
+│   ├── LocalityCard.tsx      # Card por localidad
+│   ├── TransactionList.tsx   # Lista de transacciones
+│   └── BankIncomeModal.tsx   # Modal de ingresos banco
+└── hooks/
+    ├── index.ts
+    ├── useSummaryQueries.ts  # GET_TRANSACTIONS_SUMMARY
+    └── useSummaryState.ts    # Filtros, modal state
+```
+
+**Queries necesarias** (verificar en schema.graphql):
+- `transactionsSummary` - Resumen por fecha y ruta
+- `routes` - Lista de rutas activas
+- `transactions` - Transacciones filtradas (ya existe)
+
+---
+
 ## PRÓXIMOS PASOS
 
 1. **Aprobar este plan de especificaciones**
 2. **Comenzar con Fase 2.1**: Setup del monorepo
 3. **Implementar fase por fase** siguiendo el orden
 4. **Validar cada fase** antes de continuar
-5. **Al final**: Web (Next.js 15) y Mobile (Flutter)
+5. **Fase 4**: Web (Next.js 15) siguiendo la guía de migración frontend
+6. **Al final**: Mobile (Flutter)
 
 ---
 

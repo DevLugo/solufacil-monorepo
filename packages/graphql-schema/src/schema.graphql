@@ -98,6 +98,7 @@ type Employee {
   id: ID!
   type: EmployeeType!
   personalData: PersonalData!
+  location: Location
   routes: [Route!]!
   loansGranted: [Loan!]!
   loansManagedAsLead: [Loan!]!

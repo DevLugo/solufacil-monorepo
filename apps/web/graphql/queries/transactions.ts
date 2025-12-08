@@ -76,11 +76,18 @@ export const TRANSACTIONS_QUERY = gql`
           returnToCapital
           loan {
             id
+            amountGived
             borrower {
               personalData {
                 fullName
               }
             }
+          }
+          loanPayment {
+            id
+            amount
+            comission
+            paymentMethod
           }
           sourceAccount {
             id
@@ -100,6 +107,12 @@ export const TRANSACTIONS_QUERY = gql`
             id
             personalData {
               fullName
+              addresses {
+                location {
+                  id
+                  name
+                }
+              }
             }
           }
           createdAt
@@ -478,6 +491,137 @@ export const TRANSFERS_BY_DATE_QUERY = gql`
           route {
             id
             name
+          }
+          createdAt
+        }
+      }
+      totalCount
+    }
+  }
+`
+
+// ============================================================
+// SUMMARY - Para Tab de Resumen
+// ============================================================
+
+// Query to get INCOME transactions (payments received) for summary
+export const INCOME_TRANSACTIONS_BY_DATE_QUERY = gql`
+  query IncomeTransactionsByDate($fromDate: DateTime!, $toDate: DateTime!, $routeId: ID!) {
+    transactions(
+      type: INCOME
+      routeId: $routeId
+      fromDate: $fromDate
+      toDate: $toDate
+      limit: 500
+    ) {
+      edges {
+        node {
+          id
+          amount
+          date
+          type
+          incomeSource
+          profitAmount
+          returnToCapital
+          loan {
+            id
+            borrower {
+              id
+              personalData {
+                id
+                fullName
+              }
+            }
+          }
+          loanPayment {
+            id
+            amount
+            comission
+            paymentMethod
+          }
+          sourceAccount {
+            id
+            name
+            type
+          }
+          route {
+            id
+            name
+          }
+          lead {
+            id
+            personalData {
+              id
+              fullName
+            }
+            location {
+              id
+              name
+            }
+          }
+          createdAt
+        }
+      }
+      totalCount
+    }
+  }
+`
+
+// Query to get all transaction types for full summary
+export const ALL_TRANSACTIONS_BY_DATE_QUERY = gql`
+  query AllTransactionsByDate($fromDate: DateTime!, $toDate: DateTime!, $routeId: ID!) {
+    transactions(
+      routeId: $routeId
+      fromDate: $fromDate
+      toDate: $toDate
+      limit: 500
+    ) {
+      edges {
+        node {
+          id
+          amount
+          date
+          type
+          incomeSource
+          expenseSource
+          profitAmount
+          returnToCapital
+          loan {
+            id
+            amountGived
+            borrower {
+              id
+              personalData {
+                id
+                fullName
+              }
+            }
+          }
+          loanPayment {
+            id
+            amount
+            comission
+            paymentMethod
+          }
+          sourceAccount {
+            id
+            name
+            type
+          }
+          route {
+            id
+            name
+          }
+          lead {
+            id
+            personalData {
+              id
+              fullName
+            }
+            location {
+              id
+              name
+            }
           }
           createdAt
         }

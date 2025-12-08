@@ -239,6 +239,7 @@ export type Employee = {
   id: Scalars['ID']['output'];
   loansGranted: Array<Loan>;
   loansManagedAsLead: Array<Loan>;
+  location?: Maybe<Location>;
   personalData: PersonalData;
   routes: Array<Route>;
   transactions: Array<Transaction>;
@@ -1353,6 +1354,7 @@ export type EmployeeResolvers<ContextType = GraphQLContext, ParentType extends R
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   loansGranted?: Resolver<Array<ResolversTypes['Loan']>, ParentType, ContextType>;
   loansManagedAsLead?: Resolver<Array<ResolversTypes['Loan']>, ParentType, ContextType>;
+  location?: Resolver<Maybe<ResolversTypes['Location']>, ParentType, ContextType>;
   personalData?: Resolver<ResolversTypes['PersonalData'], ParentType, ContextType>;
   routes?: Resolver<Array<ResolversTypes['Route']>, ParentType, ContextType>;
   transactions?: Resolver<Array<ResolversTypes['Transaction']>, ParentType, ContextType>;

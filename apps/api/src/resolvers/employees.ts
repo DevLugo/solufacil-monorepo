@@ -159,5 +159,53 @@ export const employeeResolvers = {
         orderBy: { createdAt: 'desc' },
       })
     },
+
+    location: async (parent: { personalData: string }, _args: unknown, context: GraphQLContext) => {
+      // Get location from first address of personalData
+      const personalData = await context.prisma.personalData.findUnique({
+        where: { id: parent.personalData },
+        include: {
+          addresses: {
+            take: 1,
+            include: {
+              locationRelation: {
+                include: {
+                  municipalityRelation: {
+                    include: {
+                      stateRelation: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      })
+
+      const firstAddress = personalData?.addresses?.[0]
+      if (!firstAddress?.locationRelation) {
+        return null
+      }
+
+      // Map to GraphQL Location type
+      const loc = firstAddress.locationRelation
+      return {
+        id: loc.id,
+        name: loc.name,
+        route: loc.route,
+        municipality: loc.municipalityRelation
+          ? {
+              id: loc.municipalityRelation.id,
+              name: loc.municipalityRelation.name,
+              state: loc.municipalityRelation.stateRelation
+                ? {
+                    id: loc.municipalityRelation.stateRelation.id,
+                    name: loc.municipalityRelation.stateRelation.name,
+                  }
+                : null,
+            }
+          : null,
+      }
+    },
   },
 }
