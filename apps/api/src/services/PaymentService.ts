@@ -565,6 +565,21 @@ export class PaymentService {
   }
 
   async updateLeadPaymentReceived(id: string, input: UpdateLeadPaymentReceivedInput) {
+    // Escribir logs a archivo para debug
+    const fs = require('fs')
+    const logFile = '/tmp/payment_debug.log'
+    const log = (msg: string) => {
+      fs.appendFileSync(logFile, msg + '\n')
+      console.log(msg)
+    }
+
+    fs.writeFileSync(logFile, `\n\n========== ${new Date().toISOString()} ==========\n`)
+    log('🔴🔴🔴 UPDATELEADPAYMENTRECEIVED LLAMADO 🔴🔴🔴')
+    log(`ID: ${id}`)
+    log(`Input payments count: ${input.payments?.length || 0}`)
+    log('Input: ' + JSON.stringify(input, null, 2))
+    log('🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴\n')
+
     // Obtener el LeadPaymentReceived existente
     const existingRecord = await this.paymentRepository.findLeadPaymentReceivedById(id)
     if (!existingRecord) {
@@ -615,29 +630,28 @@ export class PaymentService {
       const bankAccount = agentAccounts.find(a => a.type === 'BANK')
       const routeId = agent?.routes?.[0]?.id
 
-      // 2. Calcular el efecto previo en los balances de las transacciones existentes
-      const existingTransactions = await tx.transaction.findMany({
-        where: { leadPaymentReceived: id }
-      })
+      // 2. Calcular el delta basándose SOLO en los pagos que se modifican
+      // Solo contamos los pagos que vienen en el input, no todos los del record
+      const fs = require('fs')
+      const logFile = '/tmp/payment_debug.log'
+      const log = (msg: string) => fs.appendFileSync(logFile, msg + '\n')
 
+      log('=== DEBUG updateLeadPaymentReceived ===')
+      log(`LeadPaymentReceivedId: ${id}`)
+      log(`Total pagos existentes en record: ${existingRecord.payments.length}`)
+      log(`Total pagos en input: ${input.payments?.length || 0}`)
+
+      // Crear mapa de pagos existentes para búsqueda rápida
+      const existingPaymentsMap = new Map(
+        existingRecord.payments.map(p => [p.id, p])
+      )
+
+      // oldCashChange = efecto de los pagos QUE SE VAN A MODIFICAR (valores anteriores)
+      // newCashChange = efecto NUEVO de esos pagos (valores nuevos)
       let oldCashChange = new Decimal(0)
       let oldBankChange = new Decimal(0)
 
-      for (const t of existingTransactions) {
-        const amount = new Decimal(t.amount.toString())
-        if (t.type === 'INCOME') {
-          if (t.incomeSource === 'CASH_LOAN_PAYMENT') {
-            oldCashChange = oldCashChange.plus(amount)
-          } else if (t.incomeSource === 'BANK_LOAN_PAYMENT') {
-            oldBankChange = oldBankChange.plus(amount)
-          }
-        } else if (t.type === 'EXPENSE' && t.expenseSource === 'LOAN_PAYMENT_COMISSION') {
-          oldCashChange = oldCashChange.minus(amount)
-        }
-      }
-
-      // Guardar bankPaidAmount anterior para calcular el delta de transferencia
-      const oldBankPaidAmount = new Decimal(existingRecord.bankPaidAmount.toString())
+      log('\nCalculando oldCashChange SOLO de pagos que se modifican:')
 
       // 3. Acumuladores para los nuevos cambios
       let newCashChange = new Decimal(0)
@@ -646,6 +660,38 @@ export class PaymentService {
       // Track de IDs de pagos procesados en el input
       const processedPaymentIds = new Set<string>()
 
+      // Primero, calcular oldCashChange SOLO de los pagos que vienen en el input
+      log('\nCalculando OLD values de pagos en el input:')
+      if (input.payments) {
+        for (const paymentInput of input.payments) {
+          if (paymentInput.paymentId) {
+            const existingPayment = existingPaymentsMap.get(paymentInput.paymentId)
+            if (existingPayment) {
+              const oldAmount = new Decimal(existingPayment.amount.toString())
+              const oldComission = new Decimal(existingPayment.comission.toString())
+              const wasTransfer = existingPayment.paymentMethod === 'MONEY_TRANSFER'
+
+              log(`  - paymentId: ${paymentInput.paymentId.slice(0,8)}..., oldAmount: ${oldAmount}, oldComission: ${oldComission}`)
+
+              if (wasTransfer) {
+                log(`    -> oldBankChange += ${oldAmount}`)
+                oldBankChange = oldBankChange.plus(oldAmount)
+              } else {
+                log(`    -> oldCashChange += ${oldAmount}`)
+                oldCashChange = oldCashChange.plus(oldAmount)
+              }
+              log(`    -> oldCashChange -= ${oldComission} (comision)`)
+              oldCashChange = oldCashChange.minus(oldComission)
+            }
+          }
+        }
+      }
+
+      log(`\noldCashChange total: ${oldCashChange}`)
+      log(`oldBankChange total: ${oldBankChange}`)
+
+      log('\nProcesando pagos del input (NEW values):')
+
       // Procesar cada pago en el input
       if (input.payments) {
         for (const paymentInput of input.payments) {
@@ -653,6 +699,11 @@ export class PaymentService {
           const paymentComission = paymentInput.comission
             ? new Decimal(paymentInput.comission)
             : new Decimal(0)
+
+          log(`\n  Procesando pago del input:`)
+          log(`    paymentId: ${paymentInput.paymentId || 'NUEVO'}`)
+          log(`    amount: ${paymentAmount}, comission: ${paymentComission}`)
+          log(`    isDeleted: ${paymentInput.isDeleted}, method: ${paymentInput.paymentMethod}`)
 
           if (paymentInput.paymentId) {
             // Pago existente - actualizar o eliminar
@@ -664,10 +715,13 @@ export class PaymentService {
               const oldAmount = new Decimal(existingPayment.amount.toString())
               const oldComission = new Decimal(existingPayment.comission.toString())
 
+              log(`    Es pago existente - oldAmount: ${oldAmount}, oldComission: ${oldComission}`)
+
               // Marcar como procesado
               processedPaymentIds.add(paymentInput.paymentId)
 
               if (paymentInput.isDeleted) {
+                log(`    -> ELIMINANDO pago, no se acumula en newCashChange`)
                 // Eliminar el pago
                 await tx.transaction.deleteMany({
                   where: { loanPayment: paymentInput.paymentId },
@@ -752,16 +806,21 @@ export class PaymentService {
                 }
 
                 // Acumular nuevos cambios
+                log(`    -> ACTUALIZANDO pago:`)
                 if (isTransfer) {
+                  log(`      newBankChange += ${paymentAmount}`)
                   newBankChange = newBankChange.plus(paymentAmount)
                 } else {
+                  log(`      newCashChange += ${paymentAmount}`)
                   newCashChange = newCashChange.plus(paymentAmount)
                 }
                 // Comisión siempre afecta efectivo
+                log(`      newCashChange -= ${paymentComission} (comision)`)
                 newCashChange = newCashChange.minus(paymentComission)
               }
             }
           } else if (!paymentInput.isDeleted && paymentAmount.greaterThan(0)) {
+            log(`    -> NUEVO pago (no tiene paymentId)`)
             // Nuevo pago - crear
             const loan = await this.loanRepository.findById(paymentInput.loanId)
             if (!loan) continue
@@ -861,34 +920,36 @@ export class PaymentService {
         }
       }
 
-      // 3.1 Contar pagos existentes que NO fueron procesados (siguen igual)
-      // Estos pagos no están en el input pero sus transacciones siguen existiendo
+      // 3.1 Pagos existentes que NO fueron enviados en el input
+      // IMPORTANTE: Si el frontend no envía un pago, NO lo contamos en newCashChange
+      // porque el frontend solo envía los pagos relevantes para esta operación.
+      // Los pagos no enviados mantienen sus transacciones pero NO afectan el delta.
+      log('\nPagos existentes NO procesados (ignorados para el delta):')
       for (const existingPayment of existingRecord.payments) {
         if (!processedPaymentIds.has(existingPayment.id)) {
-          // Este pago no fue modificado, agregar su efecto a newCashChange/newBankChange
-          const amount = new Decimal(existingPayment.amount.toString())
-          const comission = new Decimal(existingPayment.comission.toString())
-          const isTransfer = existingPayment.paymentMethod === 'MONEY_TRANSFER'
-
-          if (isTransfer) {
-            newBankChange = newBankChange.plus(amount)
-          } else {
-            newCashChange = newCashChange.plus(amount)
-          }
-          // Comisión siempre afecta efectivo
-          newCashChange = newCashChange.minus(comission)
+          log(`  - paymentId: ${existingPayment.id.slice(0,8)}... (IGNORADO - no enviado en input)`)
         }
       }
 
-      // 4. Calcular delta de bankPaidAmount (transferencia automática efectivo → banco)
-      const bankPaidAmountDelta = bankPaidAmount.minus(oldBankPaidAmount)
+      // 3.2 Agregar el efecto del bankPaidAmount (transferencia de efectivo a banco)
+      log(`\nbankPaidAmount: ${bankPaidAmount}`)
+      if (bankPaidAmount.greaterThan(0)) {
+        log(`  -> newCashChange -= ${bankPaidAmount}, newBankChange += ${bankPaidAmount}`)
+        newCashChange = newCashChange.minus(bankPaidAmount)
+        newBankChange = newBankChange.plus(bankPaidAmount)
+      }
 
-      // 5. Calcular deltas netos para los balances de cuentas
-      // Fórmula: (nuevo - viejo) ajustado por la transferencia automática
-      // Efectivo: pagos CASH - comisiones - transferencia a banco
-      // Banco: pagos TRANSFER + transferencia desde efectivo
-      const netCashDelta = newCashChange.minus(oldCashChange).minus(bankPaidAmountDelta)
-      const netBankDelta = newBankChange.minus(oldBankChange).plus(bankPaidAmountDelta)
+      log(`\nnewCashChange total: ${newCashChange}`)
+      log(`newBankChange total: ${newBankChange}`)
+
+      // 4. Calcular deltas netos para los balances de cuentas
+      const netCashDelta = newCashChange.minus(oldCashChange)
+      const netBankDelta = newBankChange.minus(oldBankChange)
+
+      log(`\n=== RESULTADO FINAL ===`)
+      log(`netCashDelta: ${netCashDelta} (newCash ${newCashChange} - oldCash ${oldCashChange})`)
+      log(`netBankDelta: ${netBankDelta} (newBank ${newBankChange} - oldBank ${oldBankChange})`)
+      log(`=== END DEBUG ===\n`)
 
       // 6. Actualizar balances de cuentas
       if (cashAccount && !netCashDelta.isZero()) {

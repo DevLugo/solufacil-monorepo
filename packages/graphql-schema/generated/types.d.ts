@@ -175,6 +175,7 @@ export type CreateLeadPaymentReceivedInput = {
     falcoAmount?: InputMaybe<Scalars['Decimal']['input']>;
     leadId: Scalars['ID']['input'];
     paidAmount: Scalars['Decimal']['input'];
+    paymentDate: Scalars['DateTime']['input'];
     payments: Array<PaymentForLeadInput>;
 };
 export type CreateLoanInput = {
