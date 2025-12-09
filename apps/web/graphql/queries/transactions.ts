@@ -506,6 +506,78 @@ export const TRANSFERS_BY_DATE_QUERY = gql`
   }
 `
 
+// Query para transferencias E inversiones de capital (incluye TRANSFER e INCOME/MONEY_INVESTMENT)
+export const TRANSFERS_AND_INVESTMENTS_BY_DATE_QUERY = gql`
+  query TransfersAndInvestmentsByDate($fromDate: DateTime!, $toDate: DateTime!, $routeId: ID!) {
+    transfers: transactions(
+      type: TRANSFER
+      routeId: $routeId
+      fromDate: $fromDate
+      toDate: $toDate
+      limit: 100
+    ) {
+      edges {
+        node {
+          id
+          amount
+          date
+          type
+          incomeSource
+          sourceAccount {
+            id
+            name
+            type
+          }
+          destinationAccount {
+            id
+            name
+            type
+          }
+          route {
+            id
+            name
+          }
+          createdAt
+        }
+      }
+      totalCount
+    }
+    investments: transactions(
+      type: INCOME
+      routeId: $routeId
+      fromDate: $fromDate
+      toDate: $toDate
+      limit: 100
+    ) {
+      edges {
+        node {
+          id
+          amount
+          date
+          type
+          incomeSource
+          sourceAccount {
+            id
+            name
+            type
+          }
+          destinationAccount {
+            id
+            name
+            type
+          }
+          route {
+            id
+            name
+          }
+          createdAt
+        }
+      }
+      totalCount
+    }
+  }
+`
+
 // ============================================================
 // SUMMARY - Para Tab de Resumen
 // ============================================================

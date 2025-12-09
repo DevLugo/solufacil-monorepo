@@ -46,11 +46,10 @@ export function TransferenciasTab() {
   const { selectedRouteId, selectedDate, selectedLeadId } = useTransactionContext()
 
   // Queries
-  const { transfers, accounts, transfersLoading, accountsLoading, refetchTransfers } =
-    useTransferQueries({
-      selectedRouteId,
-      selectedDate,
-    })
+  const { transfers, accounts, transfersLoading, accountsLoading, refetchAll } = useTransferQueries({
+    selectedRouteId,
+    selectedDate,
+  })
 
   // Form
   const {
@@ -74,7 +73,7 @@ export function TransferenciasTab() {
     selectedLeadId,
     selectedDate,
     accounts,
-    onSuccess: refetchTransfers,
+    onSuccess: refetchAll,
   })
 
   // Early returns for loading/empty states

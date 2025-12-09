@@ -15,6 +15,7 @@ export interface Transfer {
   amount: string
   date: string
   type: string
+  incomeSource?: string
   sourceAccount: {
     id: string
     name: string
