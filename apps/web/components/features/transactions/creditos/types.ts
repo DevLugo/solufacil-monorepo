@@ -23,6 +23,8 @@ export interface ActiveLoanData {
 // Unified value type that can represent either borrower or personal data (aval)
 export interface UnifiedClientValue {
   id?: string
+  personalDataId?: string // Track for mutations
+  phoneId?: string // Track for mutations
   fullName: string
   phone?: string
   locationId?: string

@@ -76,16 +76,10 @@ const UPDATE_PERSONAL_DATA_MUTATION = gql`
 // Re-export types for convenience
 export type { ClientState, ClientAction, UnifiedClientValue } from '../types'
 
-// Extended value type to track personalDataId for mutations
-interface UnifiedClientValueExtended extends UnifiedClientValue {
-  personalDataId?: string
-  phoneId?: string
-}
-
 interface UnifiedClientAutocompleteProps {
   mode: 'borrower' | 'aval'
-  value?: UnifiedClientValueExtended | null
-  onValueChange: (value: UnifiedClientValueExtended | null) => void
+  value?: UnifiedClientValue | null
+  onValueChange: (value: UnifiedClientValue | null) => void
   // For borrower mode
   leadId?: string
   // For aval mode - exclude borrower from results
@@ -197,6 +191,8 @@ export function UnifiedClientAutocomplete({
 
       return {
         id: loan.borrower.id,
+        personalDataId: loan.borrower.personalData?.id, // Track for mutations
+        phoneId: loan.borrower.personalData?.phones?.[0]?.id, // Track for mutations
         fullName: loan.borrower.personalData?.fullName || 'Sin nombre',
         phone: loan.borrower.personalData?.phones?.[0]?.number,
         locationId: borrowerLocation?.id,
@@ -259,7 +255,7 @@ export function UnifiedClientAutocomplete({
   const results = useMemo(() => {
     if (mode === 'borrower') {
       const borrowers: BorrowerSearchResult[] = borrowerData?.searchBorrowers || []
-      return borrowers.map((b): UnifiedClientValueExtended => {
+      return borrowers.map((b): UnifiedClientValue => {
         // Check if borrower has an active loan
         const activeLoan = activeLoansByBorrowerId.get(b.id)
         let activeLoanData: ActiveLoanData | undefined
@@ -304,7 +300,7 @@ export function UnifiedClientAutocomplete({
       })
     } else {
       const personalData: PersonalData[] = personalDataData?.searchPersonalData || []
-      return personalData.map((p): UnifiedClientValueExtended => {
+      return personalData.map((p): UnifiedClientValue => {
         const personLocationId = p.addresses?.[0]?.location?.id
         const personLocationName = p.addresses?.[0]?.location?.name
         return {
@@ -406,7 +402,7 @@ export function UnifiedClientAutocomplete({
 
   // Handle selecting existing client
   const handleSelect = useCallback(
-    (client: UnifiedClientValueExtended) => {
+    (client: UnifiedClientValue) => {
       onValueChange({
         ...client,
         originalFullName: client.fullName,
