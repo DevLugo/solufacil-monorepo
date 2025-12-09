@@ -629,6 +629,14 @@ input CreateTransactionInput {
   leadId: ID
 }
 
+input UpdateTransactionInput {
+  amount: Decimal
+  expenseSource: String
+  incomeSource: String
+  sourceAccountId: ID
+  description: String
+}
+
 input TransferInput {
   amount: Decimal!
   sourceAccountId: ID!
@@ -789,6 +797,8 @@ type Mutation {
 
   # Transactions
   createTransaction(input: CreateTransactionInput!): Transaction! @auth
+  updateTransaction(id: ID!, input: UpdateTransactionInput!): Transaction! @auth
+  deleteTransaction(id: ID!): Boolean! @auth
   transferBetweenAccounts(input: TransferInput!): Transaction! @auth
 
   # Routes

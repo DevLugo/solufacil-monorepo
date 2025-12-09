@@ -25,6 +25,14 @@ export interface TransferInput {
   description?: string
 }
 
+export interface UpdateTransactionInput {
+  amount?: string | number
+  expenseSource?: string
+  incomeSource?: string
+  sourceAccountId?: string
+  description?: string
+}
+
 export class TransactionService {
   private transactionRepository: TransactionRepository
   private accountRepository: AccountRepository
@@ -138,6 +146,81 @@ export class TransactionService {
       await this.accountRepository.recalculateAndUpdateBalance(input.destinationAccountId, tx)
 
       return transaction
+    })
+  }
+
+  async update(id: string, input: UpdateTransactionInput) {
+    // Obtener transacción actual
+    const existingTransaction = await this.transactionRepository.findById(id)
+    if (!existingTransaction) {
+      throw new GraphQLError('Transaction not found', {
+        extensions: { code: 'NOT_FOUND' },
+      })
+    }
+
+    // Si se está cambiando la cuenta, validar que existe
+    if (input.sourceAccountId) {
+      const accountExists = await this.accountRepository.exists(input.sourceAccountId)
+      if (!accountExists) {
+        throw new GraphQLError('Source account not found', {
+          extensions: { code: 'NOT_FOUND' },
+        })
+      }
+    }
+
+    const oldSourceAccountId = existingTransaction.sourceAccount
+    const newSourceAccountId = input.sourceAccountId || oldSourceAccountId
+
+    return this.prisma.$transaction(async (tx) => {
+      // Actualizar la transacción
+      const updatedTransaction = await this.transactionRepository.update(
+        id,
+        {
+          amount: input.amount ? new Decimal(input.amount) : undefined,
+          expenseSource: input.expenseSource,
+          incomeSource: input.incomeSource,
+          sourceAccountId: input.sourceAccountId,
+        },
+        tx
+      )
+
+      // Recalcular balance de la cuenta anterior si cambió
+      if (input.sourceAccountId && input.sourceAccountId !== oldSourceAccountId) {
+        await this.accountRepository.recalculateAndUpdateBalance(oldSourceAccountId, tx)
+      }
+
+      // Siempre recalcular la cuenta actual/nueva
+      await this.accountRepository.recalculateAndUpdateBalance(newSourceAccountId, tx)
+
+      return updatedTransaction
+    })
+  }
+
+  async delete(id: string) {
+    // Obtener transacción actual
+    const existingTransaction = await this.transactionRepository.findById(id)
+    if (!existingTransaction) {
+      throw new GraphQLError('Transaction not found', {
+        extensions: { code: 'NOT_FOUND' },
+      })
+    }
+
+    const sourceAccountId = existingTransaction.sourceAccount
+    const destinationAccountId = existingTransaction.destinationAccount
+
+    return this.prisma.$transaction(async (tx) => {
+      // Eliminar la transacción
+      await this.transactionRepository.delete(id, tx)
+
+      // Recalcular balance de la cuenta fuente
+      await this.accountRepository.recalculateAndUpdateBalance(sourceAccountId, tx)
+
+      // Si hay cuenta destino (transferencias), también recalcular
+      if (destinationAccountId) {
+        await this.accountRepository.recalculateAndUpdateBalance(destinationAccountId, tx)
+      }
+
+      return true
     })
   }
 }

@@ -76,6 +76,37 @@ export const transactionResolvers = {
       return transactionService.create(args.input)
     },
 
+    updateTransaction: async (
+      _parent: unknown,
+      args: {
+        id: string
+        input: {
+          amount?: string
+          expenseSource?: string
+          incomeSource?: string
+          sourceAccountId?: string
+          description?: string
+        }
+      },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      const transactionService = new TransactionService(context.prisma)
+      return transactionService.update(args.id, args.input)
+    },
+
+    deleteTransaction: async (
+      _parent: unknown,
+      args: { id: string },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      const transactionService = new TransactionService(context.prisma)
+      return transactionService.delete(args.id)
+    },
+
     transferBetweenAccounts: async (
       _parent: unknown,
       args: {

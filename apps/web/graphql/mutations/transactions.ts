@@ -294,6 +294,39 @@ export const CREATE_TRANSACTION = gql`
   }
 `
 
+export const UPDATE_TRANSACTION = gql`
+  mutation UpdateTransaction($id: ID!, $input: UpdateTransactionInput!) {
+    updateTransaction(id: $id, input: $input) {
+      id
+      amount
+      date
+      type
+      incomeSource
+      expenseSource
+      sourceAccount {
+        id
+        name
+        amount
+      }
+      destinationAccount {
+        id
+        name
+        amount
+      }
+      route {
+        id
+        name
+      }
+    }
+  }
+`
+
+export const DELETE_TRANSACTION = gql`
+  mutation DeleteTransaction($id: ID!) {
+    deleteTransaction(id: $id)
+  }
+`
+
 export const TRANSFER_BETWEEN_ACCOUNTS = gql`
   mutation TransferBetweenAccounts($input: TransferInput!) {
     transferBetweenAccounts(input: $input) {

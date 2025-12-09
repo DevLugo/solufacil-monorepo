@@ -444,6 +444,7 @@ export type Mutation = {
   createUser: User;
   deleteDocumentPhoto: Scalars['Boolean']['output'];
   deleteLoanPayment: LoanPayment;
+  deleteTransaction: Scalars['Boolean']['output'];
   deleteUser: Scalars['Boolean']['output'];
   finishLoan: Loan;
   login: AuthPayload;
@@ -465,6 +466,7 @@ export type Mutation = {
   updatePersonalData: PersonalData;
   updatePhone: Phone;
   updateRoute: Route;
+  updateTransaction: Transaction;
   updateUser: User;
   uploadDocumentPhoto: DocumentPhoto;
 };
@@ -548,6 +550,11 @@ export type MutationDeleteDocumentPhotoArgs = {
 
 
 export type MutationDeleteLoanPaymentArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationDeleteTransactionArgs = {
   id: Scalars['ID']['input'];
 };
 
@@ -663,6 +670,12 @@ export type MutationUpdatePhoneArgs = {
 export type MutationUpdateRouteArgs = {
   id: Scalars['ID']['input'];
   input: UpdateRouteInput;
+};
+
+
+export type MutationUpdateTransactionArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateTransactionInput;
 };
 
 
@@ -1080,6 +1093,14 @@ export type UpdateRouteInput = {
   name?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type UpdateTransactionInput = {
+  amount?: InputMaybe<Scalars['Decimal']['input']>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  expenseSource?: InputMaybe<Scalars['String']['input']>;
+  incomeSource?: InputMaybe<Scalars['String']['input']>;
+  sourceAccountId?: InputMaybe<Scalars['ID']['input']>;
+};
+
 export type UpdateUserInput = {
   email?: InputMaybe<Scalars['String']['input']>;
   role?: InputMaybe<UserRole>;
@@ -1272,6 +1293,7 @@ export type ResolversTypes = ResolversObject<{
   UpdatePersonalDataInput: UpdatePersonalDataInput;
   UpdatePhoneInput: UpdatePhoneInput;
   UpdateRouteInput: UpdateRouteInput;
+  UpdateTransactionInput: UpdateTransactionInput;
   UpdateUserInput: UpdateUserInput;
   Upload: ResolverTypeWrapper<Scalars['Upload']['output']>;
   UploadDocumentInput: UploadDocumentInput;
@@ -1353,6 +1375,7 @@ export type ResolversParentTypes = ResolversObject<{
   UpdatePersonalDataInput: UpdatePersonalDataInput;
   UpdatePhoneInput: UpdatePhoneInput;
   UpdateRouteInput: UpdateRouteInput;
+  UpdateTransactionInput: UpdateTransactionInput;
   UpdateUserInput: UpdateUserInput;
   Upload: Scalars['Upload']['output'];
   UploadDocumentInput: UploadDocumentInput;
@@ -1643,6 +1666,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   createUser?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationCreateUserArgs, 'input'>>;
   deleteDocumentPhoto?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteDocumentPhotoArgs, 'id'>>;
   deleteLoanPayment?: Resolver<ResolversTypes['LoanPayment'], ParentType, ContextType, RequireFields<MutationDeleteLoanPaymentArgs, 'id'>>;
+  deleteTransaction?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteTransactionArgs, 'id'>>;
   deleteUser?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteUserArgs, 'id'>>;
   finishLoan?: Resolver<ResolversTypes['Loan'], ParentType, ContextType, RequireFields<MutationFinishLoanArgs, 'loanId'>>;
   login?: Resolver<ResolversTypes['AuthPayload'], ParentType, ContextType, RequireFields<MutationLoginArgs, 'email' | 'password'>>;
@@ -1664,6 +1688,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   updatePersonalData?: Resolver<ResolversTypes['PersonalData'], ParentType, ContextType, RequireFields<MutationUpdatePersonalDataArgs, 'fullName' | 'id'>>;
   updatePhone?: Resolver<ResolversTypes['Phone'], ParentType, ContextType, RequireFields<MutationUpdatePhoneArgs, 'input'>>;
   updateRoute?: Resolver<ResolversTypes['Route'], ParentType, ContextType, RequireFields<MutationUpdateRouteArgs, 'id' | 'input'>>;
+  updateTransaction?: Resolver<ResolversTypes['Transaction'], ParentType, ContextType, RequireFields<MutationUpdateTransactionArgs, 'id' | 'input'>>;
   updateUser?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationUpdateUserArgs, 'id' | 'input'>>;
   uploadDocumentPhoto?: Resolver<ResolversTypes['DocumentPhoto'], ParentType, ContextType, RequireFields<MutationUploadDocumentPhotoArgs, 'input'>>;
 }>;

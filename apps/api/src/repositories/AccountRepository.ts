@@ -1,6 +1,34 @@
 import type { PrismaClient, Account, AccountType, Prisma } from '@solufacil/database'
 import { Decimal } from 'decimal.js'
 
+/**
+ * AccountRepository - Gestión de cuentas y balances
+ *
+ * ===============================================================
+ * IMPORTANTE: POLÍTICA DE BALANCE DE CUENTAS
+ * ===============================================================
+ *
+ * El campo `amount` de las cuentas representa el balance calculado
+ * a partir de las transacciones. NUNCA debe modificarse directamente.
+ *
+ * En lugar de modificar `amount` manualmente:
+ * 1. Crear la transacción correspondiente (INCOME, EXPENSE, TRANSFER)
+ * 2. Llamar a `recalculateAndUpdateBalance()` para actualizar el balance
+ *
+ * Flujo correcto:
+ * ```typescript
+ * // Después de crear/editar/eliminar una transacción:
+ * await accountRepository.recalculateAndUpdateBalance(accountId, tx)
+ * ```
+ *
+ * Tipos de transacciones y su efecto en el balance:
+ * - INCOME (sourceAccount=cuenta): +amount (dinero ENTRA)
+ * - EXPENSE (sourceAccount=cuenta): -amount (dinero SALE)
+ * - TRANSFER (destinationAccount=cuenta): +amount (dinero ENTRA)
+ * - TRANSFER (sourceAccount=cuenta): -amount (dinero SALE)
+ *
+ * ===============================================================
+ */
 export class AccountRepository {
   constructor(private prisma: PrismaClient) {}
 
@@ -68,14 +96,6 @@ export class AccountRepository {
       include: {
         routes: true,
       },
-    })
-  }
-
-  async updateBalance(id: string, newAmount: Decimal, tx?: Prisma.TransactionClient) {
-    const client = tx || this.prisma
-    return client.account.update({
-      where: { id },
-      data: { amount: newAmount },
     })
   }
 

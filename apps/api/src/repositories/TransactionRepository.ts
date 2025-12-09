@@ -138,4 +138,39 @@ export class TransactionRepository {
       },
     })
   }
+
+  async update(
+    id: string,
+    data: {
+      amount?: Decimal
+      expenseSource?: string
+      incomeSource?: string
+      sourceAccountId?: string
+    },
+    tx?: Prisma.TransactionClient
+  ) {
+    const client = tx || this.prisma
+
+    return client.transaction.update({
+      where: { id },
+      data: {
+        amount: data.amount,
+        expenseSource: data.expenseSource,
+        incomeSource: data.incomeSource,
+        sourceAccount: data.sourceAccountId,
+      },
+      include: {
+        sourceAccountRelation: true,
+        destinationAccountRelation: true,
+      },
+    })
+  }
+
+  async delete(id: string, tx?: Prisma.TransactionClient) {
+    const client = tx || this.prisma
+
+    return client.transaction.delete({
+      where: { id },
+    })
+  }
 }
