@@ -3,6 +3,29 @@ import { BorrowerService } from '../services/BorrowerService'
 import { authenticateUser } from '../middleware/auth'
 
 export const borrowerResolvers = {
+  Query: {
+    searchBorrowers: async (
+      _parent: unknown,
+      args: {
+        searchTerm: string
+        leadId?: string
+        locationId?: string
+        limit?: number
+      },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      const borrowerService = new BorrowerService(context.prisma)
+      return borrowerService.searchByName({
+        searchTerm: args.searchTerm,
+        leadId: args.leadId,
+        locationId: args.locationId,
+        limit: args.limit,
+      })
+    },
+  },
+
   Mutation: {
     createBorrower: async (
       _parent: unknown,

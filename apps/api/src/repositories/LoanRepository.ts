@@ -49,6 +49,7 @@ export class LoanRepository {
     status?: LoanStatus
     routeId?: string
     leadId?: string
+    locationId?: string
     borrowerId?: string
     fromDate?: Date
     toDate?: Date
@@ -73,6 +74,20 @@ export class LoanRepository {
       where.lead = options.leadId
     }
 
+    // Filter by lead's location - finds all active loans in a specific locality
+    // The lead's address defines the locality where the loan was granted
+    if (options?.locationId) {
+      where.leadRelation = {
+        personalDataRelation: {
+          addresses: {
+            some: {
+              location: options.locationId,
+            },
+          },
+        },
+      }
+    }
+
     if (options?.borrowerId) {
       where.borrower = options.borrowerId
     }
@@ -90,6 +105,9 @@ export class LoanRepository {
         where.signDate.lte = options.toDate
       }
     }
+
+    // DEBUG: Log query parameters
+    console.log('[LoanRepository.findMany] where:', JSON.stringify(where), 'limit:', options?.limit ?? 50)
 
     const [loans, totalCount] = await Promise.all([
       this.prisma.loan.findMany({
@@ -166,6 +184,9 @@ export class LoanRepository {
       }),
       this.prisma.loan.count({ where }),
     ])
+
+    // DEBUG: Log result count
+    console.log('[LoanRepository.findMany] found:', loans.length, 'total:', totalCount)
 
     return { loans, totalCount }
   }

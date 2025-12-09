@@ -58,6 +58,111 @@ export const CANCEL_LOAN = gql`
   }
 `
 
+export const CREATE_LOANS_IN_BATCH = gql`
+  mutation CreateLoansInBatch($input: CreateLoansInBatchInput!) {
+    createLoansInBatch(input: $input) {
+      id
+      requestedAmount
+      amountGived
+      signDate
+      comissionAmount
+      totalDebtAcquired
+      expectedWeeklyPayment
+      pendingAmountStored
+      status
+      loantype {
+        id
+        name
+        weekDuration
+      }
+      borrower {
+        id
+        personalData {
+          id
+          fullName
+          phones {
+            id
+            number
+          }
+        }
+      }
+      collaterals {
+        id
+        fullName
+        phones {
+          id
+          number
+        }
+      }
+      previousLoan {
+        id
+        status
+      }
+    }
+  }
+`
+
+export const UPDATE_LOAN_EXTENDED = gql`
+  mutation UpdateLoanExtended($id: ID!, $input: UpdateLoanExtendedInput!) {
+    updateLoanExtended(id: $id, input: $input) {
+      id
+      requestedAmount
+      amountGived
+      totalDebtAcquired
+      expectedWeeklyPayment
+      pendingAmountStored
+      loantype {
+        id
+        name
+        weekDuration
+      }
+      borrower {
+        id
+        personalData {
+          id
+          fullName
+          phones {
+            id
+            number
+          }
+        }
+      }
+      collaterals {
+        id
+        fullName
+        phones {
+          id
+          number
+        }
+      }
+    }
+  }
+`
+
+export const CANCEL_LOAN_WITH_ACCOUNT_RESTORE = gql`
+  mutation CancelLoanWithAccountRestore($id: ID!, $accountId: ID!) {
+    cancelLoanWithAccountRestore(id: $id, accountId: $accountId) {
+      id
+      status
+      amountGived
+      borrower {
+        personalData {
+          fullName
+        }
+      }
+    }
+  }
+`
+
+export const UPDATE_PHONE = gql`
+  mutation UpdatePhone($input: UpdatePhoneInput!) {
+    updatePhone(input: $input) {
+      id
+      number
+    }
+  }
+`
+
 // ============================================================
 // PAYMENT MUTATIONS - Para Tab de Abonos
 // ============================================================

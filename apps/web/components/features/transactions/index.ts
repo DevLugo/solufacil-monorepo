@@ -2,6 +2,6 @@ export { TransactionProvider, useTransactionContext } from './transaction-contex
 export { TransactionSelectors } from './transaction-selectors'
 export { ResumenTab } from './resumen-tab'
 export { AbonosTab } from './abonos-tab'
-export { CreditosTab } from './creditos-tab'
+export { CreditosTab } from './creditos'
 export { GastosTab } from './gastos-tab'
 export { TransferenciasTab } from './transferencias-tab'

@@ -58,7 +58,7 @@ const cache = new InMemoryCache({
     Query: {
       fields: {
         loans: {
-          keyArgs: ['where', 'orderBy'],
+          keyArgs: ['status', 'routeId', 'leadId', 'locationId', 'borrowerId', 'fromDate', 'toDate', 'limit', 'offset'],
           merge(existing, incoming) {
             return incoming
           },

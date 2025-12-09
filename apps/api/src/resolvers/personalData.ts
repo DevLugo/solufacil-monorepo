@@ -1,7 +1,65 @@
 import type { GraphQLContext } from '@solufacil/graphql-schema'
+import { PersonalDataService } from '../services/PersonalDataService'
+import { authenticateUser } from '../middleware/auth'
 
 // Resolver para mapear campos de Prisma a GraphQL para PersonalData y Address
 export const personalDataResolvers = {
+  Query: {
+    searchPersonalData: async (
+      _parent: unknown,
+      args: {
+        searchTerm: string
+        excludeBorrowerId?: string
+        locationId?: string
+        limit?: number
+      },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      const personalDataService = new PersonalDataService(context.prisma)
+      return personalDataService.search({
+        searchTerm: args.searchTerm,
+        excludeBorrowerId: args.excludeBorrowerId,
+        locationId: args.locationId,
+        limit: args.limit,
+      })
+    },
+  },
+
+  Mutation: {
+    updatePersonalData: async (
+      _parent: unknown,
+      args: {
+        id: string
+        fullName: string
+      },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      const personalDataService = new PersonalDataService(context.prisma)
+      return personalDataService.updateName(args.id, args.fullName)
+    },
+
+    updatePhone: async (
+      _parent: unknown,
+      args: {
+        input: {
+          personalDataId: string
+          phoneId?: string
+          number: string
+        }
+      },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      const personalDataService = new PersonalDataService(context.prisma)
+      return personalDataService.updatePhone(args.input)
+    },
+  },
+
   PersonalData: {
     // Los phones y addresses ya vienen incluidos normalmente
     employee: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {

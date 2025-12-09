@@ -22,6 +22,7 @@ export const loanResolvers = {
         status?: LoanStatus
         routeId?: string
         leadId?: string
+        locationId?: string
         borrowerId?: string
         fromDate?: Date
         toDate?: Date
@@ -37,6 +38,7 @@ export const loanResolvers = {
         status: args.status ?? undefined,
         routeId: args.routeId ?? undefined,
         leadId: args.leadId ?? undefined,
+        locationId: args.locationId ?? undefined,
         borrowerId: args.borrowerId ?? undefined,
         fromDate: args.fromDate ?? undefined,
         toDate: args.toDate ?? undefined,
@@ -168,6 +170,109 @@ export const loanResolvers = {
 
       const loanService = new LoanService(context.prisma)
       return loanService.cancelLoan(args.id)
+    },
+
+    createLoansInBatch: async (
+      _parent: unknown,
+      args: {
+        input: {
+          loans: {
+            tempId: string
+            requestedAmount: string
+            amountGived: string
+            loantypeId: string
+            previousLoanId?: string
+            borrowerId?: string
+            newBorrower?: {
+              personalData: {
+                fullName: string
+                clientCode?: string
+                birthDate?: Date
+                phones?: { number: string }[]
+                addresses?: {
+                  street: string
+                  numberInterior?: string
+                  numberExterior?: string
+                  zipCode?: string
+                  locationId: string
+                }[]
+              }
+            }
+            collateralIds?: string[]
+            newCollateral?: {
+              fullName: string
+              clientCode?: string
+              birthDate?: Date
+              phones?: { number: string }[]
+              addresses?: {
+                street: string
+                numberInterior?: string
+                numberExterior?: string
+                zipCode?: string
+                locationId: string
+              }[]
+            }
+            firstPayment?: {
+              amount: string
+              comission?: string
+              paymentMethod: 'CASH' | 'MONEY_TRANSFER'
+            }
+            isFromDifferentLocation?: boolean
+          }[]
+          sourceAccountId: string
+          signDate: Date
+          leadId: string
+          grantorId: string
+        }
+      },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      const loanService = new LoanService(context.prisma)
+      return loanService.createLoansInBatch(args.input)
+    },
+
+    updateLoanExtended: async (
+      _parent: unknown,
+      args: {
+        id: string
+        input: {
+          loantypeId?: string
+          collateralIds?: string[]
+          newCollateral?: {
+            fullName: string
+            clientCode?: string
+            phones?: { number: string }[]
+            addresses?: {
+              street: string
+              numberInterior?: string
+              numberExterior?: string
+              zipCode?: string
+              locationId: string
+            }[]
+          }
+          borrowerPhone?: string
+          collateralPhone?: string
+        }
+      },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      const loanService = new LoanService(context.prisma)
+      return loanService.updateLoanExtended(args.id, args.input)
+    },
+
+    cancelLoanWithAccountRestore: async (
+      _parent: unknown,
+      args: { id: string; accountId: string },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      const loanService = new LoanService(context.prisma)
+      return loanService.cancelLoanWithAccountRestore(args.id, args.accountId)
     },
   },
 

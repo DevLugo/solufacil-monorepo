@@ -20,6 +20,7 @@ export const resolvers = {
     ...authResolvers.Query,
     ...userResolvers.Query,
     ...employeeResolvers.Query,
+    ...borrowerResolvers.Query,
     ...loantypeResolvers.Query,
     ...loanResolvers.Query,
     ...paymentResolvers.Query,
@@ -28,6 +29,7 @@ export const resolvers = {
     ...routeResolvers.Query,
     ...reportResolvers.Query,
     ...documentResolvers.Query,
+    ...personalDataResolvers.Query,
   },
 
   Mutation: {
@@ -42,6 +44,7 @@ export const resolvers = {
     ...accountResolvers.Mutation,
     ...routeResolvers.Mutation,
     ...documentResolvers.Mutation,
+    ...personalDataResolvers.Mutation,
   },
 
   // Type resolvers

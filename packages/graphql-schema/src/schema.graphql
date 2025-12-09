@@ -117,6 +117,18 @@ type Borrower {
   updatedAt: DateTime!
 }
 
+# Tipo para resultados de búsqueda de borrowers (autocomplete)
+type BorrowerSearchResult {
+  id: ID!
+  personalData: PersonalData!
+  loanFinishedCount: Int!
+  hasActiveLoans: Boolean!
+  pendingDebtAmount: String
+  locationId: ID
+  locationName: String
+  isFromCurrentLocation: Boolean!
+}
+
 type Loantype {
   id: ID!
   name: String!
@@ -386,6 +398,7 @@ type Query {
     status: LoanStatus
     routeId: ID
     leadId: ID
+    locationId: ID
     borrowerId: ID
     fromDate: DateTime
     toDate: DateTime
@@ -421,6 +434,21 @@ type Query {
   # Loan types
   loantype(id: ID!): Loantype @auth
   loantypes(isActive: Boolean): [Loantype!]! @auth
+
+  # Search (para autocomplete)
+  searchBorrowers(
+    searchTerm: String!
+    leadId: ID
+    locationId: ID
+    limit: Int
+  ): [BorrowerSearchResult!]! @auth
+
+  searchPersonalData(
+    searchTerm: String!
+    excludeBorrowerId: ID
+    locationId: ID
+    limit: Int
+  ): [PersonalData!]! @auth
 
   # Reports
   financialReport(routeIds: [ID!]!, year: Int!, month: Int!): FinancialReport! @requireRole(roles: [ADMIN])
@@ -660,6 +688,49 @@ input UpdateDocumentInput {
   isMissing: Boolean
 }
 
+# Inputs para creación de préstamos en batch
+input CreateLoansInBatchInput {
+  loans: [CreateSingleLoanInput!]!
+  sourceAccountId: ID!
+  signDate: DateTime!
+  leadId: ID!
+  grantorId: ID!
+}
+
+input CreateSingleLoanInput {
+  tempId: String!
+  requestedAmount: Decimal!
+  amountGived: Decimal!
+  loantypeId: ID!
+  previousLoanId: ID
+  borrowerId: ID
+  newBorrower: CreateBorrowerInput
+  collateralIds: [ID!]
+  newCollateral: CreatePersonalDataInput
+  firstPayment: FirstPaymentInput
+  isFromDifferentLocation: Boolean
+}
+
+input FirstPaymentInput {
+  amount: Decimal!
+  comission: Decimal
+  paymentMethod: PaymentMethod!
+}
+
+input UpdateLoanExtendedInput {
+  loantypeId: ID
+  collateralIds: [ID!]
+  newCollateral: CreatePersonalDataInput
+  borrowerPhone: String
+  collateralPhone: String
+}
+
+input UpdatePhoneInput {
+  personalDataId: ID!
+  phoneId: ID
+  number: String!
+}
+
 # Mutations
 type Mutation {
   # Auth
@@ -689,6 +760,17 @@ type Mutation {
   markLoanAsBadDebt(loanId: ID!, badDebtDate: DateTime!): Loan! @auth
   finishLoan(loanId: ID!): Loan! @auth
   cancelLoan(id: ID!): Loan! @auth
+
+  # Loans - Batch y edición extendida
+  createLoansInBatch(input: CreateLoansInBatchInput!): [Loan!]! @auth
+  updateLoanExtended(id: ID!, input: UpdateLoanExtendedInput!): Loan! @auth
+  cancelLoanWithAccountRestore(id: ID!, accountId: ID!): Loan! @auth
+
+  # PersonalData
+  updatePersonalData(id: ID!, fullName: String!): PersonalData! @auth
+
+  # Phones
+  updatePhone(input: UpdatePhoneInput!): Phone! @auth
 
   # Payments
   createLoanPayment(input: CreateLoanPaymentInput!): LoanPayment! @auth

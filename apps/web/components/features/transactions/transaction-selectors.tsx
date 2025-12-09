@@ -91,6 +91,8 @@ export function TransactionSelectors() {
     selectedDate,
     setSelectedRouteId,
     setSelectedLeadId,
+    setSelectedLocationId,
+    setSelectedLocationName,
     setSelectedDate,
   } = useTransactionContext()
 
@@ -152,6 +154,8 @@ export function TransactionSelectors() {
             onValueChange={(value) => {
               setSelectedRouteId(value || null)
               setSelectedLeadId(null) // Reset lead when route changes
+              setSelectedLocationId(null) // Reset location when route changes
+              setSelectedLocationName(null)
             }}
           >
             <SelectTrigger className="w-[200px]">
@@ -210,7 +214,15 @@ export function TransactionSelectors() {
             <User className="h-4 w-4 text-muted-foreground" />
             <Select
               value={selectedLeadId || 'all'}
-              onValueChange={(value) => setSelectedLeadId(value === 'all' ? null : value)}
+              onValueChange={(value) => {
+                const leadId = value === 'all' ? null : value
+                setSelectedLeadId(leadId)
+                // Also set locationId and locationName from the selected lead
+                const lead = leads.find((l) => l.id === leadId)
+                const location = lead?.personalData?.addresses?.[0]?.location
+                setSelectedLocationId(location?.id || null)
+                setSelectedLocationName(location?.name || null)
+              }}
             >
               <SelectTrigger className="w-[300px]">
                 <SelectValue placeholder="Seleccionar localidad" />
@@ -239,7 +251,11 @@ export function TransactionSelectors() {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setSelectedLeadId(null)}
+                onClick={() => {
+                  setSelectedLeadId(null)
+                  setSelectedLocationId(null)
+                  setSelectedLocationName(null)
+                }}
                 title="Limpiar localidad seleccionada"
                 className="h-8 w-8"
               >

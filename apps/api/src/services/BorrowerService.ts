@@ -26,6 +26,13 @@ export interface UpdateBorrowerInput {
   }
 }
 
+export interface SearchBorrowersInput {
+  searchTerm: string
+  leadId?: string
+  locationId?: string
+  limit?: number
+}
+
 export class BorrowerService {
   private borrowerRepository: BorrowerRepository
 
@@ -68,6 +75,39 @@ export class BorrowerService {
     }
 
     return this.borrowerRepository.update(id, input)
+  }
+
+  async searchByName(input: SearchBorrowersInput) {
+    if (input.searchTerm.length < 2) {
+      return []
+    }
+
+    const results = await this.borrowerRepository.search({
+      searchTerm: input.searchTerm,
+      leadId: input.leadId,
+      locationId: input.locationId,
+      limit: input.limit || 10,
+    })
+
+    // Transformar resultados al formato BorrowerSearchResult
+    return results.map((borrower) => {
+      const activeLoans = borrower.loans.filter((loan) => loan.status === 'ACTIVE')
+      const pendingDebtAmount = activeLoans.reduce(
+        (sum, loan) => sum + parseFloat(loan.pendingAmountStored || '0'),
+        0
+      )
+
+      return {
+        id: borrower.id,
+        personalData: borrower.personalDataRelation,
+        loanFinishedCount: borrower.loanFinishedCount,
+        hasActiveLoans: activeLoans.length > 0,
+        pendingDebtAmount: pendingDebtAmount > 0 ? pendingDebtAmount.toString() : undefined,
+        locationId: borrower.locationId,
+        locationName: borrower.locationName,
+        isFromCurrentLocation: borrower.isFromCurrentLocation ?? true,
+      }
+    })
   }
 
   private async generateUniqueClientCode(): Promise<string> {

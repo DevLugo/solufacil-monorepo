@@ -630,3 +630,135 @@ export const ALL_TRANSACTIONS_BY_DATE_QUERY = gql`
     }
   }
 `
+
+// ============================================================
+// SEARCH QUERIES - Para Autocomplete en Creditos
+// ============================================================
+
+export const SEARCH_BORROWERS_QUERY = gql`
+  query SearchBorrowers($searchTerm: String!, $leadId: ID, $locationId: ID, $limit: Int) {
+    searchBorrowers(searchTerm: $searchTerm, leadId: $leadId, locationId: $locationId, limit: $limit) {
+      id
+      personalData {
+        id
+        fullName
+        clientCode
+        phones {
+          id
+          number
+        }
+        addresses {
+          id
+          location {
+            id
+            name
+          }
+        }
+      }
+      loanFinishedCount
+      hasActiveLoans
+      pendingDebtAmount
+      locationId
+      locationName
+      isFromCurrentLocation
+    }
+  }
+`
+
+export const SEARCH_PERSONAL_DATA_QUERY = gql`
+  query SearchPersonalData($searchTerm: String!, $excludeBorrowerId: ID, $locationId: ID, $limit: Int) {
+    searchPersonalData(searchTerm: $searchTerm, excludeBorrowerId: $excludeBorrowerId, locationId: $locationId, limit: $limit) {
+      id
+      fullName
+      clientCode
+      phones {
+        id
+        number
+      }
+      addresses {
+        id
+        location {
+          id
+          name
+        }
+      }
+    }
+  }
+`
+
+// Query para obtener prestamos activos para renovacion
+// Filtra por leadId para obtener solo los prestamos de la localidad seleccionada
+export const ACTIVE_LOANS_FOR_RENEWAL_QUERY = gql`
+  query ActiveLoansForRenewal($leadId: ID) {
+    loans(leadId: $leadId, limit: 500) {
+      totalCount
+      edges {
+        node {
+          id
+          requestedAmount
+          amountGived
+          profitAmount
+          signDate
+          pendingAmountStored
+          expectedWeeklyPayment
+          totalPaid
+          status
+          loantype {
+            id
+            name
+            rate
+            weekDuration
+          }
+          borrower {
+            id
+            loanFinishedCount
+            personalData {
+              id
+              fullName
+              clientCode
+              phones {
+                id
+                number
+              }
+              addresses {
+                id
+                location {
+                  id
+                  name
+                }
+              }
+            }
+          }
+          collaterals {
+            id
+            fullName
+            phones {
+              id
+              number
+            }
+            addresses {
+              id
+              location {
+                id
+                name
+              }
+            }
+          }
+          lead {
+            id
+            personalData {
+              id
+              addresses {
+                id
+                location {
+                  id
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`

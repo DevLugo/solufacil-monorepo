@@ -86,6 +86,18 @@ export type Borrower = {
   updatedAt: Scalars['DateTime']['output'];
 };
 
+export type BorrowerSearchResult = {
+  __typename?: 'BorrowerSearchResult';
+  hasActiveLoans: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  isFromCurrentLocation: Scalars['Boolean']['output'];
+  loanFinishedCount: Scalars['Int']['output'];
+  locationId?: Maybe<Scalars['ID']['output']>;
+  locationName?: Maybe<Scalars['String']['output']>;
+  pendingDebtAmount?: Maybe<Scalars['String']['output']>;
+  personalData: PersonalData;
+};
+
 export type CommissionPayment = {
   __typename?: 'CommissionPayment';
   amount: Scalars['Decimal']['output'];
@@ -160,6 +172,14 @@ export type CreateLoanPaymentInput = {
   receivedAt: Scalars['DateTime']['input'];
 };
 
+export type CreateLoansInBatchInput = {
+  grantorId: Scalars['ID']['input'];
+  leadId: Scalars['ID']['input'];
+  loans: Array<CreateSingleLoanInput>;
+  signDate: Scalars['DateTime']['input'];
+  sourceAccountId: Scalars['ID']['input'];
+};
+
 export type CreateLoantypeInput = {
   interestRate: Scalars['Decimal']['input'];
   loanGrantedComission: Scalars['Decimal']['input'];
@@ -185,6 +205,20 @@ export type CreatePhoneInput = {
 
 export type CreateRouteInput = {
   name: Scalars['String']['input'];
+};
+
+export type CreateSingleLoanInput = {
+  amountGived: Scalars['Decimal']['input'];
+  borrowerId?: InputMaybe<Scalars['ID']['input']>;
+  collateralIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  firstPayment?: InputMaybe<FirstPaymentInput>;
+  isFromDifferentLocation?: InputMaybe<Scalars['Boolean']['input']>;
+  loantypeId: Scalars['ID']['input'];
+  newBorrower?: InputMaybe<CreateBorrowerInput>;
+  newCollateral?: InputMaybe<CreatePersonalDataInput>;
+  previousLoanId?: InputMaybe<Scalars['ID']['input']>;
+  requestedAmount: Scalars['Decimal']['input'];
+  tempId: Scalars['String']['input'];
 };
 
 export type CreateTransactionInput = {
@@ -268,6 +302,12 @@ export type FinancialSummary = {
   pendingAmount: Scalars['Decimal']['output'];
   totalPaid: Scalars['Decimal']['output'];
   totalPortfolio: Scalars['Decimal']['output'];
+};
+
+export type FirstPaymentInput = {
+  amount: Scalars['Decimal']['input'];
+  comission?: InputMaybe<Scalars['Decimal']['input']>;
+  paymentMethod: PaymentMethod;
 };
 
 export type LeadPaymentReceived = {
@@ -388,6 +428,7 @@ export type Municipality = {
 export type Mutation = {
   __typename?: 'Mutation';
   cancelLoan: Loan;
+  cancelLoanWithAccountRestore: Loan;
   changePassword: Scalars['Boolean']['output'];
   createAccount: Account;
   createBorrower: Borrower;
@@ -395,6 +436,7 @@ export type Mutation = {
   createLeadPaymentReceived: LeadPaymentReceived;
   createLoan: Loan;
   createLoanPayment: LoanPayment;
+  createLoansInBatch: Array<Loan>;
   createLoantype: Loantype;
   createRoute: Route;
   createTransaction: Transaction;
@@ -416,8 +458,11 @@ export type Mutation = {
   updateEmployee: Employee;
   updateLeadPaymentReceived: LeadPaymentReceived;
   updateLoan: Loan;
+  updateLoanExtended: Loan;
   updateLoanPayment: LoanPayment;
   updateLoantype: Loantype;
+  updatePersonalData: PersonalData;
+  updatePhone: Phone;
   updateRoute: Route;
   updateUser: User;
   uploadDocumentPhoto: DocumentPhoto;
@@ -425,6 +470,12 @@ export type Mutation = {
 
 
 export type MutationCancelLoanArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationCancelLoanWithAccountRestoreArgs = {
+  accountId: Scalars['ID']['input'];
   id: Scalars['ID']['input'];
 };
 
@@ -462,6 +513,11 @@ export type MutationCreateLoanArgs = {
 
 export type MutationCreateLoanPaymentArgs = {
   input: CreateLoanPaymentInput;
+};
+
+
+export type MutationCreateLoansInBatchArgs = {
+  input: CreateLoansInBatchInput;
 };
 
 
@@ -574,6 +630,12 @@ export type MutationUpdateLoanArgs = {
 };
 
 
+export type MutationUpdateLoanExtendedArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateLoanExtendedInput;
+};
+
+
 export type MutationUpdateLoanPaymentArgs = {
   id: Scalars['ID']['input'];
   input: UpdateLoanPaymentInput;
@@ -583,6 +645,17 @@ export type MutationUpdateLoanPaymentArgs = {
 export type MutationUpdateLoantypeArgs = {
   id: Scalars['ID']['input'];
   input: UpdateLoantypeInput;
+};
+
+
+export type MutationUpdatePersonalDataArgs = {
+  fullName: Scalars['String']['input'];
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationUpdatePhoneArgs = {
+  input: UpdatePhoneInput;
 };
 
 
@@ -675,6 +748,8 @@ export type Query = {
   me?: Maybe<User>;
   route?: Maybe<Route>;
   routes: Array<Route>;
+  searchBorrowers: Array<BorrowerSearchResult>;
+  searchPersonalData: Array<PersonalData>;
   transactions: TransactionConnection;
   user?: Maybe<User>;
   users: Array<User>;
@@ -767,6 +842,7 @@ export type QueryLoansArgs = {
   fromDate?: InputMaybe<Scalars['DateTime']['input']>;
   leadId?: InputMaybe<Scalars['ID']['input']>;
   limit?: InputMaybe<Scalars['Int']['input']>;
+  locationId?: InputMaybe<Scalars['ID']['input']>;
   offset?: InputMaybe<Scalars['Int']['input']>;
   routeId?: InputMaybe<Scalars['ID']['input']>;
   status?: InputMaybe<LoanStatus>;
@@ -796,6 +872,22 @@ export type QueryLocationsArgs = {
 
 export type QueryRouteArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type QuerySearchBorrowersArgs = {
+  leadId?: InputMaybe<Scalars['ID']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  locationId?: InputMaybe<Scalars['ID']['input']>;
+  searchTerm: Scalars['String']['input'];
+};
+
+
+export type QuerySearchPersonalDataArgs = {
+  excludeBorrowerId?: InputMaybe<Scalars['ID']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  locationId?: InputMaybe<Scalars['ID']['input']>;
+  searchTerm: Scalars['String']['input'];
 };
 
 
@@ -925,6 +1017,14 @@ export type UpdateLeadPaymentReceivedInput = {
   payments?: InputMaybe<Array<UpdatePaymentForLeadInput>>;
 };
 
+export type UpdateLoanExtendedInput = {
+  borrowerPhone?: InputMaybe<Scalars['String']['input']>;
+  collateralIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  collateralPhone?: InputMaybe<Scalars['String']['input']>;
+  loantypeId?: InputMaybe<Scalars['ID']['input']>;
+  newCollateral?: InputMaybe<CreatePersonalDataInput>;
+};
+
 export type UpdateLoanInput = {
   amountGived?: InputMaybe<Scalars['Decimal']['input']>;
   badDebtDate?: InputMaybe<Scalars['DateTime']['input']>;
@@ -963,6 +1063,12 @@ export type UpdatePaymentForLeadInput = {
 export type UpdatePersonalDataInput = {
   birthDate?: InputMaybe<Scalars['DateTime']['input']>;
   fullName?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdatePhoneInput = {
+  number: Scalars['String']['input'];
+  personalDataId: Scalars['ID']['input'];
+  phoneId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type UpdateRouteInput = {
@@ -1093,6 +1199,7 @@ export type ResolversTypes = ResolversObject<{
   BadDebtSummary: ResolverTypeWrapper<BadDebtSummary>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   Borrower: ResolverTypeWrapper<Borrower>;
+  BorrowerSearchResult: ResolverTypeWrapper<BorrowerSearchResult>;
   CommissionPayment: ResolverTypeWrapper<CommissionPayment>;
   ComparisonData: ResolverTypeWrapper<ComparisonData>;
   CreateAccountInput: CreateAccountInput;
@@ -1102,10 +1209,12 @@ export type ResolversTypes = ResolversObject<{
   CreateLeadPaymentReceivedInput: CreateLeadPaymentReceivedInput;
   CreateLoanInput: CreateLoanInput;
   CreateLoanPaymentInput: CreateLoanPaymentInput;
+  CreateLoansInBatchInput: CreateLoansInBatchInput;
   CreateLoantypeInput: CreateLoantypeInput;
   CreatePersonalDataInput: CreatePersonalDataInput;
   CreatePhoneInput: CreatePhoneInput;
   CreateRouteInput: CreateRouteInput;
+  CreateSingleLoanInput: CreateSingleLoanInput;
   CreateTransactionInput: CreateTransactionInput;
   CreateUserInput: CreateUserInput;
   DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>;
@@ -1116,6 +1225,7 @@ export type ResolversTypes = ResolversObject<{
   EmployeeType: EmployeeType;
   FinancialReport: ResolverTypeWrapper<FinancialReport>;
   FinancialSummary: ResolverTypeWrapper<FinancialSummary>;
+  FirstPaymentInput: FirstPaymentInput;
   ID: ResolverTypeWrapper<Scalars['ID']['output']>;
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
   JSON: ResolverTypeWrapper<Scalars['JSON']['output']>;
@@ -1150,11 +1260,13 @@ export type ResolversTypes = ResolversObject<{
   UpdateDocumentInput: UpdateDocumentInput;
   UpdateEmployeeInput: UpdateEmployeeInput;
   UpdateLeadPaymentReceivedInput: UpdateLeadPaymentReceivedInput;
+  UpdateLoanExtendedInput: UpdateLoanExtendedInput;
   UpdateLoanInput: UpdateLoanInput;
   UpdateLoanPaymentInput: UpdateLoanPaymentInput;
   UpdateLoantypeInput: UpdateLoantypeInput;
   UpdatePaymentForLeadInput: UpdatePaymentForLeadInput;
   UpdatePersonalDataInput: UpdatePersonalDataInput;
+  UpdatePhoneInput: UpdatePhoneInput;
   UpdateRouteInput: UpdateRouteInput;
   UpdateUserInput: UpdateUserInput;
   Upload: ResolverTypeWrapper<Scalars['Upload']['output']>;
@@ -1173,6 +1285,7 @@ export type ResolversParentTypes = ResolversObject<{
   BadDebtSummary: BadDebtSummary;
   Boolean: Scalars['Boolean']['output'];
   Borrower: Borrower;
+  BorrowerSearchResult: BorrowerSearchResult;
   CommissionPayment: CommissionPayment;
   ComparisonData: ComparisonData;
   CreateAccountInput: CreateAccountInput;
@@ -1182,10 +1295,12 @@ export type ResolversParentTypes = ResolversObject<{
   CreateLeadPaymentReceivedInput: CreateLeadPaymentReceivedInput;
   CreateLoanInput: CreateLoanInput;
   CreateLoanPaymentInput: CreateLoanPaymentInput;
+  CreateLoansInBatchInput: CreateLoansInBatchInput;
   CreateLoantypeInput: CreateLoantypeInput;
   CreatePersonalDataInput: CreatePersonalDataInput;
   CreatePhoneInput: CreatePhoneInput;
   CreateRouteInput: CreateRouteInput;
+  CreateSingleLoanInput: CreateSingleLoanInput;
   CreateTransactionInput: CreateTransactionInput;
   CreateUserInput: CreateUserInput;
   DateTime: Scalars['DateTime']['output'];
@@ -1194,6 +1309,7 @@ export type ResolversParentTypes = ResolversObject<{
   Employee: Employee;
   FinancialReport: FinancialReport;
   FinancialSummary: FinancialSummary;
+  FirstPaymentInput: FirstPaymentInput;
   ID: Scalars['ID']['output'];
   Int: Scalars['Int']['output'];
   JSON: Scalars['JSON']['output'];
@@ -1225,11 +1341,13 @@ export type ResolversParentTypes = ResolversObject<{
   UpdateDocumentInput: UpdateDocumentInput;
   UpdateEmployeeInput: UpdateEmployeeInput;
   UpdateLeadPaymentReceivedInput: UpdateLeadPaymentReceivedInput;
+  UpdateLoanExtendedInput: UpdateLoanExtendedInput;
   UpdateLoanInput: UpdateLoanInput;
   UpdateLoanPaymentInput: UpdateLoanPaymentInput;
   UpdateLoantypeInput: UpdateLoantypeInput;
   UpdatePaymentForLeadInput: UpdatePaymentForLeadInput;
   UpdatePersonalDataInput: UpdatePersonalDataInput;
+  UpdatePhoneInput: UpdatePhoneInput;
   UpdateRouteInput: UpdateRouteInput;
   UpdateUserInput: UpdateUserInput;
   Upload: Scalars['Upload']['output'];
@@ -1302,6 +1420,18 @@ export type BorrowerResolvers<ContextType = GraphQLContext, ParentType extends R
   loans?: Resolver<Array<ResolversTypes['Loan']>, ParentType, ContextType>;
   personalData?: Resolver<ResolversTypes['PersonalData'], ParentType, ContextType>;
   updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type BorrowerSearchResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['BorrowerSearchResult'] = ResolversParentTypes['BorrowerSearchResult']> = ResolversObject<{
+  hasActiveLoans?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  isFromCurrentLocation?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  loanFinishedCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  locationId?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
+  locationName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  pendingDebtAmount?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  personalData?: Resolver<ResolversTypes['PersonalData'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -1494,6 +1624,7 @@ export type MunicipalityResolvers<ContextType = GraphQLContext, ParentType exten
 
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = ResolversObject<{
   cancelLoan?: Resolver<ResolversTypes['Loan'], ParentType, ContextType, RequireFields<MutationCancelLoanArgs, 'id'>>;
+  cancelLoanWithAccountRestore?: Resolver<ResolversTypes['Loan'], ParentType, ContextType, RequireFields<MutationCancelLoanWithAccountRestoreArgs, 'accountId' | 'id'>>;
   changePassword?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationChangePasswordArgs, 'newPassword' | 'oldPassword'>>;
   createAccount?: Resolver<ResolversTypes['Account'], ParentType, ContextType, RequireFields<MutationCreateAccountArgs, 'input'>>;
   createBorrower?: Resolver<ResolversTypes['Borrower'], ParentType, ContextType, RequireFields<MutationCreateBorrowerArgs, 'input'>>;
@@ -1501,6 +1632,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   createLeadPaymentReceived?: Resolver<ResolversTypes['LeadPaymentReceived'], ParentType, ContextType, RequireFields<MutationCreateLeadPaymentReceivedArgs, 'input'>>;
   createLoan?: Resolver<ResolversTypes['Loan'], ParentType, ContextType, RequireFields<MutationCreateLoanArgs, 'input'>>;
   createLoanPayment?: Resolver<ResolversTypes['LoanPayment'], ParentType, ContextType, RequireFields<MutationCreateLoanPaymentArgs, 'input'>>;
+  createLoansInBatch?: Resolver<Array<ResolversTypes['Loan']>, ParentType, ContextType, RequireFields<MutationCreateLoansInBatchArgs, 'input'>>;
   createLoantype?: Resolver<ResolversTypes['Loantype'], ParentType, ContextType, RequireFields<MutationCreateLoantypeArgs, 'input'>>;
   createRoute?: Resolver<ResolversTypes['Route'], ParentType, ContextType, RequireFields<MutationCreateRouteArgs, 'input'>>;
   createTransaction?: Resolver<ResolversTypes['Transaction'], ParentType, ContextType, RequireFields<MutationCreateTransactionArgs, 'input'>>;
@@ -1522,8 +1654,11 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   updateEmployee?: Resolver<ResolversTypes['Employee'], ParentType, ContextType, RequireFields<MutationUpdateEmployeeArgs, 'id' | 'input'>>;
   updateLeadPaymentReceived?: Resolver<ResolversTypes['LeadPaymentReceived'], ParentType, ContextType, RequireFields<MutationUpdateLeadPaymentReceivedArgs, 'id' | 'input'>>;
   updateLoan?: Resolver<ResolversTypes['Loan'], ParentType, ContextType, RequireFields<MutationUpdateLoanArgs, 'id' | 'input'>>;
+  updateLoanExtended?: Resolver<ResolversTypes['Loan'], ParentType, ContextType, RequireFields<MutationUpdateLoanExtendedArgs, 'id' | 'input'>>;
   updateLoanPayment?: Resolver<ResolversTypes['LoanPayment'], ParentType, ContextType, RequireFields<MutationUpdateLoanPaymentArgs, 'id' | 'input'>>;
   updateLoantype?: Resolver<ResolversTypes['Loantype'], ParentType, ContextType, RequireFields<MutationUpdateLoantypeArgs, 'id' | 'input'>>;
+  updatePersonalData?: Resolver<ResolversTypes['PersonalData'], ParentType, ContextType, RequireFields<MutationUpdatePersonalDataArgs, 'fullName' | 'id'>>;
+  updatePhone?: Resolver<ResolversTypes['Phone'], ParentType, ContextType, RequireFields<MutationUpdatePhoneArgs, 'input'>>;
   updateRoute?: Resolver<ResolversTypes['Route'], ParentType, ContextType, RequireFields<MutationUpdateRouteArgs, 'id' | 'input'>>;
   updateUser?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationUpdateUserArgs, 'id' | 'input'>>;
   uploadDocumentPhoto?: Resolver<ResolversTypes['DocumentPhoto'], ParentType, ContextType, RequireFields<MutationUploadDocumentPhotoArgs, 'input'>>;
@@ -1589,6 +1724,8 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   me?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType>;
   route?: Resolver<Maybe<ResolversTypes['Route']>, ParentType, ContextType, RequireFields<QueryRouteArgs, 'id'>>;
   routes?: Resolver<Array<ResolversTypes['Route']>, ParentType, ContextType>;
+  searchBorrowers?: Resolver<Array<ResolversTypes['BorrowerSearchResult']>, ParentType, ContextType, RequireFields<QuerySearchBorrowersArgs, 'searchTerm'>>;
+  searchPersonalData?: Resolver<Array<ResolversTypes['PersonalData']>, ParentType, ContextType, RequireFields<QuerySearchPersonalDataArgs, 'searchTerm'>>;
   transactions?: Resolver<ResolversTypes['TransactionConnection'], ParentType, ContextType, Partial<QueryTransactionsArgs>>;
   user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType, RequireFields<QueryUserArgs, 'id'>>;
   users?: Resolver<Array<ResolversTypes['User']>, ParentType, ContextType, Partial<QueryUsersArgs>>;
@@ -1677,6 +1814,7 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   BadDebtData?: BadDebtDataResolvers<ContextType>;
   BadDebtSummary?: BadDebtSummaryResolvers<ContextType>;
   Borrower?: BorrowerResolvers<ContextType>;
+  BorrowerSearchResult?: BorrowerSearchResultResolvers<ContextType>;
   CommissionPayment?: CommissionPaymentResolvers<ContextType>;
   ComparisonData?: ComparisonDataResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
