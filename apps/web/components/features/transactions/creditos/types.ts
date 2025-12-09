@@ -150,6 +150,7 @@ export interface Account {
   name: string
   type: string
   amount: string
+  accountBalance?: string
 }
 
 // Pending loan to be created in batch

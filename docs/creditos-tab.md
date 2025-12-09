@@ -272,6 +272,122 @@ Obtiene los tipos de préstamo disponibles.
 ### ACCOUNTS_QUERY
 Obtiene las cuentas de efectivo de la ruta.
 
+## Edge Cases y Flujos Especiales
+
+### 6. Flujo de Fondos Insuficientes
+
+```mermaid
+flowchart TD
+    A[Usuario agrega préstamos pendientes] --> B[Calcular total a entregar]
+    B --> C{Total > Saldo cuenta?}
+    C -- No --> D[Botón Guardar habilitado]
+    C -- Sí --> E[Mostrar alerta fondos insuficientes]
+    E --> F[Botón Guardar deshabilitado]
+    F --> G{Usuario reduce monto o elimina préstamos?}
+    G -- Sí --> B
+    G -- No --> H[No puede guardar]
+```
+
+### 7. Flujo de Cliente de Otra Localidad
+
+```mermaid
+flowchart TD
+    A[Usuario busca cliente] --> B[Sistema retorna resultados]
+    B --> C{Cliente de localidad actual?}
+    C -- Sí --> D[Mostrar sin warning]
+    C -- No --> E[Mostrar con indicador de ubicación]
+    E --> F[Usuario selecciona cliente]
+    F --> G[Mostrar LocationWarning amarillo]
+    G --> H[Usuario puede continuar con advertencia]
+```
+
+### 8. Flujo de Validación de Formulario
+
+```mermaid
+flowchart TD
+    A[Usuario hace clic en Agregar] --> B{Cliente seleccionado?}
+    B -- No --> C[Toast error: Selecciona un cliente]
+    B -- Sí --> D{Tipo de préstamo seleccionado?}
+    D -- No --> E[Toast error: Selecciona tipo y monto]
+    D -- Sí --> F{Monto ingresado?}
+    F -- No --> E
+    F -- Sí --> G[Agregar a lista pendiente]
+```
+
+### 9. Flujo de Edición de Préstamo Pendiente
+
+```mermaid
+flowchart TD
+    A[Usuario hace clic en préstamo pendiente] --> B[Cargar datos en formulario]
+    B --> C[Mostrar badge Editando]
+    C --> D[Mostrar botón Cancelar edición]
+    D --> E{Usuario modifica datos?}
+    E -- Sí --> F[Click Actualizar crédito]
+    F --> G[Actualizar en lista pendiente]
+    E -- No --> H[Click Cancelar edición]
+    H --> I[Limpiar formulario]
+```
+
+### 10. Flujo de Comisión Global
+
+```mermaid
+flowchart TD
+    A[Usuario tiene préstamos pendientes] --> B[Mostrar control comisión global]
+    B --> C[Usuario ingresa monto comisión]
+    C --> D[Click Aplicar]
+    D --> E[Para cada préstamo con comisión > 0]
+    E --> F[Actualizar comisión al valor global]
+    F --> G[Toast: Comisión actualizada]
+```
+
+### 11. Flujo de Primer Pago con Préstamo
+
+```mermaid
+flowchart TD
+    A[Usuario configura préstamo] --> B[Toggle Primer pago ON]
+    B --> C[Mostrar input de monto]
+    C --> D[Usuario ingresa monto primer pago]
+    D --> E[Agregar a pendientes]
+    E --> F[Al guardar: Crear préstamo + pago inicial]
+    F --> G[Crear transacción INCOME por pago]
+```
+
+### 12. Flujo de Búsqueda en Tabla
+
+```mermaid
+flowchart TD
+    A[Usuario escribe en búsqueda] --> B[Filtrar por nombre cliente]
+    B --> C[Filtrar por nombre aval]
+    C --> D{Coincidencias encontradas?}
+    D -- Sí --> E[Mostrar préstamos filtrados]
+    D -- No --> F[Mostrar tabla vacía]
+```
+
+## Casos de Prueba E2E
+
+### Escenarios Principales
+1. Visualización de tab sin ruta/localidad seleccionada
+2. Visualización de créditos del día
+3. Creación de préstamo nuevo con cliente existente
+4. Creación de préstamo nuevo con cliente nuevo
+5. Renovación de préstamo (cliente con deuda activa)
+6. Edición de préstamo guardado
+7. Cancelación de préstamo con restauración de saldo
+8. Búsqueda/filtrado en tabla
+
+### Escenarios de Validación
+9. Error al agregar sin cliente seleccionado
+10. Error al agregar sin tipo de préstamo
+11. Alerta de fondos insuficientes
+12. Warning de cliente de otra localidad
+
+### Escenarios de Lote
+13. Agregar múltiples préstamos antes de guardar
+14. Editar préstamo pendiente antes de guardar
+15. Eliminar préstamo pendiente
+16. Aplicar comisión global
+17. Guardar lote con primer pago incluido
+
 ## Dependencias
 
 - `@apollo/client` - GraphQL client

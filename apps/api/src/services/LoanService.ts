@@ -567,7 +567,7 @@ export class LoanService {
         })
 
         // 7. Crear transacción EXPENSE por el monto otorgado
-        await tx.transaction.create({
+        const expenseTransaction = await tx.transaction.create({
           data: {
             amount: amountGived,
             date: input.signDate,
@@ -578,6 +578,12 @@ export class LoanService {
             lead: input.leadId,
             route: routeId,
           },
+        })
+        console.log('[LoanService] Created EXPENSE transaction:', {
+          id: expenseTransaction.id,
+          amount: amountGived.toString(),
+          sourceAccount: input.sourceAccountId,
+          type: 'EXPENSE'
         })
 
         // 8. Crear primer pago si se especificó
@@ -663,9 +669,8 @@ export class LoanService {
         createdLoans.push(loan)
       }
 
-      // 9. Deducir el total de la cuenta origen
-      const newAccountBalance = accountBalance.minus(totalAmountToDeduct)
-      await this.accountRepository.updateBalance(input.sourceAccountId, newAccountBalance, tx)
+      // 9. Recalcular balance de la cuenta origen desde las transacciones
+      await this.accountRepository.recalculateAndUpdateBalance(input.sourceAccountId, tx)
 
       return createdLoans
     })
@@ -915,28 +920,9 @@ export class LoanService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Restaurar el monto a la cuenta
       const amountGived = new Decimal(loan.amountGived.toString())
-      const currentBalance = new Decimal(account.amount.toString())
-      const newBalance = currentBalance.plus(amountGived)
 
-      await this.accountRepository.updateBalance(accountId, newBalance, tx)
-
-      // 2. Crear transacción de restauración (INCOME)
-      await tx.transaction.create({
-        data: {
-          amount: amountGived,
-          date: new Date(),
-          type: 'INCOME',
-          incomeSource: 'LOAN_CANCELLED_RESTORE',
-          sourceAccount: accountId,
-          loan: loanId,
-          lead: loan.lead || undefined,
-          route: loan.snapshotRouteId || undefined,
-        },
-      })
-
-      // 3. Eliminar pagos y sus transacciones si existen
+      // 1. Eliminar pagos y sus transacciones si existen
       const payments = await tx.loanPayment.findMany({
         where: { loan: loanId },
       })
@@ -950,10 +936,27 @@ export class LoanService {
         })
       }
 
-      // 4. Eliminar transacciones del préstamo
+      // 2. Eliminar transacciones del préstamo (EXPENSE de LOAN_GRANTED, etc.)
       await tx.transaction.deleteMany({
         where: { loan: loanId },
       })
+
+      // 3. Crear transacción de restauración (INCOME) - sin relación al loan para que no se elimine
+      await tx.transaction.create({
+        data: {
+          amount: amountGived,
+          date: new Date(),
+          type: 'INCOME',
+          incomeSource: 'LOAN_CANCELLED_RESTORE',
+          sourceAccount: accountId,
+          // No se asocia al loan porque ya está cancelado
+          lead: loan.lead || undefined,
+          route: loan.snapshotRouteId || undefined,
+        },
+      })
+
+      // 4. Recalcular balance desde las transacciones
+      await this.accountRepository.recalculateAndUpdateBalance(accountId, tx)
 
       // 5. Marcar préstamo como CANCELLED
       return tx.loan.update({

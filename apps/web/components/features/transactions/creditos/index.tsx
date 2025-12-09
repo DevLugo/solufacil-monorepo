@@ -103,6 +103,7 @@ export function CreditosTab() {
     loansForRenewal,
     accounts,
     defaultAccount,
+    refetchAccounts,
   } = useCreditosQueries({
     selectedDate,
     selectedLeadId,
@@ -166,6 +167,7 @@ export function CreditosTab() {
 
       setLoanToCancel(null)
       refetchLoans()
+      refetchAccounts()
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'No se pudo cancelar el crédito'
       toast({
@@ -179,11 +181,13 @@ export function CreditosTab() {
   // Handle success from create modal
   const handleCreateSuccess = () => {
     refetchLoans()
+    refetchAccounts()
   }
 
   // Handle success from edit modal
   const handleEditSuccess = () => {
     refetchLoans()
+    refetchAccounts()
   }
 
   if (!selectedRouteId || !selectedLeadId) {

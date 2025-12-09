@@ -66,13 +66,14 @@ export function useCreditosQueries({
     console.error('[useCreditosQueries] Error fetching loans:', renewalLoansError)
   }
 
-  // Query accounts for the route
-  const { data: accountsData, loading: accountsLoading } = useQuery(ACCOUNTS_QUERY, {
+  // Query accounts for the route - using no-cache to always get fresh balance
+  const { data: accountsData, loading: accountsLoading, refetch: refetchAccounts } = useQuery(ACCOUNTS_QUERY, {
     variables: {
       routeId: selectedRouteId,
       type: 'OFFICE_CASH_FUND',
     },
     skip: !selectedRouteId,
+    fetchPolicy: 'no-cache',
   })
 
   // Extract and transform data
@@ -135,5 +136,6 @@ export function useCreditosQueries({
     accounts,
     accountsLoading,
     defaultAccount,
+    refetchAccounts,
   }
 }

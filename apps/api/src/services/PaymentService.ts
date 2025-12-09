@@ -175,6 +175,9 @@ export class PaymentService {
         data: updateData,
       })
 
+      // Recalcular balance de la cuenta
+      await this.accountRepository.recalculateAndUpdateBalance(leadAccount.id, tx)
+
       return payment
     })
   }
@@ -356,21 +359,13 @@ export class PaymentService {
         bankAmountChange = bankAmountChange.plus(bankPaidAmount)
       }
 
-      // 6. Actualizar balances de cuentas
-      if (cashAccount && !cashAmountChange.isZero()) {
-        const currentAmount = new Decimal(cashAccount.amount.toString())
-        await tx.account.update({
-          where: { id: cashAccount.id },
-          data: { amount: currentAmount.plus(cashAmountChange) },
-        })
+      // 6. Recalcular balances de cuentas desde transacciones
+      if (cashAccount) {
+        await this.accountRepository.recalculateAndUpdateBalance(cashAccount.id, tx)
       }
 
-      if (bankAccount && !bankAmountChange.isZero()) {
-        const currentAmount = new Decimal(bankAccount.amount.toString())
-        await tx.account.update({
-          where: { id: bankAccount.id },
-          data: { amount: currentAmount.plus(bankAmountChange) },
-        })
+      if (bankAccount) {
+        await this.accountRepository.recalculateAndUpdateBalance(bankAccount.id, tx)
       }
 
       return leadPaymentReceived
@@ -531,6 +526,10 @@ export class PaymentService {
         }
       }
 
+      // Recalcular balance de la cuenta del lead
+      const leadAccount = await this.getLeadAccount(loan.lead || '', tx)
+      await this.accountRepository.recalculateAndUpdateBalance(leadAccount.id, tx)
+
       return updatedPayment
     })
   }
@@ -573,6 +572,10 @@ export class PaymentService {
           finishedDate: null,
         },
       })
+
+      // Recalcular balance de la cuenta del lead
+      const leadAccount = await this.getLeadAccount(loan.lead || '', tx)
+      await this.accountRepository.recalculateAndUpdateBalance(leadAccount.id, tx)
 
       return deletedPayment
     })
@@ -907,28 +910,7 @@ export class PaymentService {
         newBankChange = newBankChange.plus(bankPaidAmount)
       }
 
-      // 4. Calcular deltas netos para los balances de cuentas
-      const netCashDelta = newCashChange.minus(oldCashChange)
-      const netBankDelta = newBankChange.minus(oldBankChange)
-
-      // 6. Actualizar balances de cuentas
-      if (cashAccount && !netCashDelta.isZero()) {
-        const currentCashAmount = new Decimal(cashAccount.amount.toString())
-        await tx.account.update({
-          where: { id: cashAccount.id },
-          data: { amount: currentCashAmount.plus(netCashDelta) },
-        })
-      }
-
-      if (bankAccount && !netBankDelta.isZero()) {
-        const currentBankAmount = new Decimal(bankAccount.amount.toString())
-        await tx.account.update({
-          where: { id: bankAccount.id },
-          data: { amount: currentBankAmount.plus(netBankDelta) },
-        })
-      }
-
-      // 7. Manejar transacción de transferencia (bankPaidAmount)
+      // 4. Manejar transacción de transferencia (bankPaidAmount)
       // Eliminar transferencia anterior si existe
       await tx.transaction.deleteMany({
         where: {
@@ -952,6 +934,15 @@ export class PaymentService {
           },
           tx
         )
+      }
+
+      // 5. Recalcular balances de cuentas desde transacciones (al final, después de todas las modificaciones)
+      if (cashAccount) {
+        await this.accountRepository.recalculateAndUpdateBalance(cashAccount.id, tx)
+      }
+
+      if (bankAccount) {
+        await this.accountRepository.recalculateAndUpdateBalance(bankAccount.id, tx)
       }
 
       // Actualizar el registro LeadPaymentReceived

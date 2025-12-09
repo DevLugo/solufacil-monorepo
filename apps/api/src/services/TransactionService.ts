@@ -133,13 +133,9 @@ export class TransactionService {
         tx
       )
 
-      // Actualizar saldos
-      const newSourceBalance = sourceBalance.minus(amount)
-      const destBalance = new Decimal(destAccount.amount.toString())
-      const newDestBalance = destBalance.plus(amount)
-
-      await this.accountRepository.updateBalance(input.sourceAccountId, newSourceBalance, tx)
-      await this.accountRepository.updateBalance(input.destinationAccountId, newDestBalance, tx)
+      // Recalcular saldos de ambas cuentas desde transacciones
+      await this.accountRepository.recalculateAndUpdateBalance(input.sourceAccountId, tx)
+      await this.accountRepository.recalculateAndUpdateBalance(input.destinationAccountId, tx)
 
       return transaction
     })
