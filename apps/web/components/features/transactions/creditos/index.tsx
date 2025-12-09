@@ -100,6 +100,16 @@ export function CreditosTab() {
     selectedRouteId,
   })
 
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[CreditosTab] Loans:', {
+      loansToday,
+      loansTodayCount: loansToday.length,
+      loansLoading,
+      selectedLeadId,
+    })
+  }
+
   // Mutation for canceling loans
   const [cancelLoanWithAccountRestore, { loading: canceling }] = useMutation(
     CANCEL_LOAN_WITH_ACCOUNT_RESTORE
@@ -109,11 +119,21 @@ export function CreditosTab() {
   const filteredLoans = useMemo(() => {
     if (!searchTerm) return loansToday
     const term = searchTerm.toLowerCase()
-    return loansToday.filter(
+    const filtered = loansToday.filter(
       (loan) =>
         loan.borrower.personalData?.fullName?.toLowerCase().includes(term) ||
         loan.collaterals.some((c) => c.fullName?.toLowerCase().includes(term))
     )
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[CreditosTab] Filtered loans:', {
+        searchTerm,
+        loansTodayCount: loansToday.length,
+        filteredCount: filtered.length,
+      })
+    }
+
+    return filtered
   }, [loansToday, searchTerm])
 
   // Calculate totals

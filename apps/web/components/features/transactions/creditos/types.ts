@@ -160,12 +160,17 @@ export interface PendingLoan {
   loantypeId: string
   loantypeName: string
   weekDuration: number
+  comissionAmount: string // Commission for loan grant
   previousLoanId?: string
   borrowerId?: string
+  borrowerPersonalDataId?: string // Track for editing
+  borrowerPhoneId?: string // Track for editing
   borrowerName: string
   borrowerPhone?: string
   newBorrower?: CreateBorrowerInput
   collateralIds: string[]
+  collateralPersonalDataId?: string // Track for editing (same as collateralIds[0] for existing avales)
+  collateralPhoneId?: string // Track for editing
   collateralName?: string
   collateralPhone?: string
   newCollateral?: CreatePersonalDataInput

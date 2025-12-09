@@ -25,6 +25,7 @@ export function useCreditosQueries({
   const {
     data: loansData,
     loading: loansLoading,
+    error: loansError,
     refetch: refetchLoans,
   } = useQuery(LOANS_BY_DATE_LEAD_QUERY, {
     variables: {
@@ -33,8 +34,14 @@ export function useCreditosQueries({
       leadId: selectedLeadId,
     },
     skip: !selectedLeadId,
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: 'no-cache', // Use no-cache to avoid conflicts with ACTIVE_LOANS_FOR_RENEWAL_QUERY which also uses 'loans' field
+    notifyOnNetworkStatusChange: true,
   })
+
+  // Log errors
+  if (loansError) {
+    console.error('[useCreditosQueries] Error fetching loans:', loansError)
+  }
 
   // Query loan types
   const { data: loanTypesData, loading: loanTypesLoading } = useQuery(LOAN_TYPES_QUERY)
@@ -71,6 +78,20 @@ export function useCreditosQueries({
   // Extract and transform data
   const loansToday: Loan[] = loansData?.loans?.edges?.map((edge: { node: Loan }) => edge.node) || []
   const loanTypes: LoanType[] = loanTypesData?.loantypes || []
+
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[useCreditosQueries] Raw data:', {
+      loansData,
+      hasLoansData: !!loansData,
+      hasEdges: !!loansData?.loans?.edges,
+      edgesLength: loansData?.loans?.edges?.length,
+      loansToday,
+      loansTodayCount: loansToday.length,
+      selectedLeadId,
+      selectedDate: selectedDate.toISOString(),
+    })
+  }
 
   // Get all loans for the route
   const allLoansFromRoute: PreviousLoan[] =

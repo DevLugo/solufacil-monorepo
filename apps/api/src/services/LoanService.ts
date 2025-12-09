@@ -50,6 +50,7 @@ export interface CreateSingleLoanInput {
   requestedAmount: string | number
   amountGived: string | number
   loantypeId: string
+  comissionAmount?: string | number
   previousLoanId?: string
   borrowerId?: string
   newBorrower?: {
@@ -486,25 +487,43 @@ export class LoanService {
         if (loanInput.previousLoanId) {
           const previousLoan = await tx.loan.findUnique({
             where: { id: loanInput.previousLoanId },
+            include: { renewedBy: true },
           })
-          if (previousLoan) {
-            pendingProfit = new Decimal(previousLoan.pendingAmountStored.toString())
 
-            // Marcar préstamo anterior como RENOVATED
-            await tx.loan.update({
-              where: { id: loanInput.previousLoanId },
-              data: {
-                status: 'RENOVATED',
-                finishedDate: input.signDate,
-              },
+          if (!previousLoan) {
+            throw new GraphQLError(`Previous loan not found`, {
+              extensions: { code: 'NOT_FOUND' },
             })
           }
+
+          // Check if loan has already been renewed
+          if (previousLoan.renewedBy) {
+            throw new GraphQLError(
+              `Este préstamo ya fue renovado anteriormente. No se puede renovar dos veces.`,
+              { extensions: { code: 'BAD_USER_INPUT' } }
+            )
+          }
+
+          pendingProfit = new Decimal(previousLoan.pendingAmountStored.toString())
+
+          // Marcar préstamo anterior como RENOVATED
+          await tx.loan.update({
+            where: { id: loanInput.previousLoanId },
+            data: {
+              status: 'RENOVATED',
+              finishedDate: input.signDate,
+            },
+          })
         }
 
         const finalProfitAmount = metrics.profitAmount.plus(pendingProfit)
         const finalTotalDebt = metrics.totalDebtAcquired.plus(pendingProfit)
 
         // 6. Crear el préstamo
+        const comissionAmount = loanInput.comissionAmount
+          ? new Decimal(loanInput.comissionAmount)
+          : new Decimal(0)
+
         const loan = await tx.loan.create({
           data: {
             requestedAmount,
@@ -515,7 +534,7 @@ export class LoanService {
             expectedWeeklyPayment: metrics.expectedWeeklyPayment,
             pendingAmountStored: finalTotalDebt,
             totalPaid: new Decimal(0),
-            comissionAmount: new Decimal(0),
+            comissionAmount,
             borrower: borrowerId,
             loantype: loanInput.loantypeId,
             grantor: input.grantorId,
@@ -537,7 +556,11 @@ export class LoanService {
               },
             },
             loantypeRelation: true,
-            collaterals: true,
+            collaterals: {
+              include: {
+                phones: true,
+              },
+            },
           },
         })
 

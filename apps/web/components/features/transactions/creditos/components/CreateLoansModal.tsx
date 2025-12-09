@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useMutation } from '@apollo/client'
 import {
   Plus,
@@ -98,10 +98,12 @@ export function CreateLoansModal({
   const [editingLoanId, setEditingLoanId] = useState<string | null>(null)
   const [selectedLoanTypeId, setSelectedLoanTypeId] = useState<string>('')
   const [requestedAmount, setRequestedAmount] = useState<string>('')
+  const [comissionAmount, setComissionAmount] = useState<string>('')
   const [selectedBorrower, setSelectedBorrower] = useState<UnifiedClientValue | null>(null)
   const [selectedAval, setSelectedAval] = useState<UnifiedClientValue | null>(null)
   const [includeFirstPayment, setIncludeFirstPayment] = useState(false)
   const [firstPaymentAmount, setFirstPaymentAmount] = useState<string>('')
+  const [globalComissionAmount, setGlobalComissionAmount] = useState<string>('')
 
   // Get active loan from selected borrower (if any)
   const selectedActiveLoan = selectedBorrower?.activeLoan
@@ -150,6 +152,13 @@ export function CreateLoansModal({
   // Check if aval is from different location
   const isAvalFromDifferentLocation = selectedAval && selectedAval.isFromCurrentLocation === false
 
+  // Auto-calculate comission when loan type changes
+  useEffect(() => {
+    if (selectedLoanType && !editingLoanId) {
+      setComissionAmount(selectedLoanType.loanGrantedComission || '0')
+    }
+  }, [selectedLoanType, editingLoanId])
+
   // Account balance and validation
   const accountBalance = parseFloat(defaultAccount?.amount || '0')
   const hasInsufficientFunds = accountBalance < totals.totalAmount
@@ -159,6 +168,7 @@ export function CreateLoansModal({
     setEditingLoanId(null)
     setSelectedLoanTypeId('')
     setRequestedAmount('')
+    setComissionAmount('')
     setSelectedBorrower(null)
     setSelectedAval(null)
     setIncludeFirstPayment(false)
@@ -170,13 +180,15 @@ export function CreateLoansModal({
     setEditingLoanId(loan.tempId)
     setSelectedLoanTypeId(loan.loantypeId)
     setRequestedAmount(loan.requestedAmount)
+    setComissionAmount(loan.comissionAmount)
 
     // Reconstruct borrower from loan data
     if (loan.borrowerId) {
       // Existing borrower
       setSelectedBorrower({
         id: loan.borrowerId,
-        personalDataId: loan.borrowerId,
+        personalDataId: loan.borrowerPersonalDataId,
+        phoneId: loan.borrowerPhoneId,
         fullName: loan.borrowerName,
         phone: loan.borrowerPhone,
         isFromCurrentLocation: !loan.isFromDifferentLocation,
@@ -199,7 +211,8 @@ export function CreateLoansModal({
       // Existing aval
       setSelectedAval({
         id: loan.collateralIds[0],
-        personalDataId: loan.collateralIds[0],
+        personalDataId: loan.collateralPersonalDataId,
+        phoneId: loan.collateralPhoneId,
         fullName: loan.collateralName || '',
         phone: loan.collateralPhone,
         isFromCurrentLocation: true, // Assume same location for aval
@@ -244,6 +257,11 @@ export function CreateLoansModal({
       // Pre-fill loan type from previous loan
       if (activeLoan.loantype?.id) {
         setSelectedLoanTypeId(activeLoan.loantype.id)
+        // Set comission based on loantype's loanGrantedComission
+        const loantype = loanTypes.find(lt => lt.id === activeLoan.loantype?.id)
+        if (loantype) {
+          setComissionAmount(loantype.loanGrantedComission || '0')
+        }
       }
       // Pre-fill requested amount with the previous loan's amount
       setRequestedAmount(activeLoan.requestedAmount)
@@ -262,9 +280,10 @@ export function CreateLoansModal({
         })
       }
     } else {
-      // Clear loan type, amount, and aval if borrower has no active loan
+      // Clear loan type, amount, aval, and comission if borrower has no active loan
       setSelectedLoanTypeId('')
       setRequestedAmount('')
+      setComissionAmount('')
       setSelectedAval(null)
     }
   }
@@ -291,6 +310,8 @@ export function CreateLoansModal({
 
     // Determine borrower info
     let borrowerId: string | undefined
+    let borrowerPersonalDataId: string | undefined
+    let borrowerPhoneId: string | undefined
     let borrowerName: string
     let borrowerPhone: string | undefined
     let newBorrower: PendingLoan['newBorrower']
@@ -310,12 +331,16 @@ export function CreateLoansModal({
     } else {
       // Connecting existing borrower
       borrowerId = selectedBorrower.id
+      borrowerPersonalDataId = selectedBorrower.personalDataId
+      borrowerPhoneId = selectedBorrower.phoneId
       borrowerName = selectedBorrower.fullName
       borrowerPhone = selectedBorrower.phone
     }
 
     // Determine collateral/aval info
     let collateralIds: string[] = []
+    let collateralPersonalDataId: string | undefined
+    let collateralPhoneId: string | undefined
     let collateralName: string | undefined
     let collateralPhone: string | undefined
     let newCollateral: PendingLoan['newCollateral']
@@ -333,6 +358,8 @@ export function CreateLoansModal({
       } else if (selectedAval.id) {
         // Connecting existing aval
         collateralIds = [selectedAval.id]
+        collateralPersonalDataId = selectedAval.personalDataId
+        collateralPhoneId = selectedAval.phoneId
         collateralName = selectedAval.fullName
         collateralPhone = selectedAval.phone
       }
@@ -345,12 +372,17 @@ export function CreateLoansModal({
       loantypeId: selectedLoanTypeId,
       loantypeName: selectedLoanType?.name || '',
       weekDuration: selectedLoanType?.weekDuration || 0,
+      comissionAmount: comissionAmount || '0',
       previousLoanId: selectedActiveLoan?.id,
       borrowerId,
+      borrowerPersonalDataId,
+      borrowerPhoneId,
       borrowerName,
       borrowerPhone,
       newBorrower,
       collateralIds,
+      collateralPersonalDataId,
+      collateralPhoneId,
       collateralName,
       collateralPhone,
       newCollateral,
@@ -412,6 +444,7 @@ export function CreateLoansModal({
               requestedAmount: loan.requestedAmount,
               amountGived: loan.amountGived,
               loantypeId: loan.loantypeId,
+              comissionAmount: loan.comissionAmount,
               previousLoanId: loan.previousLoanId,
               borrowerId: loan.borrowerId,
               newBorrower: loan.newBorrower,
@@ -434,8 +467,8 @@ export function CreateLoansModal({
       })
 
       clearPendingLoans()
-      onOpenChange(false)
       onSuccess()
+      onOpenChange(false)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'No se pudieron guardar los créditos'
       toast({
@@ -513,8 +546,8 @@ export function CreateLoansModal({
               </div>
             )}
 
-            {/* Loan type and amount - side by side on desktop */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Loan type, amount and commission in one row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-sm">Tipo de préstamo</Label>
                 <Select value={selectedLoanTypeId} onValueChange={setSelectedLoanTypeId}>
@@ -538,6 +571,17 @@ export function CreateLoansModal({
                   value={requestedAmount}
                   onChange={(e) => setRequestedAmount(e.target.value)}
                   placeholder="0.00"
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Comisión</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={comissionAmount}
+                  onChange={(e) => setComissionAmount(e.target.value)}
+                  placeholder="0"
                   className="h-10"
                 />
               </div>
@@ -625,8 +669,48 @@ export function CreateLoansModal({
               </Badge>
             </div>
 
+            {/* Global commission control */}
+            {pendingLoans.length > 0 && (
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border">
+                <Label className="text-xs whitespace-nowrap">Comisión global:</Label>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={globalComissionAmount}
+                  onChange={(e) => setGlobalComissionAmount(e.target.value)}
+                  placeholder="0"
+                  className="h-8 w-20 text-sm"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() => {
+                    if (globalComissionAmount) {
+                      pendingLoans.forEach((loan) => {
+                        // Only apply to loans with commission > 0
+                        if (parseFloat(loan.comissionAmount) > 0) {
+                          updatePendingLoan(loan.tempId, {
+                            ...loan,
+                            comissionAmount: globalComissionAmount,
+                          })
+                        }
+                      })
+                      toast({
+                        title: 'Comisión actualizada',
+                        description: 'Se aplicó la comisión a todos los créditos con comisión',
+                      })
+                    }
+                  }}
+                  disabled={!globalComissionAmount}
+                >
+                  Aplicar
+                </Button>
+              </div>
+            )}
+
             <ScrollArea className="h-[250px] md:h-[300px]">
-              <div className="space-y-2">
+              <div className="space-y-2 p-0.5">
                 {pendingLoans.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     No hay créditos pendientes
@@ -635,9 +719,9 @@ export function CreateLoansModal({
                   pendingLoans.map((loan) => (
                     <Card
                       key={loan.tempId}
-                      className={`relative touch-manipulation cursor-pointer transition-colors ${
+                      className={`relative touch-manipulation cursor-pointer transition-all ${
                         editingLoanId === loan.tempId
-                          ? 'ring-2 ring-primary bg-primary/5'
+                          ? 'border-2 border-primary bg-primary/5 shadow-sm'
                           : 'hover:bg-muted/50'
                       }`}
                       onClick={() => handleEditLoan(loan)}
@@ -670,6 +754,11 @@ export function CreateLoansModal({
                               <DollarSign className="h-3.5 w-3.5" />
                               {formatCurrency(parseFloat(loan.amountGived))}
                             </div>
+                            {loan.comissionAmount && parseFloat(loan.comissionAmount) > 0 && (
+                              <div className="text-xs md:text-sm text-muted-foreground">
+                                Comisión: {formatCurrency(parseFloat(loan.comissionAmount))}
+                              </div>
+                            )}
                             {loan.collateralName && (
                               <div className="text-xs md:text-sm text-muted-foreground">
                                 Aval: {loan.collateralName}

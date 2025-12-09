@@ -702,6 +702,7 @@ input CreateSingleLoanInput {
   requestedAmount: Decimal!
   amountGived: Decimal!
   loantypeId: ID!
+  comissionAmount: Decimal
   previousLoanId: ID
   borrowerId: ID
   newBorrower: CreateBorrowerInput

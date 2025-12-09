@@ -211,6 +211,7 @@ export type CreateSingleLoanInput = {
   amountGived: Scalars['Decimal']['input'];
   borrowerId?: InputMaybe<Scalars['ID']['input']>;
   collateralIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  comissionAmount?: InputMaybe<Scalars['Decimal']['input']>;
   firstPayment?: InputMaybe<FirstPaymentInput>;
   isFromDifferentLocation?: InputMaybe<Scalars['Boolean']['input']>;
   loantypeId: Scalars['ID']['input'];
