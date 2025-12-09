@@ -48,7 +48,10 @@ export function EditLoanModal({
   const { toast } = useToast()
 
   const [selectedLoanTypeId, setSelectedLoanTypeId] = useState<string>('')
+  const [requestedAmount, setRequestedAmount] = useState<string>('')
+  const [borrowerName, setBorrowerName] = useState<string>('')
   const [borrowerPhone, setBorrowerPhone] = useState<string>('')
+  const [comissionAmount, setComissionAmount] = useState<string>('')
   const [selectedAval, setSelectedAval] = useState<UnifiedClientValue | null>(null)
 
   const [updateLoanExtended, { loading: saving }] = useMutation(UPDATE_LOAN_EXTENDED)
@@ -57,7 +60,10 @@ export function EditLoanModal({
   useEffect(() => {
     if (loan) {
       setSelectedLoanTypeId(loan.loantype.id)
+      setRequestedAmount(loan.requestedAmount || '')
+      setBorrowerName(loan.borrower.personalData.fullName || '')
       setBorrowerPhone(loan.borrower.personalData.phones[0]?.number || '')
+      setComissionAmount(loan.comissionAmount?.toString() || '0')
       if (loan.collaterals.length > 0) {
         const collateral = loan.collaterals[0]
         const collateralLocationId = collateral.addresses?.[0]?.location?.id
@@ -82,30 +88,16 @@ export function EditLoanModal({
   // Check if aval is from different location
   const isAvalFromDifferentLocation = selectedAval && selectedAval.isFromCurrentLocation === false
 
-  // Get selected loan type details
-  const selectedLoanType = useMemo(
-    () => loanTypes.find((lt) => lt.id === selectedLoanTypeId),
-    [loanTypes, selectedLoanTypeId]
-  )
-
-  // Calculate new weekly payment if loan type changed
-  const newWeeklyPayment = useMemo(() => {
-    if (!selectedLoanType || !loan) return null
-    if (selectedLoanTypeId === loan.loantype.id) return null
-
-    const requestedAmount = parseFloat(loan.requestedAmount)
-    const rate = parseFloat(selectedLoanType.rate)
-    const totalDebt = requestedAmount * (1 + rate / 100)
-    return totalDebt / selectedLoanType.weekDuration
-  }, [selectedLoanType, selectedLoanTypeId, loan])
-
   const handleSave = async () => {
     if (!loan) return
 
     try {
       const input: {
         loantypeId?: string
+        requestedAmount?: string
+        borrowerName?: string
         borrowerPhone?: string
+        comissionAmount?: string
         collateralIds?: string[]
         collateralPhone?: string
         newCollateral?: {
@@ -120,8 +112,20 @@ export function EditLoanModal({
         input.loantypeId = selectedLoanTypeId
       }
 
+      if (requestedAmount !== loan.requestedAmount) {
+        input.requestedAmount = requestedAmount
+      }
+
+      if (borrowerName !== loan.borrower.personalData.fullName) {
+        input.borrowerName = borrowerName
+      }
+
       if (borrowerPhone !== loan.borrower.personalData.phones[0]?.number) {
         input.borrowerPhone = borrowerPhone
+      }
+
+      if (comissionAmount !== loan.comissionAmount?.toString()) {
+        input.comissionAmount = comissionAmount
       }
 
       // Handle aval changes
@@ -192,6 +196,22 @@ export function EditLoanModal({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Current debt info */}
+          <div className="p-3 rounded-lg bg-muted/50 space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Deuda total:</span>
+              <span className="font-medium">{formatCurrency(parseFloat(loan.totalDebtAcquired || '0'))}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Pago semanal:</span>
+              <span>{formatCurrency(parseFloat(loan.expectedWeeklyPayment || '0'))}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Pendiente:</span>
+              <span className="text-destructive font-medium">{formatCurrency(parseFloat(loan.pendingAmountStored || '0'))}</span>
+            </div>
+          </div>
+
           {/* Loan type */}
           <div className="space-y-2">
             <Label>Tipo de préstamo</Label>
@@ -207,11 +227,28 @@ export function EditLoanModal({
                 ))}
               </SelectContent>
             </Select>
-            {newWeeklyPayment && (
-              <p className="text-sm text-muted-foreground">
-                Nuevo pago semanal: {formatCurrency(newWeeklyPayment)}
-              </p>
-            )}
+          </div>
+
+          {/* Requested Amount */}
+          <div className="space-y-2">
+            <Label>Monto solicitado</Label>
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={requestedAmount}
+              onChange={(e) => setRequestedAmount(e.target.value)}
+              placeholder="0"
+            />
+          </div>
+
+          {/* Borrower name */}
+          <div className="space-y-2">
+            <Label>Nombre del cliente</Label>
+            <Input
+              value={borrowerName}
+              onChange={(e) => setBorrowerName(e.target.value)}
+              placeholder="Nombre completo"
+            />
           </div>
 
           {/* Borrower phone */}
@@ -221,6 +258,18 @@ export function EditLoanModal({
               value={borrowerPhone}
               onChange={(e) => setBorrowerPhone(e.target.value)}
               placeholder="Teléfono"
+            />
+          </div>
+
+          {/* Commission */}
+          <div className="space-y-2">
+            <Label>Comisión</Label>
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={comissionAmount}
+              onChange={(e) => setComissionAmount(e.target.value)}
+              placeholder="0"
             />
           </div>
 

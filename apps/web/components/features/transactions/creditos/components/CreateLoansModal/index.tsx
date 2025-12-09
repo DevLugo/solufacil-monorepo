@@ -2,24 +2,11 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useMutation } from '@apollo/client'
-import {
-  Plus,
-  Trash2,
-  Save,
-  Loader2,
-  MapPin,
-  RefreshCw,
-  User,
-  DollarSign,
-  AlertCircle,
-  Wallet,
-  ArrowRight,
-} from 'lucide-react'
+import { Plus, Save, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Dialog,
   DialogContent,
@@ -28,43 +15,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
 import { formatCurrency } from '@/lib/utils'
-import { UnifiedClientAutocomplete } from './UnifiedClientAutocomplete'
-import { LocationWarning } from './LocationWarning'
-import { usePendingLoans } from '../hooks/usePendingLoans'
+import { UnifiedClientAutocomplete } from '../UnifiedClientAutocomplete'
+import { LocationWarning } from '../LocationWarning'
+import { usePendingLoans } from '../../hooks/usePendingLoans'
 import { CREATE_LOANS_IN_BATCH } from '@/graphql/mutations/transactions'
-import type {
-  LoanType,
-  Account,
-  PreviousLoan,
-  PendingLoan,
-  UnifiedClientValue,
-} from '../types'
 
-interface CreateLoansModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  loanTypes: LoanType[]
-  accounts: Account[]
-  loansForRenewal: PreviousLoan[]
-  leadId: string
-  grantorId: string
-  locationId?: string
-  selectedDate: Date
-  onSuccess: () => void
-}
+import { PendingLoanCard } from './PendingLoanCard'
+import { AccountBalanceInfo } from './AccountBalanceInfo'
+import { LoanCalculationSummary } from './LoanCalculationSummary'
+import { GlobalCommissionControl } from './GlobalCommissionControl'
+import { FirstPaymentControl } from './FirstPaymentControl'
+import { RenewalSummaryInline } from './RenewalSummaryInline'
+import { LoanTypeAmountFields } from './LoanTypeAmountFields'
+import type { CreateLoansModalProps, PendingLoan, UnifiedClientValue } from './types'
 
 export function CreateLoansModal({
   open,
@@ -126,8 +91,6 @@ export function CreateLoansModal({
   const isRenewal = !!selectedActiveLoan
 
   // Calculate "Monto Otorgado" (amount actually given to client)
-  // For renewals: requestedAmount - pendingAmount
-  // For new loans: requestedAmount
   const calculatedAmountGived = useMemo(() => {
     const requested = parseFloat(requestedAmount) || 0
     if (isRenewal && renewalPendingAmount > 0) {
@@ -137,7 +100,6 @@ export function CreateLoansModal({
   }, [requestedAmount, isRenewal, renewalPendingAmount])
 
   // Calculate weekly payment based on the total debt
-  // Rate is already in decimal format (0.4 = 40%), so we use it directly
   const calculatedWeeklyPayment = useMemo(() => {
     if (!selectedLoanType || !requestedAmount) return 0
     const amount = parseFloat(requestedAmount) || 0
@@ -184,7 +146,6 @@ export function CreateLoansModal({
 
     // Reconstruct borrower from loan data
     if (loan.borrowerId) {
-      // Existing borrower
       setSelectedBorrower({
         id: loan.borrowerId,
         personalDataId: loan.borrowerPersonalDataId,
@@ -196,7 +157,6 @@ export function CreateLoansModal({
         action: 'connect',
       })
     } else if (loan.newBorrower) {
-      // New borrower
       setSelectedBorrower({
         fullName: loan.newBorrower.personalData.fullName,
         phone: loan.newBorrower.personalData.phones?.[0]?.number,
@@ -208,19 +168,17 @@ export function CreateLoansModal({
 
     // Reconstruct aval from loan data
     if (loan.collateralIds && loan.collateralIds.length > 0) {
-      // Existing aval
       setSelectedAval({
         id: loan.collateralIds[0],
         personalDataId: loan.collateralPersonalDataId,
         phoneId: loan.collateralPhoneId,
         fullName: loan.collateralName || '',
         phone: loan.collateralPhone,
-        isFromCurrentLocation: true, // Assume same location for aval
+        isFromCurrentLocation: true,
         clientState: 'existing',
         action: 'connect',
       })
     } else if (loan.newCollateral) {
-      // New aval
       setSelectedAval({
         fullName: loan.newCollateral.fullName,
         phone: loan.newCollateral.phones?.[0]?.number,
@@ -244,43 +202,36 @@ export function CreateLoansModal({
 
   // Handle selecting a borrower - auto-fill if they have an active loan
   const handleBorrowerChange = (borrower: UnifiedClientValue | null) => {
-    // If editing a loan and changing the borrower, cancel the edit
     if (editingLoanId) {
       setEditingLoanId(null)
     }
 
     setSelectedBorrower(borrower)
 
-    // If borrower has an active loan, pre-fill the form
     if (borrower?.activeLoan) {
       const activeLoan = borrower.activeLoan
-      // Pre-fill loan type from previous loan
       if (activeLoan.loantype?.id) {
         setSelectedLoanTypeId(activeLoan.loantype.id)
-        // Set comission based on loantype's loanGrantedComission
         const loantype = loanTypes.find(lt => lt.id === activeLoan.loantype?.id)
         if (loantype) {
           setComissionAmount(loantype.loanGrantedComission || '0')
         }
       }
-      // Pre-fill requested amount with the previous loan's amount
       setRequestedAmount(activeLoan.requestedAmount)
-      // Pre-fill aval if exists
       if (activeLoan.collaterals && activeLoan.collaterals.length > 0) {
         const collateral = activeLoan.collaterals[0]
         setSelectedAval({
           id: collateral.id,
-          personalDataId: collateral.id, // For avales, id IS the personalDataId
+          personalDataId: collateral.id,
           phoneId: collateral.phones?.[0]?.id,
           fullName: collateral.fullName,
           phone: collateral.phones?.[0]?.number,
-          isFromCurrentLocation: true, // Assume same location
+          isFromCurrentLocation: true,
           clientState: 'existing',
           action: 'connect',
         })
       }
     } else {
-      // Clear loan type, amount, aval, and comission if borrower has no active loan
       setSelectedLoanTypeId('')
       setRequestedAmount('')
       setComissionAmount('')
@@ -316,9 +267,7 @@ export function CreateLoansModal({
     let borrowerPhone: string | undefined
     let newBorrower: PendingLoan['newBorrower']
 
-    // Check if creating new or connecting existing borrower
     if (selectedBorrower.action === 'create') {
-      // Creating new borrower
       borrowerName = selectedBorrower.fullName
       borrowerPhone = selectedBorrower.phone
       newBorrower = {
@@ -329,7 +278,6 @@ export function CreateLoansModal({
         },
       }
     } else {
-      // Connecting existing borrower
       borrowerId = selectedBorrower.id
       borrowerPersonalDataId = selectedBorrower.personalDataId
       borrowerPhoneId = selectedBorrower.phoneId
@@ -347,7 +295,6 @@ export function CreateLoansModal({
 
     if (selectedAval) {
       if (selectedAval.action === 'create') {
-        // Creating new aval
         collateralName = selectedAval.fullName
         collateralPhone = selectedAval.phone
         newCollateral = {
@@ -356,7 +303,6 @@ export function CreateLoansModal({
           addresses: locationId ? [{ street: '', locationId }] : undefined,
         }
       } else if (selectedAval.id) {
-        // Connecting existing aval
         collateralIds = [selectedAval.id]
         collateralPersonalDataId = selectedAval.personalDataId
         collateralPhoneId = selectedAval.phoneId
@@ -368,7 +314,7 @@ export function CreateLoansModal({
     const pendingLoanData: PendingLoan = {
       tempId: editingLoanId || generateTempId(),
       requestedAmount,
-      amountGived: calculatedAmountGived.toString(), // For renewals: requestedAmount - pendingAmount
+      amountGived: calculatedAmountGived.toString(),
       loantypeId: selectedLoanTypeId,
       loantypeName: selectedLoanType?.name || '',
       weekDuration: selectedLoanType?.weekDuration || 0,
@@ -387,24 +333,19 @@ export function CreateLoansModal({
       collateralPhone,
       newCollateral,
       firstPayment: includeFirstPayment && firstPaymentAmount
-        ? {
-            amount: firstPaymentAmount,
-            paymentMethod: 'CASH',
-          }
+        ? { amount: firstPaymentAmount, paymentMethod: 'CASH' }
         : undefined,
       isFromDifferentLocation: selectedBorrower?.isFromCurrentLocation === false,
       isRenewal,
     }
 
     if (editingLoanId) {
-      // Update existing loan
       updatePendingLoan(editingLoanId, pendingLoanData)
       toast({
         title: 'Crédito actualizado',
         description: `${pendingLoanData.borrowerName} - ${formatCurrency(calculatedAmountGived)} a entregar`,
       })
     } else {
-      // Add new loan
       addPendingLoan(pendingLoanData)
       toast({
         title: 'Crédito agregado',
@@ -413,6 +354,32 @@ export function CreateLoansModal({
     }
 
     resetForm()
+  }
+
+  // Apply global commission
+  const handleApplyGlobalCommission = () => {
+    if (globalComissionAmount) {
+      pendingLoans.forEach((loan) => {
+        if (parseFloat(loan.comissionAmount) > 0) {
+          updatePendingLoan(loan.tempId, {
+            ...loan,
+            comissionAmount: globalComissionAmount,
+          })
+        }
+      })
+      toast({
+        title: 'Comisión actualizada',
+        description: 'Se aplicó la comisión a todos los créditos con comisión',
+      })
+    }
+  }
+
+  // Handle remove loan
+  const handleRemoveLoan = (tempId: string) => {
+    removePendingLoan(tempId)
+    if (editingLoanId === tempId) {
+      resetForm()
+    }
   }
 
   // Save all pending loans
@@ -508,7 +475,7 @@ export function CreateLoansModal({
               )}
             </div>
 
-            {/* Client selector - shows both new clients and clients with active loans for renewal */}
+            {/* Client selector */}
             <div className="space-y-2">
               <Label>Cliente</Label>
               <UnifiedClientAutocomplete
@@ -530,77 +497,33 @@ export function CreateLoansModal({
               )}
             </div>
 
-            {/* Renewal summary - compact inline version */}
+            {/* Renewal summary */}
             {isRenewal && selectedActiveLoan && (
-              <div className="flex items-center gap-3 p-2.5 rounded-lg border border-green-200 bg-green-50/50 dark:border-green-800 dark:bg-green-950/30">
-                <RefreshCw className="h-4 w-4 text-green-600 flex-shrink-0" />
-                <div className="flex-1 min-w-0 flex items-center gap-4 text-sm">
-                  <span className="text-green-700 dark:text-green-400 font-medium">Renovación</span>
-                  <span className="text-muted-foreground">
-                    Pagado: <span className="text-green-600">{formatCurrency(parseFloat(selectedActiveLoan.totalPaid || '0'))}</span>
-                  </span>
-                  <span className="text-muted-foreground">
-                    Deuda: <span className="text-destructive font-medium">{formatCurrency(renewalPendingAmount)}</span>
-                  </span>
-                </div>
-              </div>
+              <RenewalSummaryInline
+                activeLoan={selectedActiveLoan}
+                renewalPendingAmount={renewalPendingAmount}
+              />
             )}
 
-            {/* Loan type, amount and commission in one row */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-sm">Tipo de préstamo</Label>
-                <Select value={selectedLoanTypeId} onValueChange={setSelectedLoanTypeId}>
-                  <SelectTrigger className="h-10">
-                    <SelectValue placeholder="Seleccionar..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {loanTypes.map((lt) => (
-                      <SelectItem key={lt.id} value={lt.id} className="py-2">
-                        {lt.name} ({lt.weekDuration}sem, {lt.rate}%)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm">Monto solicitado</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  value={requestedAmount}
-                  onChange={(e) => setRequestedAmount(e.target.value)}
-                  placeholder="0.00"
-                  className="h-10"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-sm">Comisión</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  value={comissionAmount}
-                  onChange={(e) => setComissionAmount(e.target.value)}
-                  placeholder="0"
-                  className="h-10"
-                />
-              </div>
-            </div>
+            {/* Loan type, amount and commission */}
+            <LoanTypeAmountFields
+              loanTypes={loanTypes}
+              selectedLoanTypeId={selectedLoanTypeId}
+              onLoanTypeChange={setSelectedLoanTypeId}
+              requestedAmount={requestedAmount}
+              onRequestedAmountChange={setRequestedAmount}
+              comissionAmount={comissionAmount}
+              onComissionChange={setComissionAmount}
+            />
 
-            {/* Calculation summary - always show if we have amount and type */}
+            {/* Calculation summary */}
             {requestedAmount && calculatedWeeklyPayment > 0 && (
-              <div className="p-2.5 rounded-lg bg-muted/50 space-y-1.5 text-sm">
-                {isRenewal && renewalPendingAmount > 0 && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">A entregar:</span>
-                    <span className="font-semibold text-primary">{formatCurrency(calculatedAmountGived)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Pago semanal:</span>
-                  <span className="font-medium">{formatCurrency(calculatedWeeklyPayment)}</span>
-                </div>
-              </div>
+              <LoanCalculationSummary
+                isRenewal={isRenewal}
+                renewalPendingAmount={renewalPendingAmount}
+                calculatedAmountGived={calculatedAmountGived}
+                calculatedWeeklyPayment={calculatedWeeklyPayment}
+              />
             )}
 
             {/* Aval selector */}
@@ -624,24 +547,13 @@ export function CreateLoansModal({
               )}
             </div>
 
-            {/* First payment - inline toggle */}
-            <div className="flex items-center gap-3">
-              <Switch
-                checked={includeFirstPayment}
-                onCheckedChange={setIncludeFirstPayment}
-              />
-              <Label className="text-sm flex-shrink-0">Primer pago</Label>
-              {includeFirstPayment && (
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  value={firstPaymentAmount}
-                  onChange={(e) => setFirstPaymentAmount(e.target.value)}
-                  placeholder="Monto"
-                  className="h-9 flex-1"
-                />
-              )}
-            </div>
+            {/* First payment */}
+            <FirstPaymentControl
+              includeFirstPayment={includeFirstPayment}
+              onIncludeChange={setIncludeFirstPayment}
+              firstPaymentAmount={firstPaymentAmount}
+              onAmountChange={setFirstPaymentAmount}
+            />
 
             <Button onClick={handleAddLoan} className="w-full h-11">
               {editingLoanId ? (
@@ -670,44 +582,12 @@ export function CreateLoansModal({
             </div>
 
             {/* Global commission control */}
-            {pendingLoans.length > 0 && (
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border">
-                <Label className="text-xs whitespace-nowrap">Comisión global:</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  value={globalComissionAmount}
-                  onChange={(e) => setGlobalComissionAmount(e.target.value)}
-                  placeholder="0"
-                  className="h-8 w-20 text-sm"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={() => {
-                    if (globalComissionAmount) {
-                      pendingLoans.forEach((loan) => {
-                        // Only apply to loans with commission > 0
-                        if (parseFloat(loan.comissionAmount) > 0) {
-                          updatePendingLoan(loan.tempId, {
-                            ...loan,
-                            comissionAmount: globalComissionAmount,
-                          })
-                        }
-                      })
-                      toast({
-                        title: 'Comisión actualizada',
-                        description: 'Se aplicó la comisión a todos los créditos con comisión',
-                      })
-                    }
-                  }}
-                  disabled={!globalComissionAmount}
-                >
-                  Aplicar
-                </Button>
-              </div>
-            )}
+            <GlobalCommissionControl
+              globalComissionAmount={globalComissionAmount}
+              onGlobalComissionChange={setGlobalComissionAmount}
+              pendingLoans={pendingLoans}
+              onApply={handleApplyGlobalCommission}
+            />
 
             <ScrollArea className="h-[250px] md:h-[300px]">
               <div className="space-y-2 p-0.5">
@@ -717,100 +597,24 @@ export function CreateLoansModal({
                   </div>
                 ) : (
                   pendingLoans.map((loan) => (
-                    <Card
+                    <PendingLoanCard
                       key={loan.tempId}
-                      className={`relative touch-manipulation cursor-pointer transition-all ${
-                        editingLoanId === loan.tempId
-                          ? 'border-2 border-primary bg-primary/5 shadow-sm'
-                          : 'hover:bg-muted/50'
-                      }`}
-                      onClick={() => handleEditLoan(loan)}
-                    >
-                      <CardContent className="p-3 md:p-4">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="space-y-1.5 flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <User className="h-4 w-4 flex-shrink-0" />
-                              <span className="font-medium text-sm md:text-base truncate">{loan.borrowerName}</span>
-                              {loan.isFromDifferentLocation && (
-                                <MapPin className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0" />
-                              )}
-                              {loan.isRenewal && (
-                                <Badge variant="outline" className="text-xs flex-shrink-0">
-                                  <RefreshCw className="h-3 w-3 mr-1" />
-                                  Renovación
-                                </Badge>
-                              )}
-                              {editingLoanId === loan.tempId && (
-                                <Badge variant="default" className="text-xs flex-shrink-0">
-                                  Editando
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {loan.loantypeName} - {loan.weekDuration} sem
-                            </div>
-                            <div className="flex items-center gap-1 text-sm md:text-base font-medium">
-                              <DollarSign className="h-3.5 w-3.5" />
-                              {formatCurrency(parseFloat(loan.amountGived))}
-                            </div>
-                            {loan.comissionAmount && parseFloat(loan.comissionAmount) > 0 && (
-                              <div className="text-xs md:text-sm text-muted-foreground">
-                                Comisión: {formatCurrency(parseFloat(loan.comissionAmount))}
-                              </div>
-                            )}
-                            {loan.collateralName && (
-                              <div className="text-xs md:text-sm text-muted-foreground">
-                                Aval: {loan.collateralName}
-                              </div>
-                            )}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-10 w-10 md:h-11 md:w-11 flex-shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              removePendingLoan(loan.tempId)
-                              if (editingLoanId === loan.tempId) {
-                                resetForm()
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-5 w-5 text-destructive" />
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                      loan={loan}
+                      isEditing={editingLoanId === loan.tempId}
+                      onEdit={handleEditLoan}
+                      onRemove={handleRemoveLoan}
+                    />
                   ))
                 )}
               </div>
             </ScrollArea>
 
-            {/* Account info (auto-selected) */}
-            <div className="pt-4 border-t">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <Wallet className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">{defaultAccount?.name || 'Sin cuenta'}</p>
-                    <p className="text-xs text-muted-foreground">Cuenta origen</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium">{formatCurrency(accountBalance)}</p>
-                  <p className="text-xs text-muted-foreground">Saldo disponible</p>
-                </div>
-              </div>
-              {hasInsufficientFunds && (
-                <Alert variant="destructive" className="mt-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>
-                    Fondos insuficientes. Se necesitan {formatCurrency(totals.totalAmount)}
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
+            {/* Account info */}
+            <AccountBalanceInfo
+              account={defaultAccount}
+              totalAmount={totals.totalAmount}
+              hasInsufficientFunds={hasInsufficientFunds}
+            />
           </div>
         </div>
 

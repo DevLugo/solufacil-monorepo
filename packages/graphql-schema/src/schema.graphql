@@ -720,10 +720,13 @@ input FirstPaymentInput {
 
 input UpdateLoanExtendedInput {
   loantypeId: ID
+  requestedAmount: Decimal
+  borrowerName: String
+  borrowerPhone: String
   collateralIds: [ID!]
   newCollateral: CreatePersonalDataInput
-  borrowerPhone: String
   collateralPhone: String
+  comissionAmount: Decimal
 }
 
 input UpdatePhoneInput {

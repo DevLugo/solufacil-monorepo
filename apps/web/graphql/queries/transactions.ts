@@ -408,6 +408,12 @@ export const ACTIVE_LOANS_BY_LEAD_QUERY = gql`
             leadPaymentReceived {
               id
             }
+            transactions {
+              id
+              type
+              profitAmount
+              returnToCapital
+            }
           }
         }
       }

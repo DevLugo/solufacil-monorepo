@@ -21,6 +21,7 @@ interface UserAddedPaymentRowProps {
   payment: UserAddedPayment
   availableLoans: ActiveLoan[]
   selectedLoan: ActiveLoan | undefined
+  isAdmin?: boolean
   onLoanChange: (loanId: string) => void
   onAmountChange: (amount: string) => void
   onCommissionChange: (commission: string) => void
@@ -32,6 +33,7 @@ export function UserAddedPaymentRow({
   payment,
   availableLoans,
   selectedLoan,
+  isAdmin,
   onLoanChange,
   onAmountChange,
   onCommissionChange,
@@ -170,6 +172,18 @@ export function UserAddedPaymentRow({
           </Badge>
         )}
       </TableCell>
+
+      {/* Admin-only columns (empty for new payments) */}
+      {isAdmin && (
+        <>
+          <TableCell className="text-right bg-muted/50">
+            <span className="text-sm text-muted-foreground">-</span>
+          </TableCell>
+          <TableCell className="text-right bg-muted/50">
+            <span className="text-sm text-muted-foreground">-</span>
+          </TableCell>
+        </>
+      )}
     </TableRow>
   )
 }

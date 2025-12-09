@@ -467,11 +467,23 @@ export class PaymentService {
         })
       }
 
-      // Actualizar transacciones asociadas
+      // Actualizar transacciones asociadas (incluyendo recálculo de profitAmount)
       if (input.amount || input.paymentMethod) {
         const incomeSource = (input.paymentMethod || existingPayment.paymentMethod) === 'CASH'
           ? 'CASH_LOAN_PAYMENT'
           : 'BANK_LOAN_PAYMENT'
+
+        // Recalcular profitAmount y returnToCapital si cambió el monto
+        const totalProfit = new Decimal(loan.profitAmount.toString())
+        const totalDebt = new Decimal(loan.totalDebtAcquired.toString())
+        const isBadDebt = !!loan.badDebtDate
+
+        const { profitAmount, returnToCapital } = calculatePaymentProfit(
+          newAmount,
+          totalProfit,
+          totalDebt,
+          isBadDebt
+        )
 
         await tx.transaction.updateMany({
           where: {
@@ -481,6 +493,8 @@ export class PaymentService {
           data: {
             amount: newAmount,
             incomeSource,
+            profitAmount,
+            returnToCapital,
           },
         })
       }
@@ -714,13 +728,27 @@ export class PaymentService {
                   },
                 })
 
-                // Actualizar transacciones
+                // Actualizar transacciones (incluyendo recálculo de profitAmount)
                 const incomeSource = paymentInput.paymentMethod === 'CASH'
                   ? 'CASH_LOAN_PAYMENT'
                   : 'BANK_LOAN_PAYMENT'
 
                 const isTransfer = paymentInput.paymentMethod === 'MONEY_TRANSFER'
                 const destinationAccountId = isTransfer ? bankAccount?.id : cashAccount?.id
+
+                // Obtener datos del loan para recalcular profit
+                const loan = existingPayment.loanRelation
+                const loanTotalProfit = new Decimal(loan.profitAmount.toString())
+                const loanTotalDebt = new Decimal(loan.totalDebtAcquired.toString())
+                const loanIsBadDebt = !!loan.badDebtDate
+
+                // Recalcular profitAmount y returnToCapital
+                const { profitAmount, returnToCapital } = calculatePaymentProfit(
+                  paymentAmount,
+                  loanTotalProfit,
+                  loanTotalDebt,
+                  loanIsBadDebt
+                )
 
                 await tx.transaction.updateMany({
                   where: {
@@ -731,6 +759,8 @@ export class PaymentService {
                     amount: paymentAmount,
                     incomeSource,
                     destinationAccount: destinationAccountId,
+                    profitAmount,
+                    returnToCapital,
                   },
                 })
 

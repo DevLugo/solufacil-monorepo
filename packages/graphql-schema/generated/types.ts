@@ -1019,11 +1019,14 @@ export type UpdateLeadPaymentReceivedInput = {
 };
 
 export type UpdateLoanExtendedInput = {
+  borrowerName?: InputMaybe<Scalars['String']['input']>;
   borrowerPhone?: InputMaybe<Scalars['String']['input']>;
   collateralIds?: InputMaybe<Array<Scalars['ID']['input']>>;
   collateralPhone?: InputMaybe<Scalars['String']['input']>;
+  comissionAmount?: InputMaybe<Scalars['Decimal']['input']>;
   loantypeId?: InputMaybe<Scalars['ID']['input']>;
   newCollateral?: InputMaybe<CreatePersonalDataInput>;
+  requestedAmount?: InputMaybe<Scalars['Decimal']['input']>;
 };
 
 export type UpdateLoanInput = {

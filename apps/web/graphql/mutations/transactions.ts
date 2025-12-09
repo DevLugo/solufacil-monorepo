@@ -108,6 +108,7 @@ export const UPDATE_LOAN_EXTENDED = gql`
       id
       requestedAmount
       amountGived
+      comissionAmount
       totalDebtAcquired
       expectedWeeklyPayment
       pendingAmountStored

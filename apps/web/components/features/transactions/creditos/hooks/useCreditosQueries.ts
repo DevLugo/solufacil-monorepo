@@ -79,30 +79,45 @@ export function useCreditosQueries({
   const loansToday: Loan[] = loansData?.loans?.edges?.map((edge: { node: Loan }) => edge.node) || []
   const loanTypes: LoanType[] = loanTypesData?.loantypes || []
 
-  // Debug logging
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[useCreditosQueries] Raw data:', {
-      loansData,
-      hasLoansData: !!loansData,
-      hasEdges: !!loansData?.loans?.edges,
-      edgesLength: loansData?.loans?.edges?.length,
-      loansToday,
-      loansTodayCount: loansToday.length,
-      selectedLeadId,
-      selectedDate: selectedDate.toISOString(),
-    })
-  }
-
   // Get all loans for the route
   const allLoansFromRoute: PreviousLoan[] =
     renewalLoansData?.loans?.edges?.map((edge: { node: PreviousLoan }) => edge.node) || []
 
-  // Filter for ACTIVE loans (pendingAmountStored > 0 means there's still debt)
-  // Server already filters by leadId, so all loans here are from the selected lead's location
-  const loansForRenewal: PreviousLoan[] = allLoansFromRoute.filter((loan) => {
-    const pendingAmount = parseFloat(loan.pendingAmountStored || '0')
-    return pendingAmount > 0
-  })
+  // Para cada cliente, solo mostrar su préstamo MÁS RECIENTE con deuda pendiente
+  // Esto garantiza que si aparece en el autocomplete, es renovable
+  const loansForRenewal: PreviousLoan[] = (() => {
+    // Agrupar préstamos por borrower
+    const loansByBorrower = new Map<string, PreviousLoan[]>()
+
+    allLoansFromRoute.forEach((loan) => {
+      const borrowerId = loan.borrower.id
+      if (!loansByBorrower.has(borrowerId)) {
+        loansByBorrower.set(borrowerId, [])
+      }
+      loansByBorrower.get(borrowerId)!.push(loan)
+    })
+
+    // Para cada borrower, obtener solo el préstamo más reciente con deuda
+    const mostRecentLoans: PreviousLoan[] = []
+
+    loansByBorrower.forEach((loans) => {
+      // Ordenar por fecha de firma descendente (más reciente primero)
+      const sortedLoans = loans.sort((a, b) =>
+        new Date(b.signDate).getTime() - new Date(a.signDate).getTime()
+      )
+
+      // Tomar el más reciente con deuda pendiente
+      const mostRecentWithDebt = sortedLoans.find(
+        loan => parseFloat(loan.pendingAmountStored || '0') > 0
+      )
+
+      if (mostRecentWithDebt) {
+        mostRecentLoans.push(mostRecentWithDebt)
+      }
+    })
+
+    return mostRecentLoans
+  })()
 
   const accounts: Account[] = accountsData?.accounts || []
 

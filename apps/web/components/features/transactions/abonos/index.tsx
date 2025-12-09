@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/table'
 import { useTransactionContext } from '../transaction-context'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/use-auth'
 
 // Local imports
 import { useAbonosQueries, usePayments, useTotals } from './hooks'
@@ -34,6 +35,8 @@ import type { ActiveLoan } from './types'
 export function AbonosTab() {
   const { selectedRouteId, selectedDate, selectedLeadId } = useTransactionContext()
   const { toast } = useToast()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'ADMIN'
 
   // UI State
   const [searchTerm, setSearchTerm] = useState('')
@@ -493,6 +496,12 @@ export function AbonosTab() {
                   <TableHead className="w-[80px]">Comisión</TableHead>
                   <TableHead className="w-[120px]">Método</TableHead>
                   <TableHead className="w-[80px]">Estado</TableHead>
+                  {isAdmin && (
+                    <>
+                      <TableHead className="text-right bg-muted/50 w-[90px]">Ganancia</TableHead>
+                      <TableHead className="text-right bg-muted/50 w-[90px]">Capital</TableHead>
+                    </>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -503,6 +512,7 @@ export function AbonosTab() {
                     payment={userPayment}
                     availableLoans={getAvailableLoansForRow(userPayment.tempId)}
                     selectedLoan={loans.find((l) => l.id === userPayment.loanId)}
+                    isAdmin={isAdmin}
                     onLoanChange={(loanId) => handleUserAddedPaymentChange(userPayment.tempId, 'loanId', loanId)}
                     onAmountChange={(amount) => handleUserAddedPaymentChange(userPayment.tempId, 'amount', amount)}
                     onCommissionChange={(commission) => handleUserAddedPaymentChange(userPayment.tempId, 'commission', commission)}
@@ -521,6 +531,7 @@ export function AbonosTab() {
                     registeredPayment={registeredPaymentsMap.get(loan.id)}
                     editedPayment={editedPayments[loan.id]}
                     leadPaymentReceivedId={leadPaymentReceivedId}
+                    isAdmin={isAdmin}
                     onPaymentChange={(amount) => handlePaymentChange(loan.id, amount)}
                     onCommissionChange={(commission) => handleCommissionChange(loan.id, commission)}
                     onPaymentMethodChange={(method) => handlePaymentMethodChange(loan.id, method)}

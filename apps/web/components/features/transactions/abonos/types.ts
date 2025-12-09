@@ -1,3 +1,10 @@
+export interface PaymentTransaction {
+  id: string
+  type: string
+  profitAmount: string | null
+  returnToCapital: string | null
+}
+
 export interface LoanPayment {
   id: string
   amount: string
@@ -7,6 +14,7 @@ export interface LoanPayment {
   leadPaymentReceived?: {
     id: string
   } | null
+  transactions?: PaymentTransaction[]
 }
 
 export interface ActiveLoan {

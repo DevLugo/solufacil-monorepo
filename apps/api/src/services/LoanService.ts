@@ -96,6 +96,10 @@ export interface CreateLoansInBatchInput {
 
 export interface UpdateLoanExtendedInput {
   loantypeId?: string
+  requestedAmount?: string
+  borrowerName?: string
+  borrowerPhone?: string
+  comissionAmount?: string
   collateralIds?: string[]
   newCollateral?: {
     fullName: string
@@ -109,7 +113,6 @@ export interface UpdateLoanExtendedInput {
       locationId: string
     }[]
   }
-  borrowerPhone?: string
   collateralPhone?: string
 }
 
@@ -479,7 +482,6 @@ export class LoanService {
         const requestedAmount = new Decimal(loanInput.requestedAmount)
         const amountGived = new Decimal(loanInput.amountGived)
         const rate = new Decimal(loantype.rate.toString())
-
         const metrics = calculateLoanMetrics(requestedAmount, rate, loantype.weekDuration)
 
         // 5. Manejar profit pendiente si es renovación
@@ -497,9 +499,10 @@ export class LoanService {
           }
 
           // Check if loan has already been renewed
+          // Este caso no debería ocurrir si el frontend filtra correctamente (mostrando solo el préstamo más reciente)
           if (previousLoan.renewedBy) {
             throw new GraphQLError(
-              `Este préstamo ya fue renovado anteriormente. No se puede renovar dos veces.`,
+              `Este préstamo ya fue renovado. Por favor, recarga la página para ver los préstamos disponibles actualizados.`,
               { extensions: { code: 'BAD_USER_INPUT' } }
             )
           }
@@ -516,10 +519,9 @@ export class LoanService {
           })
         }
 
-        const finalProfitAmount = metrics.profitAmount.plus(pendingProfit)
-        const finalTotalDebt = metrics.totalDebtAcquired.plus(pendingProfit)
-
         // 6. Crear el préstamo
+        // Note: La deuda anterior ya está descontada en amountGived
+        // totalDebtAcquired y pendingAmountStored siempre son: requestedAmount + profitAmount
         const comissionAmount = loanInput.comissionAmount
           ? new Decimal(loanInput.comissionAmount)
           : new Decimal(0)
@@ -529,10 +531,10 @@ export class LoanService {
             requestedAmount,
             amountGived,
             signDate: input.signDate,
-            profitAmount: finalProfitAmount,
-            totalDebtAcquired: finalTotalDebt,
+            profitAmount: metrics.profitAmount,
+            totalDebtAcquired: metrics.totalDebtAcquired,
             expectedWeeklyPayment: metrics.expectedWeeklyPayment,
-            pendingAmountStored: finalTotalDebt,
+            pendingAmountStored: metrics.totalDebtAcquired,
             totalPaid: new Decimal(0),
             comissionAmount,
             borrower: borrowerId,
@@ -588,8 +590,8 @@ export class LoanService {
           // Calcular profit del pago
           const { profitAmount, returnToCapital } = calculatePaymentProfit(
             paymentAmount,
-            finalProfitAmount,
-            finalTotalDebt,
+            metrics.profitAmount,
+            metrics.totalDebtAcquired,
             false
           )
 
@@ -643,7 +645,7 @@ export class LoanService {
           }
 
           // Actualizar métricas del préstamo
-          const updatedPending = finalTotalDebt.minus(paymentAmount)
+          const updatedPending = metrics.totalDebtAcquired.minus(paymentAmount)
           await tx.loan.update({
             where: { id: loan.id },
             data: {
@@ -712,7 +714,43 @@ export class LoanService {
         })
       }
 
-      // 2. Manejar collaterals
+      // 2. Actualizar monto solicitado y recalcular métricas si se especificó
+      if (input.requestedAmount && input.requestedAmount !== loan.requestedAmount.toString()) {
+        const newRequestedAmount = new Decimal(input.requestedAmount)
+
+        // Obtener el loantype actual
+        const currentLoantype = await this.loantypeRepository.findById(loan.loantype)
+        if (!currentLoantype) {
+          throw new GraphQLError('Loantype not found', {
+            extensions: { code: 'NOT_FOUND' },
+          })
+        }
+
+        // Recalcular métricas con el nuevo monto solicitado
+        const rate = new Decimal(currentLoantype.rate.toString())
+        const metrics = calculateLoanMetrics(newRequestedAmount, rate, currentLoantype.weekDuration)
+
+        // Calcular el diferencial de deuda
+        const oldTotalDebt = new Decimal(loan.totalDebtAcquired.toString())
+        const newTotalDebt = metrics.totalDebtAcquired
+        const debtDiff = newTotalDebt.minus(oldTotalDebt)
+
+        const currentPending = new Decimal(loan.pendingAmountStored.toString())
+        const newPending = currentPending.plus(debtDiff)
+
+        await tx.loan.update({
+          where: { id: loanId },
+          data: {
+            requestedAmount: newRequestedAmount,
+            profitAmount: metrics.profitAmount,
+            totalDebtAcquired: newTotalDebt,
+            expectedWeeklyPayment: metrics.expectedWeeklyPayment,
+            pendingAmountStored: newPending.isNegative() ? new Decimal(0) : newPending,
+          },
+        })
+      }
+
+      // 3. Manejar collaterals
       if (input.collateralIds || input.newCollateral) {
         let collateralIds = input.collateralIds || []
 
@@ -753,7 +791,24 @@ export class LoanService {
         })
       }
 
-      // 3. Actualizar teléfono del borrower si se especificó
+      // 4. Actualizar nombre del borrower si se especificó
+      if (input.borrowerName) {
+        const borrower = await tx.borrower.findUnique({
+          where: { id: loan.borrower },
+          include: {
+            personalDataRelation: true,
+          },
+        })
+
+        if (borrower?.personalDataRelation) {
+          await tx.personalData.update({
+            where: { id: borrower.personalDataRelation.id },
+            data: { fullName: input.borrowerName },
+          })
+        }
+      }
+
+      // 5. Actualizar teléfono del borrower si se especificó
       if (input.borrowerPhone) {
         const borrower = await tx.borrower.findUnique({
           where: { id: loan.borrower },
@@ -782,7 +837,17 @@ export class LoanService {
         }
       }
 
-      // 4. Actualizar teléfono del collateral si se especificó
+      // 6. Actualizar comisión si se especificó
+      if (input.comissionAmount !== undefined) {
+        await tx.loan.update({
+          where: { id: loanId },
+          data: {
+            comissionAmount: new Decimal(input.comissionAmount),
+          },
+        })
+      }
+
+      // 7. Actualizar teléfono del collateral si se especificó
       if (input.collateralPhone && loan.collaterals?.length > 0) {
         const collateral = loan.collaterals[0]
         const collateralData = await tx.personalData.findUnique({

@@ -38,6 +38,7 @@ interface LoanPaymentRowProps {
   registeredPayment: LoanPayment | undefined
   editedPayment: EditedPayment | undefined
   leadPaymentReceivedId: string | null
+  isAdmin?: boolean
   onPaymentChange: (amount: string) => void
   onCommissionChange: (commission: string) => void
   onPaymentMethodChange: (method: 'CASH' | 'MONEY_TRANSFER') => void
@@ -55,6 +56,7 @@ export function LoanPaymentRow({
   registeredPayment,
   editedPayment,
   leadPaymentReceivedId,
+  isAdmin,
   onPaymentChange,
   onCommissionChange,
   onPaymentMethodChange,
@@ -443,6 +445,30 @@ export function LoanPaymentRow({
           </Badge>
         )}
       </TableCell>
+
+      {/* Admin-only columns: Profit and Return to Capital */}
+      {isAdmin && (
+        <>
+          <TableCell className="text-right bg-muted/50">
+            {isRegistered && registeredPayment.transactions?.[0] ? (
+              <span className="text-sm font-medium text-green-600">
+                {formatCurrency(parseFloat(registeredPayment.transactions[0].profitAmount || '0'))}
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground">-</span>
+            )}
+          </TableCell>
+          <TableCell className="text-right bg-muted/50">
+            {isRegistered && registeredPayment.transactions?.[0] ? (
+              <span className="text-sm font-medium text-blue-600">
+                {formatCurrency(parseFloat(registeredPayment.transactions[0].returnToCapital || '0'))}
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground">-</span>
+            )}
+          </TableCell>
+        </>
+      )}
     </TableRow>
   )
 }

@@ -3,3 +3,8 @@ export type { ClientState, ClientAction, UnifiedClientValue } from './UnifiedCli
 export { LocationWarning } from './LocationWarning'
 export { CreateLoansModal } from './CreateLoansModal'
 export { EditLoanModal } from './EditLoanModal'
+export { SummaryCards } from './SummaryCards'
+export { AccountBalanceCard } from './AccountBalanceCard'
+export { LoansTable } from './LoansTable'
+export { LoanTableRow } from './LoanTableRow'
+export { CancelLoanDialog } from './CancelLoanDialog'

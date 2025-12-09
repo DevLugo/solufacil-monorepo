@@ -239,6 +239,9 @@ export const loanResolvers = {
         id: string
         input: {
           loantypeId?: string
+          requestedAmount?: string
+          borrowerName?: string
+          borrowerPhone?: string
           collateralIds?: string[]
           newCollateral?: {
             fullName: string
@@ -252,8 +255,8 @@ export const loanResolvers = {
               locationId: string
             }[]
           }
-          borrowerPhone?: string
           collateralPhone?: string
+          comissionAmount?: string
         }
       },
       context: GraphQLContext

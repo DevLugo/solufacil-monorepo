@@ -227,9 +227,12 @@ export interface CreateSingleLoanInput {
 
 export interface UpdateLoanExtendedInput {
   loantypeId?: string
+  requestedAmount?: string
+  borrowerName?: string
+  borrowerPhone?: string
+  comissionAmount?: string
   collateralIds?: string[]
   newCollateral?: CreatePersonalDataInput
-  borrowerPhone?: string
   collateralPhone?: string
 }
 
