@@ -122,9 +122,12 @@ const navigation: NavItem[] = [
 
 interface SidebarProps {
   isCollapsed?: boolean
+  isMobile?: boolean
+  isOpen?: boolean
+  onClose?: () => void
 }
 
-export function Sidebar({ isCollapsed = false }: SidebarProps) {
+export function Sidebar({ isCollapsed = false, isMobile = false, isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname()
   const [expandedItems, setExpandedItems] = React.useState<string[]>([])
 
@@ -146,17 +149,40 @@ export function Sidebar({ isCollapsed = false }: SidebarProps) {
     return item.children?.some((child) => isActive(child.href))
   }
 
+  // On mobile: sidebar is always expanded (not collapsed), slides in/out
+  // On desktop: toggle between collapsed (w-16) and expanded (w-64)
+  const effectiveCollapsed = isMobile ? false : isCollapsed
+
+  // Close sidebar when clicking a link on mobile
+  const handleLinkClick = () => {
+    if (isMobile && onClose) {
+      onClose()
+    }
+  }
+
   return (
-    <aside
-      className={cn(
-        'fixed left-0 top-0 z-40 h-screen border-r bg-sidebar transition-all duration-300',
-        isCollapsed ? 'w-16' : 'w-64'
+    <>
+      {/* Mobile backdrop */}
+      {isMobile && isOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 transition-opacity"
+          onClick={onClose}
+          aria-hidden="true"
+        />
       )}
-    >
-      {/* Logo */}
-      <div className="flex h-16 items-center justify-center border-b px-4">
-        <Link href="/dashboard" className="flex items-center">
-          {isCollapsed ? (
+
+      <aside
+        className={cn(
+          'fixed left-0 top-0 z-40 h-screen border-r bg-sidebar transition-all duration-300',
+          effectiveCollapsed ? 'w-16' : 'w-64',
+          isMobile && !isOpen && '-translate-x-full',
+          isMobile && isOpen && 'translate-x-0'
+        )}
+      >
+        {/* Logo */}
+        <div className="flex h-16 items-center justify-center border-b px-4">
+          <Link href="/dashboard" className="flex items-center" onClick={handleLinkClick}>
+            {effectiveCollapsed ? (
             /* Ícono pequeño cuando está colapsado */
             <div className="relative flex h-9 w-9 items-center justify-center">
               <div className="absolute inset-0 rotate-45 rounded-lg bg-primary" />
@@ -173,82 +199,85 @@ export function Sidebar({ isCollapsed = false }: SidebarProps) {
               </svg>
             </div>
           ) : (
-            /* Logo completo cuando está expandido */
-            <Image
-              src="/solufacil.png"
-              alt="Solufácil"
-              width={150}
-              height={45}
-              priority
-              className="h-9 w-auto"
-            />
-          )}
-        </Link>
-      </div>
+              /* Logo completo cuando está expandido */
+              <Image
+                src="/solufacil.png"
+                alt="Solufácil"
+                width={150}
+                height={45}
+                priority
+                className="h-9 w-auto"
+              />
+            )}
+          </Link>
+        </div>
 
-      {/* Navigation */}
-      <ScrollArea className="h-[calc(100vh-4rem)] py-4">
-        <nav className="space-y-1 px-2">
-          {navigation.map((item) => (
-            <div key={item.title}>
-              {item.children ? (
-                <div>
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      'w-full justify-start gap-3',
-                      isParentActive(item) && 'bg-sidebar-accent text-sidebar-accent-foreground'
+        {/* Navigation */}
+        <ScrollArea className="h-[calc(100vh-4rem)] py-4">
+          <nav className="space-y-1 px-2">
+            {navigation.map((item) => (
+              <div key={item.title}>
+                {item.children ? (
+                  <div>
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        'w-full justify-start gap-3',
+                        isParentActive(item) && 'bg-sidebar-accent text-sidebar-accent-foreground'
+                      )}
+                      onClick={() => toggleExpanded(item.title)}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {!effectiveCollapsed && (
+                        <>
+                          <span className="flex-1 text-left">{item.title}</span>
+                          {expandedItems.includes(item.title) ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </>
+                      )}
+                    </Button>
+                    {!effectiveCollapsed && expandedItems.includes(item.title) && (
+                      <div className="ml-4 mt-1 space-y-1 border-l pl-4">
+                        {item.children.map((child) => (
+                          <Link
+                            key={child.href}
+                            href={child.href!}
+                            onClick={handleLinkClick}
+                            className={cn(
+                              'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                              isActive(child.href) &&
+                                'bg-sidebar-primary text-sidebar-primary-foreground'
+                            )}
+                          >
+                            <child.icon className="h-4 w-4" />
+                            <span>{child.title}</span>
+                          </Link>
+                        ))}
+                      </div>
                     )}
-                    onClick={() => toggleExpanded(item.title)}
+                  </div>
+                ) : (
+                  <Link
+                    href={item.href!}
+                    onClick={handleLinkClick}
+                    className={cn(
+                      'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                      isActive(item.href) &&
+                        'bg-sidebar-primary text-sidebar-primary-foreground'
+                    )}
                   >
                     <item.icon className="h-4 w-4" />
-                    {!isCollapsed && (
-                      <>
-                        <span className="flex-1 text-left">{item.title}</span>
-                        {expandedItems.includes(item.title) ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                      </>
-                    )}
-                  </Button>
-                  {!isCollapsed && expandedItems.includes(item.title) && (
-                    <div className="ml-4 mt-1 space-y-1 border-l pl-4">
-                      {item.children.map((child) => (
-                        <Link
-                          key={child.href}
-                          href={child.href!}
-                          className={cn(
-                            'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                            isActive(child.href) &&
-                              'bg-sidebar-primary text-sidebar-primary-foreground'
-                          )}
-                        >
-                          <child.icon className="h-4 w-4" />
-                          <span>{child.title}</span>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <Link
-                  href={item.href!}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                    isActive(item.href) &&
-                      'bg-sidebar-primary text-sidebar-primary-foreground'
-                  )}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {!isCollapsed && <span>{item.title}</span>}
-                </Link>
-              )}
-            </div>
-          ))}
-        </nav>
-      </ScrollArea>
-    </aside>
+                    {!effectiveCollapsed && <span>{item.title}</span>}
+                  </Link>
+                )}
+              </div>
+            ))}
+          </nav>
+        </ScrollArea>
+      </aside>
+    </>
   )
 }

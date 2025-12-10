@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { LOGIN_MUTATION } from '@/graphql/mutations/auth'
+import { getRedirectUrl } from '@/hooks/use-redirect-url'
 
 interface LoginResult {
   login: {
@@ -49,7 +50,8 @@ export default function LoginPage() {
         localStorage.setItem('accessToken', data.login.accessToken)
         localStorage.setItem('refreshToken', data.login.refreshToken)
         setIsNavigating(true)
-        await router.push('/dashboard')
+        const redirectTo = getRedirectUrl() || '/dashboard'
+        await router.push(redirectTo)
       }
     },
     onError: (err) => {

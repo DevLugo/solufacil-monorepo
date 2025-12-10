@@ -12,18 +12,25 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/use-auth'
 
 interface HeaderProps {
   onToggleSidebar?: () => void
   sidebarCollapsed?: boolean
+  isMobile?: boolean
 }
 
-export function Header({ onToggleSidebar, sidebarCollapsed = false }: HeaderProps) {
+export function Header({ onToggleSidebar, sidebarCollapsed = false, isMobile = false }: HeaderProps) {
+  const { user, logout } = useAuth()
+
+  const userName = user?.employee?.personalData?.fullName || user?.email || 'Usuario'
+  const userRole = user?.role === 'ADMIN' ? 'Administrador' : user?.role === 'NORMAL' ? 'Usuario' : 'Captura'
+
   return (
     <header
       className={cn(
         'fixed right-0 top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-all duration-300',
-        sidebarCollapsed ? 'left-16' : 'left-64'
+        isMobile ? 'left-0' : (sidebarCollapsed ? 'left-16' : 'left-64')
       )}
     >
       {/* Left side */}
@@ -76,11 +83,11 @@ export function Header({ onToggleSidebar, sidebarCollapsed = false }: HeaderProp
         {/* User menu */}
         <div className="flex items-center gap-3 border-l pl-3 ml-1">
           <div className="hidden md:block text-right">
-            <p className="text-sm font-medium">Usuario</p>
-            <p className="text-xs text-muted-foreground">Admin</p>
+            <p className="text-sm font-medium">{userName}</p>
+            <p className="text-xs text-muted-foreground">{userRole}</p>
           </div>
           <Avatar className="h-9 w-9">
-            <AvatarImage src="" alt="Usuario" />
+            <AvatarImage src="" alt={userName} />
             <AvatarFallback className="bg-primary text-primary-foreground">
               <User className="h-4 w-4" />
             </AvatarFallback>
@@ -88,7 +95,7 @@ export function Header({ onToggleSidebar, sidebarCollapsed = false }: HeaderProp
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9">
+                <Button variant="ghost" size="icon" className="h-9 w-9" onClick={logout}>
                   <LogOut className="h-4 w-4" />
                   <span className="sr-only">Cerrar sesión</span>
                 </Button>

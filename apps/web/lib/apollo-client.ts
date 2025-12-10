@@ -6,11 +6,17 @@ import {
   createHttpLink,
   from,
   type NormalizedCacheObject,
+  Observable,
+  type FetchResult,
 } from '@apollo/client'
 import { setContext } from '@apollo/client/link/context'
 import { onError } from '@apollo/client/link/error'
+import { saveRedirectUrl } from '@/hooks/use-redirect-url'
 
 const GRAPHQL_URL = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:4000/graphql'
+
+// Shared promise for refresh token to handle race conditions
+let refreshPromise: Promise<boolean> | null = null
 
 const httpLink = createHttpLink({
   uri: GRAPHQL_URL,
@@ -18,7 +24,6 @@ const httpLink = createHttpLink({
 })
 
 const authLink = setContext((_, { headers }) => {
-  // Get the authentication token from localStorage
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
 
   return {
@@ -29,22 +34,112 @@ const authLink = setContext((_, { headers }) => {
   }
 })
 
-const errorLink = onError(({ graphQLErrors, networkError }) => {
+// Function to refresh tokens
+async function refreshTokens(): Promise<boolean> {
+  const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null
+
+  if (!refreshToken) {
+    return false
+  }
+
+  try {
+    const response = await fetch(GRAPHQL_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: `
+          mutation RefreshToken($refreshToken: String!) {
+            refreshToken(refreshToken: $refreshToken) {
+              accessToken
+              refreshToken
+            }
+          }
+        `,
+        variables: { refreshToken },
+      }),
+    })
+
+    const result = await response.json()
+
+    if (result.data?.refreshToken) {
+      const { accessToken, refreshToken: newRefreshToken } = result.data.refreshToken
+      localStorage.setItem('accessToken', accessToken)
+      localStorage.setItem('refreshToken', newRefreshToken)
+      return true
+    }
+
+    return false
+  } catch (error) {
+    console.error('Failed to refresh token:', error)
+    return false
+  }
+}
+
+// Function to handle logout with redirect URL saving
+function handleLogout() {
+  if (typeof window === 'undefined') return
+
+  // Save current URL for redirect after login
+  const currentPath = window.location.pathname
+  if (currentPath !== '/login' && !currentPath.startsWith('/login')) {
+    saveRedirectUrl(currentPath)
+  }
+
+  // Clear tokens
+  localStorage.removeItem('accessToken')
+  localStorage.removeItem('refreshToken')
+
+  // Redirect to login
+  window.location.href = '/login'
+}
+
+const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) => {
   if (graphQLErrors) {
     for (const err of graphQLErrors) {
+      // Handle authentication errors - attempt refresh before logging
+      if (err.extensions?.code === 'UNAUTHENTICATED') {
+        // Return an observable that will retry the request after refresh
+        return new Observable<FetchResult>((observer) => {
+          let subscription: { unsubscribe: () => void } | null = null
+
+          // If there's already a refresh in progress, wait for it
+          const doRefresh = refreshPromise || (refreshPromise = refreshTokens().finally(() => {
+            refreshPromise = null
+          }))
+
+          doRefresh.then((success) => {
+            if (success) {
+              // Retry the request with new token
+              subscription = forward(operation).subscribe({
+                next: observer.next.bind(observer),
+                error: observer.error.bind(observer),
+                complete: observer.complete.bind(observer),
+              })
+            } else {
+              // Refresh failed, logout
+              handleLogout()
+              observer.error(err)
+            }
+          }).catch(() => {
+            handleLogout()
+            observer.error(err)
+          })
+
+          // Return cleanup function
+          return () => {
+            if (subscription) {
+              subscription.unsubscribe()
+            }
+          }
+        })
+      }
+
+      // Log non-auth errors
       console.error(
         `[GraphQL error]: Message: ${err.message}, Location: ${err.locations}, Path: ${err.path}`
       )
-
-      // Handle authentication errors
-      if (err.extensions?.code === 'UNAUTHENTICATED') {
-        // Clear tokens and redirect to login
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('accessToken')
-          localStorage.removeItem('refreshToken')
-          window.location.href = '/login'
-        }
-      }
     }
   }
 

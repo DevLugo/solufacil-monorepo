@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
+import { saveRedirectUrl } from '@/hooks/use-redirect-url'
 import { Loader2 } from 'lucide-react'
 
 interface AuthGuardProps {
@@ -11,6 +12,7 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const { isAuthenticated, isLoading } = useAuth()
   const [isMounted, setIsMounted] = useState(false)
   const [hasToken, setHasToken] = useState(false)
@@ -26,9 +28,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
     const token = localStorage.getItem('accessToken')
     if (!isLoading && !isAuthenticated && !token) {
+      saveRedirectUrl(pathname)
       router.replace('/login')
     }
-  }, [isAuthenticated, isLoading, router, isMounted])
+  }, [isAuthenticated, isLoading, router, isMounted, pathname])
 
   // Show loading during SSR and initial mount
   if (!isMounted || isLoading) {
