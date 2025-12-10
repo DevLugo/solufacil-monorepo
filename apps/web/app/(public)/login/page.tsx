@@ -41,13 +41,15 @@ export default function LoginPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = React.useState(false)
   const [error, setError] = React.useState('')
+  const [isNavigating, setIsNavigating] = React.useState(false)
 
   const [login, { loading: isLoading }] = useMutation<LoginResult>(LOGIN_MUTATION, {
-    onCompleted: (data) => {
+    onCompleted: async (data) => {
       if (data.login) {
         localStorage.setItem('accessToken', data.login.accessToken)
         localStorage.setItem('refreshToken', data.login.refreshToken)
-        router.push('/dashboard')
+        setIsNavigating(true)
+        await router.push('/dashboard')
       }
     },
     onError: (err) => {
@@ -124,7 +126,7 @@ export default function LoginPage() {
                 type="email"
                 placeholder="tu@email.com"
                 required
-                disabled={isLoading}
+                disabled={isLoading || isNavigating}
                 autoComplete="email"
               />
             </div>
@@ -146,7 +148,7 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || isNavigating}
                   autoComplete="current-password"
                   className="pr-10"
                 />
@@ -172,9 +174,9 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={isLoading}
+              disabled={isLoading || isNavigating}
             >
-              {isLoading ? (
+              {isLoading || isNavigating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Ingresando...

@@ -57,10 +57,11 @@
 
     /* Chart Colors */
     --chart-1: 18 87% 54%;           /* Naranja */
-    --chart-2: 240 38% 17%;          /* Azul Marino */
+    --chart-2: 221 83% 53%;          /* Azul */
     --chart-3: 142 76% 36%;          /* Verde */
     --chart-4: 38 92% 50%;           /* Amarillo */
-    --chart-5: 199 89% 48%;          /* Azul claro */
+    --chart-5: 199 89% 48%;          /* Cyan */
+    --chart-6: 0 72% 51%;            /* Rojo */
 
     /* Radius */
     --radius: 0.75rem;
@@ -116,6 +117,14 @@
     --sidebar-accent: 240 30% 15%;
     --sidebar-accent-foreground: 18 90% 65%;
     --sidebar-border: 240 25% 22%;
+
+    /* Chart Colors - Brighter for dark mode */
+    --chart-1: 18 90% 60%;             /* Naranja brillante */
+    --chart-2: 217 91% 70%;            /* Azul brillante */
+    --chart-3: 142 70% 55%;            /* Verde brillante */
+    --chart-4: 48 96% 58%;             /* Amarillo brillante */
+    --chart-5: 199 89% 60%;            /* Cyan brillante */
+    --chart-6: 0 85% 65%;              /* Rojo brillante */
   }
 }
 

@@ -331,8 +331,15 @@ type FinancialReport {
   performanceMetrics: PerformanceMetrics!
 }
 
+type ActiveLoansBreakdown {
+  total: Int!
+  alCorriente: Int!
+  carteraVencida: Int!
+}
+
 type FinancialSummary {
   activeLoans: Int!
+  activeLoansBreakdown: ActiveLoansBreakdown!
   totalPortfolio: Decimal!
   totalPaid: Decimal!
   pendingAmount: Decimal!
@@ -372,6 +379,66 @@ type BadDebtSummary {
   totalLoans: Int!
   totalAmount: Decimal!
   byRoute: [BadDebtData!]!
+}
+
+# Annual Financial Report Types
+type AnnualFinancialReport {
+  routes: [RouteInfo!]!
+  year: Int!
+  months: [String!]!
+  data: [MonthlyFinancialData!]!
+  annualWeeklyAverageProfit: Decimal!
+  annualWeeklyAverageExpenses: Decimal!
+  annualWeeklyAverageIncome: Decimal!
+  totalActiveWeeks: Int!
+}
+
+type RouteInfo {
+  id: ID!
+  name: String!
+}
+
+type MonthlyFinancialData {
+  month: String!
+  # Egresos
+  totalExpenses: Decimal!
+  generalExpenses: Decimal!
+  nomina: Decimal!
+  comissions: Decimal!
+  nominaInterna: Decimal!
+  salarioExterno: Decimal!
+  viaticos: Decimal!
+  travelExpenses: Decimal!
+  tokaGasolina: Decimal!
+  cashGasolina: Decimal!
+  totalGasolina: Decimal!
+  badDebtAmount: Decimal!
+  # Ingresos
+  incomes: Decimal!
+  # Resultados
+  operationalProfit: Decimal!
+  profitPercentage: Decimal!
+  gainPerPayment: Decimal!
+  # Semanas
+  activeWeeks: Int!
+  weeklyAverageProfit: Decimal!
+  weeklyAverageExpenses: Decimal!
+  weeklyAverageIncome: Decimal!
+  # Reinversión
+  loanDisbursements: Decimal!
+  # Portfolio
+  carteraActiva: Int!
+  carteraVencida: Int!
+  carteraMuerta: Decimal!
+  renovados: Int!
+  # Flujo de efectivo
+  totalIncomingCash: Decimal!
+  capitalReturn: Decimal!
+  profitReturn: Decimal!
+  operationalCashUsed: Decimal!
+  totalInvestment: Decimal!
+  availableCash: Decimal!
+  paymentsCount: Int!
 }
 
 # Auth Types
@@ -452,6 +519,7 @@ type Query {
 
   # Reports
   financialReport(routeIds: [ID!]!, year: Int!, month: Int!): FinancialReport! @requireRole(roles: [ADMIN])
+  getFinancialReportAnnual(routeIds: [ID!]!, year: Int!): AnnualFinancialReport! @requireRole(roles: [ADMIN])
   badDebtByMonth(year: Int!, month: Int!): [BadDebtData!]! @requireRole(roles: [ADMIN])
   badDebtSummary: BadDebtSummary! @requireRole(roles: [ADMIN])
   loansForBadDebt(routeId: ID): [Loan!]! @auth

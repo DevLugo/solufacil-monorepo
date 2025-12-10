@@ -275,13 +275,16 @@ async function migrateTable(tableName: string): Promise<MigrationResult> {
 
       case 'LoanPayment':
         // Only insert if loan exists in target and leadPaymentReceived exists (if not null)
+        // Note: Many payments have NULL paymentMethod, default to 'CASH' for these
         insertQuery = `
           INSERT INTO "${TARGET_SCHEMA}"."LoanPayment" (id, amount, comission, "receivedAt", "paymentMethod", type, "oldLoanId", loan, "leadPaymentReceived", "createdAt", "updatedAt")
-          SELECT lp.id, COALESCE(lp.amount, 0), COALESCE(lp.comission, 0), lp."receivedAt", lp."paymentMethod"::text::"${TARGET_SCHEMA}"."PaymentMethod", COALESCE(lp.type, ''), lp."oldLoanId", lp.loan,
+          SELECT lp.id, COALESCE(lp.amount, 0), COALESCE(lp.comission, 0), lp."receivedAt",
+            COALESCE(NULLIF(lp."paymentMethod", ''), 'CASH')::text::"${TARGET_SCHEMA}"."PaymentMethod",
+            COALESCE(lp.type, ''), lp."oldLoanId", lp.loan,
             CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."LeadPaymentReceived" WHERE id = lp."leadPaymentReceived") THEN lp."leadPaymentReceived" ELSE NULL END,
             lp."createdAt", COALESCE(lp."updatedAt", lp."createdAt", NOW())
           FROM "${SOURCE_SCHEMA}"."LoanPayment" lp
-          WHERE lp."paymentMethod" IS NOT NULL AND lp.loan IS NOT NULL
+          WHERE lp.loan IS NOT NULL
             AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Loan" WHERE id = lp.loan)
           ON CONFLICT (id) DO NOTHING
         `
@@ -308,18 +311,36 @@ async function migrateTable(tableName: string): Promise<MigrationResult> {
 
       case 'Transaction':
         // Filter invalid FKs for loanPayment, loan, lead, leadPaymentReceived
+        // Note: INCOME transactions typically don't have sourceAccount set in keystone,
+        // so we use destinationAccount as sourceAccount for these (the account receiving the payment)
         insertQuery = `
           INSERT INTO "${TARGET_SCHEMA}"."Transaction" (id, amount, date, type, description, "incomeSource", "expenseSource", "snapshotLeadId", "snapshotRouteId", "expenseGroupId", "profitAmount", "returnToCapital", loan, "loanPayment", "sourceAccount", "destinationAccount", route, lead, "leadPaymentReceived", "createdAt", "updatedAt")
           SELECT t.id, COALESCE(t.amount, 0), t.date, t.type::text::"${TARGET_SCHEMA}"."TransactionType", COALESCE(t.description, ''), t."incomeSource", t."expenseSource", COALESCE(t."snapshotLeadId", ''), COALESCE(t."snapshotRouteId", ''), t."expenseGroupId", COALESCE(t."profitAmount", 0), COALESCE(t."returnToCapital", 0),
             CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Loan" WHERE id = t.loan) THEN t.loan ELSE NULL END,
             CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."LoanPayment" WHERE id = t."loanPayment") THEN t."loanPayment" ELSE NULL END,
-            t."sourceAccount", t."destinationAccount", t.route,
+            -- sourceAccount: use original if valid, otherwise use destinationAccount for INCOME transactions
+            CASE
+              WHEN t."sourceAccount" IS NOT NULL AND t."sourceAccount" != '' AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Account" WHERE id = t."sourceAccount") THEN t."sourceAccount"
+              WHEN t."destinationAccount" IS NOT NULL AND t."destinationAccount" != '' AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Account" WHERE id = t."destinationAccount") THEN t."destinationAccount"
+            END,
+            -- destinationAccount: keep original if valid
+            CASE
+              WHEN t."destinationAccount" IS NOT NULL AND t."destinationAccount" != '' AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Account" WHERE id = t."destinationAccount") THEN t."destinationAccount"
+              ELSE NULL
+            END,
+            t.route,
             CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Employee" WHERE id = t.lead) THEN t.lead ELSE NULL END,
             CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."LeadPaymentReceived" WHERE id = t."leadPaymentReceived") THEN t."leadPaymentReceived" ELSE NULL END,
             t."createdAt", COALESCE(t."updatedAt", t."createdAt", NOW())
           FROM "${SOURCE_SCHEMA}"."Transaction" t
-          WHERE t."sourceAccount" IS NOT NULL AND t.date IS NOT NULL
-            AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Account" WHERE id = t."sourceAccount")
+          WHERE t.date IS NOT NULL
+            AND (
+              -- Transactions with valid sourceAccount
+              (t."sourceAccount" IS NOT NULL AND t."sourceAccount" != '' AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Account" WHERE id = t."sourceAccount"))
+              OR
+              -- INCOME transactions that have valid destinationAccount (use it as sourceAccount)
+              (t.type = 'INCOME' AND t."destinationAccount" IS NOT NULL AND t."destinationAccount" != '' AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Account" WHERE id = t."destinationAccount"))
+            )
           ON CONFLICT (id) DO NOTHING
         `
         break
