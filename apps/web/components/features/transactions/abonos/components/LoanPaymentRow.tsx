@@ -28,8 +28,9 @@ import {
 } from '@/components/ui/select'
 import { formatCurrency } from '@/lib/utils'
 import { cn } from '@/lib/utils'
-import type { ActiveLoan, PaymentEntry, EditedPayment, LoanPayment, RowStyle } from '../types'
-import { getRowStyle, hasIncompleteAval, hasIncompletePhone } from '../utils'
+import type { ActiveLoan, PaymentEntry, EditedPayment, LoanPayment } from '../types'
+import { getRowClassName, hasIncompleteAval, hasIncompletePhone } from '../utils'
+import { textStyles, actionButtonStyles, statusBadgeStyles } from '../../shared/theme'
 
 interface LoanPaymentRowProps {
   loan: ActiveLoan
@@ -79,7 +80,7 @@ export function LoanPaymentRow({
   const isIncompletePhone = hasIncompletePhone(loan)
   const isIncomplete = isIncompleteAval || isIncompletePhone
 
-  const rowStyle: RowStyle = getRowStyle({
+  const rowClassName = getRowClassName({
     isMarkedForDeletion: !!isMarkedForDeletion,
     isEditing,
     isRegistered,
@@ -132,12 +133,9 @@ export function LoanPaymentRow({
     <TableRow
       className={cn(
         'transition-colors select-none cursor-pointer',
-        rowStyle.className,
+        rowClassName,
         isNoPayment && 'line-through opacity-70'
       )}
-      style={{
-        borderLeft: `${rowStyle.borderWidth} solid ${rowStyle.borderColor}`,
-      }}
       onClick={handleRowClick}
     >
       {/* Checkbox */}
@@ -177,7 +175,7 @@ export function LoanPaymentRow({
                 {loan.borrower.personalData.phones[0].number}
               </p>
             ) : (
-              <p className="text-xs text-orange-600 flex items-center gap-1">
+              <p className={cn('text-xs flex items-center gap-1', textStyles.orange)}>
                 <Phone className="h-3 w-3" />
                 Sin teléfono
               </p>
@@ -190,18 +188,18 @@ export function LoanPaymentRow({
       <TableCell>
         {aval ? (
           <div>
-            <p className="text-sm">{aval.fullName || <span className="text-orange-600">Sin nombre</span>}</p>
+            <p className="text-sm">{aval.fullName || <span className={textStyles.orange}>Sin nombre</span>}</p>
             {aval.phones?.[0]?.number ? (
               <p className="text-xs text-muted-foreground">{aval.phones[0].number}</p>
             ) : (
-              <p className="text-xs text-orange-600 flex items-center gap-1">
+              <p className={cn('text-xs flex items-center gap-1', textStyles.orange)}>
                 <Phone className="h-3 w-3" />
                 Sin teléfono
               </p>
             )}
           </div>
         ) : (
-          <span className="text-orange-600 text-sm flex items-center gap-1">
+          <span className={cn('text-sm flex items-center gap-1', textStyles.orange)}>
             <AlertTriangle className="h-3 w-3" />
             Sin aval
           </span>
@@ -231,7 +229,7 @@ export function LoanPaymentRow({
               disabled={isMarkedForDeletion}
             />
           ) : (
-            <div className="w-[90px] h-9 px-3 flex items-center text-sm font-medium text-slate-600">
+            <div className={cn('w-[90px] h-9 px-3 flex items-center text-sm font-medium', textStyles.muted)}>
               {formatCurrency(parseFloat(registeredPayment.amount))}
             </div>
           )
@@ -260,7 +258,7 @@ export function LoanPaymentRow({
               disabled={isMarkedForDeletion}
             />
           ) : (
-            <div className="w-[70px] h-9 px-3 flex items-center text-sm text-slate-600">
+            <div className={cn('w-[70px] h-9 px-3 flex items-center text-sm', textStyles.muted)}>
               {formatCurrency(parseFloat(registeredPayment.comission || '0'))}
             </div>
           )
@@ -304,7 +302,7 @@ export function LoanPaymentRow({
               </SelectContent>
             </Select>
           ) : (
-            <div className="w-[110px] h-9 px-3 flex items-center gap-2 text-sm text-slate-600">
+            <div className={cn('w-[110px] h-9 px-3 flex items-center gap-2 text-sm', textStyles.muted)}>
               {registeredPayment.paymentMethod === 'MONEY_TRANSFER' ? (
                 <>
                   <Building2 className="h-4 w-4" />
@@ -367,7 +365,7 @@ export function LoanPaymentRow({
                     e.stopPropagation()
                     onToggleDelete()
                   }}
-                  className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                  className={cn('h-7 px-2', actionButtonStyles.restore)}
                   title="Restaurar pago"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
@@ -380,7 +378,7 @@ export function LoanPaymentRow({
                     e.stopPropagation()
                     onToggleDelete()
                   }}
-                  className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  className={cn('h-7 px-2', actionButtonStyles.delete)}
                   title="Eliminar pago"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -401,7 +399,7 @@ export function LoanPaymentRow({
             </div>
           ) : (
             <div className="flex items-center gap-1">
-              <Badge className="bg-slate-600 text-xs font-semibold">
+              <Badge className={cn('text-xs font-semibold', statusBadgeStyles.registered)}>
                 <Check className="h-3 w-3 mr-1" />
                 Registrado
               </Badge>
@@ -425,12 +423,12 @@ export function LoanPaymentRow({
             Sin pago
           </Badge>
         ) : hasPayment && isTransfer ? (
-          <Badge className="bg-purple-600 hover:bg-purple-700 text-xs cursor-pointer font-semibold">
+          <Badge className={cn('text-xs cursor-pointer font-semibold', statusBadgeStyles.transfer)}>
             <Building2 className="h-3 w-3 mr-1" />
             Banco
           </Badge>
         ) : hasPayment ? (
-          <Badge className="bg-green-600 hover:bg-green-700 text-xs cursor-pointer font-semibold">
+          <Badge className={cn('text-xs cursor-pointer font-semibold', statusBadgeStyles.cash)}>
             <Wallet className="h-3 w-3 mr-1" />
             Efectivo
           </Badge>
@@ -440,7 +438,7 @@ export function LoanPaymentRow({
           </Badge>
         )}
         {hasZeroCommission && !isRegistered && (
-          <Badge variant="outline" className="text-xs ml-1 bg-amber-100 text-amber-700 border-amber-300">
+          <Badge variant="outline" className={cn('text-xs ml-1', statusBadgeStyles.zeroCommission)}>
             $0
           </Badge>
         )}
@@ -451,7 +449,7 @@ export function LoanPaymentRow({
         <>
           <TableCell className="text-right bg-muted/50">
             {isRegistered && registeredPayment.transactions?.[0] ? (
-              <span className="text-sm font-medium text-green-600">
+              <span className={cn('text-sm font-medium', textStyles.success)}>
                 {formatCurrency(parseFloat(registeredPayment.transactions[0].profitAmount || '0'))}
               </span>
             ) : (
@@ -460,7 +458,7 @@ export function LoanPaymentRow({
           </TableCell>
           <TableCell className="text-right bg-muted/50">
             {isRegistered && registeredPayment.transactions?.[0] ? (
-              <span className="text-sm font-medium text-blue-600">
+              <span className={cn('text-sm font-medium', textStyles.blue)}>
                 {formatCurrency(parseFloat(registeredPayment.transactions[0].returnToCapital || '0'))}
               </span>
             ) : (

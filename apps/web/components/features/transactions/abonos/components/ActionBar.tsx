@@ -12,6 +12,14 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
+
+// Button style constants for action buttons
+const actionButtonStyles = {
+  addPayment: 'text-info border-info/30 hover:bg-info/10 hover:text-info',
+  multa: 'text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700 hover:bg-orange-50 dark:hover:bg-orange-950/30 hover:text-orange-700 dark:hover:text-orange-300',
+  saveEdits: 'bg-warning hover:bg-warning/90',
+}
 
 interface ActionBarProps {
   searchTerm: string
@@ -122,7 +130,7 @@ export function ActionBar({
           size="sm"
           variant="outline"
           onClick={onAddPayment}
-          className="h-8 px-2 gap-1.5 text-blue-600 border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+          className={cn('h-8 px-2 gap-1.5', actionButtonStyles.addPayment)}
           title="Agregar pago manual"
         >
           <Plus className="h-3.5 w-3.5" />
@@ -132,7 +140,7 @@ export function ActionBar({
           size="sm"
           variant="outline"
           onClick={onOpenMultaModal}
-          className="h-8 px-2 gap-1.5 text-orange-600 border-orange-300 hover:bg-orange-50 hover:text-orange-700"
+          className={cn('h-8 px-2 gap-1.5', actionButtonStyles.multa)}
           title="Registrar multa"
         >
           <Gavel className="h-3.5 w-3.5" />
@@ -165,7 +173,7 @@ export function ActionBar({
               size="sm"
               onClick={onSaveEditedPayments}
               disabled={isSavingEdits}
-              className="gap-1.5 h-8 bg-yellow-600 hover:bg-yellow-700"
+              className={cn('gap-1.5 h-8', actionButtonStyles.saveEdits)}
             >
               {isSavingEdits ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />

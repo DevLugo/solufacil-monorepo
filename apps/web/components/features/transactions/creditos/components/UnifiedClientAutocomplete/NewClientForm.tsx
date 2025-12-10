@@ -5,6 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
+import { clientFormStateStyles } from '../../../shared/theme'
+
+// Extract styles for new client form - uses info color scheme
+const newClientStyles = clientFormStateStyles.newClient
 
 interface NewClientFormProps {
   mode: 'borrower' | 'aval'
@@ -28,10 +32,10 @@ export function NewClientForm({
   className,
 }: NewClientFormProps) {
   return (
-    <div className={cn('space-y-4 p-4 md:p-5 border-2 rounded-lg border-blue-400 bg-blue-50/50 dark:bg-blue-950/20 touch-manipulation', className)}>
+    <div className={cn('space-y-4 p-4 md:p-5 border-2 rounded-lg touch-manipulation', newClientStyles.container, className)}>
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
+        <div className={cn('flex items-center gap-2', newClientStyles.icon)}>
+          <div className={cn('flex h-10 w-10 items-center justify-center rounded-full', newClientStyles.avatar)}>
             <UserPlus className="h-5 w-5" />
           </div>
           <span className="font-semibold text-base md:text-lg">
@@ -83,7 +87,7 @@ export function NewClientForm({
           type="button"
           onClick={onConfirm}
           disabled={!name.trim()}
-          className="flex-1 h-11 md:h-12 text-base bg-blue-600 hover:bg-blue-700"
+          className="flex-1 h-11 md:h-12 text-base bg-info hover:bg-info/90"
         >
           <Check className="h-5 w-5 mr-2" />
           Confirmar

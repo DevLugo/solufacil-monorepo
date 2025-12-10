@@ -119,8 +119,4 @@ export interface ModalTotals {
   noPayment: number
 }
 
-export interface RowStyle {
-  className: string
-  borderColor: string
-  borderWidth: string
-}
+// RowStyle type removed - now using theme constants from shared/theme.ts

@@ -2,7 +2,9 @@
 
 import { User, MapPin, Phone, RefreshCw } from 'lucide-react'
 import { CommandItem } from '@/components/ui/command'
+import { cn } from '@/lib/utils'
 import { ClientLoanBadges } from './ClientLoanBadges'
+import { clientFormStateStyles, textStyles } from '../../../shared/theme'
 import type { UnifiedClientValue } from '../../types'
 
 interface ClientSearchItemProps {
@@ -12,25 +14,34 @@ interface ClientSearchItemProps {
   onSelect: (client: UnifiedClientValue) => void
 }
 
+// Variant-based styles using theme constants
+const variantStyles = {
+  'active-loan': clientFormStateStyles.otherLocation, // Uses warning colors for active loan
+  'other-location': clientFormStateStyles.otherLocation,
+  'current-location': clientFormStateStyles.existing,
+}
+
 export function ClientSearchItem({ client, mode, variant, onSelect }: ClientSearchItemProps) {
+  const styles = variantStyles[variant]
+
   const getIcon = () => {
     if (variant === 'active-loan') {
       return (
-        <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50 flex-shrink-0">
-          <RefreshCw className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+        <div className={cn('flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-full flex-shrink-0', styles.avatar)}>
+          <RefreshCw className={cn('h-5 w-5', styles.icon)} />
         </div>
       )
     }
     if (variant === 'other-location') {
       return (
-        <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50 flex-shrink-0">
-          <MapPin className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+        <div className={cn('flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-full flex-shrink-0', styles.avatar)}>
+          <MapPin className={cn('h-5 w-5', styles.icon)} />
         </div>
       )
     }
     return (
-      <div className="flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 flex-shrink-0">
-        <User className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+      <div className={cn('flex h-10 w-10 md:h-11 md:w-11 items-center justify-center rounded-full flex-shrink-0', styles.avatar)}>
+        <User className={cn('h-5 w-5', styles.icon)} />
       </div>
     )
   }
@@ -38,7 +49,7 @@ export function ClientSearchItem({ client, mode, variant, onSelect }: ClientSear
   const getSubtitle = () => {
     if (variant === 'other-location') {
       return (
-        <div className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+        <div className={cn('text-sm mt-1', textStyles.warning)}>
           {client.locationName || 'Otra localidad'}
         </div>
       )

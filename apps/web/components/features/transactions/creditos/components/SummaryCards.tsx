@@ -39,8 +39,8 @@ export function SummaryCards({ totals }: SummaryCardsProps) {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/10">
-              <DollarSign className="h-5 w-5 text-blue-500" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-info/10">
+              <DollarSign className="h-5 w-5 text-info" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Total Prestado</p>
@@ -67,8 +67,8 @@ export function SummaryCards({ totals }: SummaryCardsProps) {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/10">
-              <DollarSign className="h-5 w-5 text-amber-500" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/10">
+              <DollarSign className="h-5 w-5 text-warning" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Comisión</p>

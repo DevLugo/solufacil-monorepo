@@ -3,7 +3,8 @@
 import { Plus, Save, Loader2, Split } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
+import { badgeStyles } from '../../shared/theme'
 import type { ExpenseTotals } from '../types'
 
 interface KPIBarProps {
@@ -33,14 +34,14 @@ export function KPIBar({
       {newExpenseCount > 0 && (
         <Badge
           variant="outline"
-          className="text-sm py-1 px-3 bg-amber-50 text-amber-700 border-amber-200"
+          className={cn('text-sm py-1 px-3', badgeStyles.warning)}
         >
           Nuevos: {newExpenseCount}
         </Badge>
       )}
       <Badge
         variant="outline"
-        className="text-sm py-1 px-3 bg-red-50 text-red-700 border-red-200"
+        className={cn('text-sm py-1 px-3', badgeStyles.danger)}
       >
         Total: {formatCurrency(totals.total)}
       </Badge>

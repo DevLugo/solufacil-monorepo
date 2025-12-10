@@ -15,9 +15,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { formatCurrency } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 import type { CombinedTotals, PaymentTotals } from '../types'
+import { badgeStyles } from '../../shared/theme'
 
 interface KPIBadgesProps {
   filteredLoansCount: number
@@ -28,6 +28,9 @@ interface KPIBadgesProps {
   showOnlyIncomplete: boolean
   onToggleIncomplete: () => void
 }
+
+// Base badge class for all KPI badges
+const kpiBadgeBase = 'text-xs py-0.5 px-2 cursor-default'
 
 export function KPIBadges({
   filteredLoansCount,
@@ -41,9 +44,10 @@ export function KPIBadges({
   return (
     <TooltipProvider delayDuration={100}>
       <div className="flex flex-wrap items-center gap-1.5 justify-end">
+        {/* Active clients */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="text-xs py-0.5 px-2 cursor-default">
+            <Badge variant="outline" className={kpiBadgeBase}>
               <Users className="h-3 w-3 mr-1" />
               {filteredLoansCount}
             </Badge>
@@ -51,10 +55,11 @@ export function KPIBadges({
           <TooltipContent><p>Clientes activos</p></TooltipContent>
         </Tooltip>
 
+        {/* Already registered */}
         {registeredCount > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Badge variant="outline" className="text-xs py-0.5 px-2 bg-slate-100 text-slate-700 border-slate-300 cursor-default">
+              <Badge variant="outline" className={cn(kpiBadgeBase, badgeStyles.slate)}>
                 <Check className="h-3 w-3 mr-1" />
                 {registeredCount}
               </Badge>
@@ -63,9 +68,10 @@ export function KPIBadges({
           </Tooltip>
         )}
 
+        {/* New payments to save */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="text-xs py-0.5 px-2 bg-green-50 text-green-700 border-green-200 cursor-default">
+            <Badge variant="outline" className={cn(kpiBadgeBase, badgeStyles.success)}>
               <Check className="h-3 w-3 mr-1" />
               {totals.count}
             </Badge>
@@ -73,9 +79,10 @@ export function KPIBadges({
           <TooltipContent><p>Abonos nuevos por guardar</p></TooltipContent>
         </Tooltip>
 
+        {/* No payment */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="text-xs py-0.5 px-2 bg-red-50 text-red-700 border-red-200 cursor-default">
+            <Badge variant="outline" className={cn(kpiBadgeBase, badgeStyles.danger)}>
               <Ban className="h-3 w-3 mr-1" />
               {combinedTotals.noPayment}
             </Badge>
@@ -83,10 +90,11 @@ export function KPIBadges({
           <TooltipContent><p>Marcados sin pago</p></TooltipContent>
         </Tooltip>
 
+        {/* Deleted */}
         {combinedTotals.deleted > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Badge variant="outline" className="text-xs py-0.5 px-2 bg-red-100 text-red-700 border-red-300 cursor-default">
+              <Badge variant="outline" className={cn(kpiBadgeBase, badgeStyles.danger)}>
                 <Trash2 className="h-3 w-3 mr-1" />
                 {combinedTotals.deleted}
               </Badge>
@@ -95,19 +103,21 @@ export function KPIBadges({
           </Tooltip>
         )}
 
+        {/* Commission */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="text-xs py-0.5 px-2 bg-purple-50 text-purple-700 border-purple-200 cursor-default">
+            <Badge variant="outline" className={cn(kpiBadgeBase, badgeStyles.purple)}>
               <DollarSign className="h-3 w-3 mr-1" />
               {formatCurrency(combinedTotals.commission)}
             </Badge>
           </TooltipTrigger>
-          <TooltipContent><p>Comisión del líder</p></TooltipContent>
+          <TooltipContent><p>Comision del lider</p></TooltipContent>
         </Tooltip>
 
+        {/* Cash */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="text-xs py-0.5 px-2 bg-green-50 text-green-700 border-green-200 cursor-default">
+            <Badge variant="outline" className={cn(kpiBadgeBase, badgeStyles.success)}>
               <Wallet className="h-3 w-3 mr-1" />
               {formatCurrency(combinedTotals.cash)}
             </Badge>
@@ -115,9 +125,10 @@ export function KPIBadges({
           <TooltipContent><p>Cobrado en efectivo</p></TooltipContent>
         </Tooltip>
 
+        {/* Bank transfer */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="text-xs py-0.5 px-2 bg-blue-50 text-blue-700 border-blue-200 cursor-default">
+            <Badge variant="outline" className={cn(kpiBadgeBase, badgeStyles.info)}>
               <Building2 className="h-3 w-3 mr-1" />
               {formatCurrency(combinedTotals.bank)}
             </Badge>
@@ -125,32 +136,32 @@ export function KPIBadges({
           <TooltipContent><p>Cobrado por transferencia</p></TooltipContent>
         </Tooltip>
 
+        {/* Total */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="text-xs py-0.5 px-2 font-bold bg-slate-100 cursor-default">
+            <Badge variant="outline" className={cn(kpiBadgeBase, 'font-bold', badgeStyles.default)}>
               {formatCurrency(combinedTotals.total)}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
             <div className="space-y-1 text-xs">
-              <p className="font-semibold">Distribución Total</p>
-              <p>💵 Efectivo: {formatCurrency(combinedTotals.cash)}</p>
-              <p>🏦 Transferencia: {formatCurrency(combinedTotals.bank)}</p>
-              <p>📊 Comisión: {formatCurrency(combinedTotals.commission)}</p>
+              <p className="font-semibold">Distribucion Total</p>
+              <p>Efectivo: {formatCurrency(combinedTotals.cash)}</p>
+              <p>Transferencia: {formatCurrency(combinedTotals.bank)}</p>
+              <p>Comision: {formatCurrency(combinedTotals.commission)}</p>
             </div>
           </TooltipContent>
         </Tooltip>
 
+        {/* Incomplete */}
         {incompleteCount > 0 && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Badge
                 variant="outline"
                 className={cn(
-                  "text-xs py-0.5 px-2 cursor-pointer transition-colors",
-                  showOnlyIncomplete
-                    ? "bg-orange-100 text-orange-700 border-orange-300"
-                    : "bg-orange-50 text-orange-600 border-orange-200"
+                  'text-xs py-0.5 px-2 cursor-pointer transition-colors',
+                  showOnlyIncomplete ? badgeStyles.warning : badgeStyles.orange
                 )}
                 onClick={onToggleIncomplete}
               >

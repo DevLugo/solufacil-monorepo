@@ -10,23 +10,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 import { ALL_EXPENSE_TYPES, EXPENSE_SOURCE_LABELS, ACCOUNT_TYPE_LABELS } from '../constants'
 import type { Expense, AccountType } from '../types'
+import {
+  accountTypeStyles,
+  commissionRowStyle,
+  commissionIconStyle,
+  badgeStyles,
+  textStyles,
+} from '../../shared/theme'
 
 interface ExpenseRowProps {
   expense: Expense
   onEdit: (expense: Expense) => void
   onDelete: (expenseId: string) => void
-}
-
-// Account type badge colors
-const ACCOUNT_TYPE_COLORS: Record<AccountType, string> = {
-  EMPLOYEE_CASH_FUND: 'bg-blue-50 text-blue-700 border-blue-200',
-  PREPAID_GAS: 'bg-orange-50 text-orange-700 border-orange-200',
-  TRAVEL_EXPENSES: 'bg-purple-50 text-purple-700 border-purple-200',
-  BANK: 'bg-green-50 text-green-700 border-green-200',
-  OFFICE_CASH_FUND: 'bg-slate-50 text-slate-700 border-slate-200',
 }
 
 // Commission expense types that are system-generated
@@ -38,27 +36,27 @@ export function ExpenseRow({ expense, onEdit, onDelete }: ExpenseRowProps) {
   const typeLabel = EXPENSE_SOURCE_LABELS[expense.expenseSource || ''] || expense.expenseSource || 'Sin tipo'
   const isCommissionType = COMMISSION_EXPENSE_TYPES.includes(expense.expenseSource || '')
   const accountType = expense.sourceAccount?.type as AccountType | undefined
-  const accountBadgeColor = accountType ? ACCOUNT_TYPE_COLORS[accountType] : ''
+  const accountBadgeColor = accountType ? accountTypeStyles[accountType] : ''
 
   return (
-    <TableRow className={isCommissionType ? 'bg-amber-50/50' : ''}>
+    <TableRow className={isCommissionType ? commissionRowStyle : ''}>
       <TableCell>
         <div className="flex items-center gap-2">
-          <Icon className={`h-4 w-4 ${isCommissionType ? 'text-amber-600' : 'text-muted-foreground'}`} />
+          <Icon className={cn('h-4 w-4', isCommissionType ? commissionIconStyle : 'text-muted-foreground')} />
           <span>{typeLabel}</span>
           {isCommissionType && (
-            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+            <Badge variant="outline" className={cn('text-xs', badgeStyles.warning)}>
               Comision
             </Badge>
           )}
         </div>
       </TableCell>
-      <TableCell className="font-medium text-red-600">
+      <TableCell className={cn('font-medium', textStyles.danger)}>
         -{formatCurrency(parseFloat(expense.amount))}
       </TableCell>
       <TableCell>
         <div className="flex flex-col gap-1">
-          <Badge variant="outline" className={`text-xs ${accountBadgeColor}`}>
+          <Badge variant="outline" className={cn('text-xs', accountBadgeColor)}>
             {expense.sourceAccount?.name || 'Sin cuenta'}
           </Badge>
           {accountType && (
