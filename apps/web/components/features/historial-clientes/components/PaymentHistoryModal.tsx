@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import { formatCurrency, formatDate } from '../utils'
+import { paymentLegendItems, coverageRowStyles } from '../constants'
 import type { LoanHistoryDetail, LoanPaymentDetail } from '../types'
 
 interface PaymentHistoryModalProps {
@@ -115,7 +116,10 @@ export function PaymentHistoryModal({ loan, isOpen, onClose }: PaymentHistoryMod
               </div>
               <div className="flex items-center gap-1.5 p-2 rounded-lg bg-muted/50">
                 <div className="min-w-0">
-                  <div className={`text-xs font-bold truncate ${loan.pendingDebt > 0 ? 'text-destructive' : 'text-success'}`}>
+                  <div className={cn(
+                    'text-xs font-bold truncate',
+                    loan.pendingDebt > 0 ? 'text-destructive' : 'text-success'
+                  )}>
                     {formatCurrency(loan.pendingDebt)}
                   </div>
                   <div className="text-[10px] text-muted-foreground">debe</div>
@@ -125,10 +129,11 @@ export function PaymentHistoryModal({ loan, isOpen, onClose }: PaymentHistoryMod
 
             {/* Legend - Compact inline */}
             <div className="flex flex-wrap gap-1.5 mb-3 text-[9px]">
-              <span className="px-1.5 py-0.5 rounded bg-success/10 border-l-2 border-l-success">Completo</span>
-              <span className="px-1.5 py-0.5 rounded bg-info/10 border-l-2 border-l-info">Sobrepago</span>
-              <span className="px-1.5 py-0.5 rounded bg-warning/10 border-l-2 border-l-warning">Parcial</span>
-              <span className="px-1.5 py-0.5 rounded bg-destructive/10 border-l-2 border-l-destructive">Sin Pago</span>
+              {paymentLegendItems.map((item) => (
+                <span key={item.label} className={cn('px-1.5 py-0.5 rounded', item.style)}>
+                  {item.label}
+                </span>
+              ))}
             </div>
 
             {/* Payment Table - Compact for mobile */}

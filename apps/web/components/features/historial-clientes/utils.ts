@@ -3,6 +3,24 @@ import type {
   PaymentChronologyItem,
   CoverageType,
 } from './types'
+import {
+  mapApiStatus,
+  statusToBadgeVariant,
+  statusLabels,
+  coverageRowStyles,
+  type LoanStatusType,
+  type BadgeVariant,
+} from './constants'
+
+// Re-export from constants for backwards compatibility
+export {
+  mapApiStatus,
+  statusToBadgeVariant,
+  statusLabels,
+  coverageRowStyles,
+  type LoanStatusType,
+  type BadgeVariant,
+} from './constants'
 
 // ============================================================
 // TRANSLATION FUNCTIONS - English to Spanish
@@ -288,45 +306,37 @@ export const generatePaymentChronology = (
 // UI HELPER FUNCTIONS
 // ============================================================
 
-export const getStatusBadgeVariant = (
-  status: string
-): 'success' | 'default' | 'purple' | 'destructive' => {
-  switch (status) {
-    case 'ACTIVE':
-      return 'success'
-    case 'FINISHED':
-      return 'default'
-    case 'RENOVATED':
-      return 'purple'
-    case 'CANCELLED':
-      return 'destructive'
-    default:
-      return 'default'
-  }
+/**
+ * Get the effective loan status considering wasRenewed flag
+ * Uses constants from ./constants.ts for theme-aware styling
+ */
+export const getEffectiveLoanStatus = (
+  apiStatus: string,
+  wasRenewed: boolean
+): LoanStatusType => {
+  return mapApiStatus(apiStatus, wasRenewed)
 }
 
-export const getCoverageColor = (
-  coverage: CoverageType | undefined,
-  isDark: boolean = false
+/**
+ * Get badge variant for a loan status
+ * @deprecated Use statusToBadgeVariant from constants directly
+ */
+export const getStatusBadgeVariant = (
+  status: string
+): BadgeVariant => {
+  const effectiveStatus = mapApiStatus(status, false)
+  return statusToBadgeVariant[effectiveStatus]
+}
+
+/**
+ * Get row style class for a coverage type (theme-aware)
+ * Uses CSS variables that work in both light and dark mode
+ */
+export const getCoverageRowStyle = (
+  coverage: CoverageType | undefined
 ): string => {
-  switch (coverage) {
-    case 'FULL':
-      return isDark
-        ? 'bg-green-900 border-green-700'
-        : 'bg-green-50 border-green-200'
-    case 'COVERED_BY_SURPLUS':
-      return isDark
-        ? 'bg-blue-900 border-blue-700'
-        : 'bg-blue-50 border-blue-200'
-    case 'PARTIAL':
-      return isDark
-        ? 'bg-amber-900 border-amber-700'
-        : 'bg-amber-50 border-amber-200'
-    case 'MISS':
-      return isDark ? 'bg-red-900 border-red-700' : 'bg-red-50 border-red-200'
-    default:
-      return ''
-  }
+  if (!coverage) return ''
+  return coverageRowStyles[coverage] || ''
 }
 
 // Map loan from API to card format

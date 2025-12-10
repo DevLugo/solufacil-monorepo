@@ -10,8 +10,10 @@ import {
   TrendingDown,
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import type { ClientInfo, ClientSummary } from '../types'
 import { formatCurrency } from '../utils'
+import { roleStyles, type ClientRole } from '../constants'
 
 interface ClientProfileProps {
   client: ClientInfo
@@ -46,11 +48,10 @@ export function ClientProfile({ client, summary }: ClientProfileProps) {
               {roles.map((role) => (
                 <span
                   key={role}
-                  className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
-                    role === 'Cliente'
-                      ? 'bg-success/10 text-success'
-                      : 'bg-warning/10 text-warning'
-                  }`}
+                  className={cn(
+                    'text-[9px] px-1.5 py-0.5 rounded font-medium',
+                    roleStyles[role as ClientRole]
+                  )}
                 >
                   {role}
                 </span>
@@ -111,9 +112,10 @@ export function ClientProfile({ client, summary }: ClientProfileProps) {
           <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
             <TrendingDown className="h-4 w-4 text-destructive flex-shrink-0" />
             <div className="min-w-0">
-              <div className={`text-xs font-bold truncate ${
+              <div className={cn(
+                'text-xs font-bold truncate',
                 summary.currentPendingDebtAsClient > 0 ? 'text-destructive' : 'text-success'
-              }`}>
+              )}>
                 {formatCurrency(summary.currentPendingDebtAsClient)}
               </div>
               <div className="text-[10px] text-muted-foreground">debe</div>

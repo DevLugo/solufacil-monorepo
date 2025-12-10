@@ -2,8 +2,10 @@
 
 import { ChevronRight } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import { StatusBadge } from './StatusBadge'
 import { formatCurrency } from '../utils'
+import { mapApiStatus, statusToBadgeVariant, statusLabels } from '../constants'
 import type { LoanHistoryDetail } from '../types'
 
 interface LoanCardProps {
@@ -13,86 +15,29 @@ interface LoanCardProps {
   isCollateral?: boolean
 }
 
-export function LoanCard({ loan, onToggleExpand, isCollateral = false }: LoanCardProps) {
+export function LoanCard({ loan, onToggleExpand }: LoanCardProps) {
   const progress = loan.totalAmountDue > 0
     ? Math.round((loan.totalPaid / loan.totalAmountDue) * 100)
     : 0
 
-  const pendingDebt = loan.pendingDebt
-
-  // Determine effective status - following Keystone logic exactly:
-  // 1. Default: 'active'
-  // 2. If status is FINISHED: 'completed'
-  // 3. If wasRenewed is true: 'renewed' (overrides completed)
-  const getEffectiveStatus = (): 'active' | 'completed' | 'renewed' | 'cancelled' => {
-    // Start with default
-    let status: 'active' | 'completed' | 'renewed' | 'cancelled' = 'active'
-
-    // Check for completed status
-    if (loan.status === 'FINISHED') {
-      status = 'completed'
-    }
-
-    // Check for cancelled
-    if (loan.status === 'CANCELLED') {
-      status = 'cancelled'
-    }
-
-    // wasRenewed overrides other statuses (except cancelled)
-    if (loan.wasRenewed && status !== 'cancelled') {
-      status = 'renewed'
-    }
-
-    return status
-  }
-
-  const effectiveStatus = getEffectiveStatus()
-
-  const getStatusVariant = () => {
-    switch (effectiveStatus) {
-      case 'active':
-        return 'success'
-      case 'completed':
-        return 'default'
-      case 'renewed':
-        return 'info'
-      case 'cancelled':
-        return 'danger'
-      default:
-        return 'default'
-    }
-  }
-
-  const getStatusLabel = () => {
-    switch (effectiveStatus) {
-      case 'active':
-        return 'Activo'
-      case 'completed':
-        return 'Terminado'
-      case 'renewed':
-        return 'Renovado'
-      case 'cancelled':
-        return 'Cancelado'
-      default:
-        return loan.status
-    }
-  }
-
-  // Only show green border for truly active loans
+  // Use centralized status logic from constants
+  const effectiveStatus = mapApiStatus(loan.status, loan.wasRenewed)
   const isActive = effectiveStatus === 'active'
 
   return (
     <Card
-      className="cursor-pointer hover:bg-accent/50 transition-colors border-l-2"
-      style={{ borderLeftColor: isActive ? 'hsl(var(--success))' : 'transparent' }}
+      className={cn(
+        'cursor-pointer hover:bg-accent/50 transition-colors border-l-2',
+        isActive ? 'border-l-success' : 'border-l-transparent'
+      )}
       onClick={onToggleExpand}
     >
       <div className="p-2.5">
         {/* Row 1: Date, Status, Progress */}
         <div className="flex items-center gap-2 mb-2">
           <div className="text-xs font-medium">{loan.signDateFormatted}</div>
-          <StatusBadge variant={getStatusVariant()}>
-            {getStatusLabel()}
+          <StatusBadge variant={statusToBadgeVariant[effectiveStatus]}>
+            {statusLabels[effectiveStatus]}
           </StatusBadge>
 
           {/* Progress Bar - fills remaining space */}
@@ -123,7 +68,10 @@ export function LoanCard({ loan, onToggleExpand, isCollateral = false }: LoanCar
           </div>
           <div>
             <span className="text-muted-foreground">Debe </span>
-            <span className={`font-semibold ${pendingDebt > 0 ? 'text-destructive' : 'text-success'}`}>
+            <span className={cn(
+              'font-semibold',
+              loan.pendingDebt > 0 ? 'text-destructive' : 'text-success'
+            )}>
               {formatCurrency(loan.pendingDebt)}
             </span>
           </div>
