@@ -10,7 +10,7 @@ export interface CreateTransactionInput {
   type: TransactionType
   incomeSource?: string
   expenseSource?: string
-  sourceAccountId: string
+  sourceAccountId?: string
   destinationAccountId?: string
   loanId?: string
   loanPaymentId?: string
@@ -65,12 +65,14 @@ export class TransactionService {
   }
 
   async create(input: CreateTransactionInput) {
-    // Validar que la cuenta origen existe
-    const sourceExists = await this.accountRepository.exists(input.sourceAccountId)
-    if (!sourceExists) {
-      throw new GraphQLError('Source account not found', {
-        extensions: { code: 'NOT_FOUND' },
-      })
+    // Validar que la cuenta origen existe (si se proporciona)
+    if (input.sourceAccountId) {
+      const sourceExists = await this.accountRepository.exists(input.sourceAccountId)
+      if (!sourceExists) {
+        throw new GraphQLError('Source account not found', {
+          extensions: { code: 'NOT_FOUND' },
+        })
+      }
     }
 
     // Validar cuenta destino si se proporciona
@@ -85,18 +87,36 @@ export class TransactionService {
 
     const amount = new Decimal(input.amount)
 
-    return this.transactionRepository.create({
-      amount,
-      date: input.date,
-      type: input.type,
-      incomeSource: input.incomeSource,
-      expenseSource: input.expenseSource,
-      sourceAccountId: input.sourceAccountId,
-      destinationAccountId: input.destinationAccountId,
-      loanId: input.loanId,
-      loanPaymentId: input.loanPaymentId,
-      routeId: input.routeId,
-      leadId: input.leadId,
+    // Ejecutar creación en transacción para actualizar balances
+    return this.prisma.$transaction(async (tx) => {
+      const transaction = await this.transactionRepository.create(
+        {
+          amount,
+          date: input.date,
+          type: input.type,
+          incomeSource: input.incomeSource,
+          expenseSource: input.expenseSource,
+          sourceAccountId: input.sourceAccountId,
+          destinationAccountId: input.destinationAccountId,
+          loanId: input.loanId,
+          loanPaymentId: input.loanPaymentId,
+          routeId: input.routeId,
+          leadId: input.leadId,
+        },
+        tx
+      )
+
+      // Recalcular balance de cuenta origen
+      if (input.sourceAccountId) {
+        await this.accountRepository.recalculateAndUpdateBalance(input.sourceAccountId, tx)
+      }
+
+      // Recalcular balance de cuenta destino si existe
+      if (input.destinationAccountId) {
+        await this.accountRepository.recalculateAndUpdateBalance(input.destinationAccountId, tx)
+      }
+
+      return transaction
     })
   }
 

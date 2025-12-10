@@ -621,7 +621,7 @@ input CreateTransactionInput {
   type: TransactionType!
   incomeSource: String
   expenseSource: String
-  sourceAccountId: ID!
+  sourceAccountId: ID
   destinationAccountId: ID
   loanId: ID
   loanPaymentId: ID

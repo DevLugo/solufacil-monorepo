@@ -60,7 +60,7 @@ export const transactionResolvers = {
           type: TransactionType
           incomeSource?: string
           expenseSource?: string
-          sourceAccountId: string
+          sourceAccountId?: string
           destinationAccountId?: string
           loanId?: string
           loanPaymentId?: string

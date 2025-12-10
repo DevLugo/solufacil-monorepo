@@ -232,7 +232,7 @@ export type CreateTransactionInput = {
   loanId?: InputMaybe<Scalars['ID']['input']>;
   loanPaymentId?: InputMaybe<Scalars['ID']['input']>;
   routeId?: InputMaybe<Scalars['ID']['input']>;
-  sourceAccountId: Scalars['ID']['input'];
+  sourceAccountId?: InputMaybe<Scalars['ID']['input']>;
   type: TransactionType;
 };
 
