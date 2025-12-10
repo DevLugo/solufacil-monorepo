@@ -12,6 +12,7 @@ import { routeResolvers } from './routes'
 import { reportResolvers } from './reports'
 import { documentResolvers } from './documents'
 import { personalDataResolvers } from './personalData'
+import { clientResolvers } from './clients'
 
 export const resolvers = {
   ...scalars,
@@ -30,6 +31,7 @@ export const resolvers = {
     ...reportResolvers.Query,
     ...documentResolvers.Query,
     ...personalDataResolvers.Query,
+    ...clientResolvers.Query,
   },
 
   Mutation: {

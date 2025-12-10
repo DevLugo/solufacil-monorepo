@@ -293,6 +293,122 @@ type LeadPaymentReceived {
   updatedAt: DateTime!
 }
 
+# Client History Types (para historial de clientes)
+type ClientSearchResult {
+  id: ID!
+  name: String!
+  clientCode: String!
+  phone: String
+  address: String
+  route: String
+  location: String
+  municipality: String
+  state: String
+  latestLoanDate: DateTime
+  hasLoans: Boolean!
+  hasBeenCollateral: Boolean!
+  totalLoans: Int!
+  activeLoans: Int!
+  finishedLoans: Int!
+  collateralLoans: Int!
+}
+
+type ClientHistoryData {
+  client: ClientInfo!
+  summary: ClientSummary!
+  loansAsClient: [LoanHistoryDetail!]!
+  loansAsCollateral: [LoanHistoryDetail!]!
+}
+
+type ClientInfo {
+  id: ID!
+  fullName: String!
+  clientCode: String!
+  phones: [String!]!
+  addresses: [ClientAddressInfo!]!
+  leader: LeaderInfo
+}
+
+type ClientAddressInfo {
+  street: String!
+  city: String
+  location: String!
+  route: String!
+}
+
+type LeaderInfo {
+  name: String!
+  route: String!
+  location: String!
+  municipality: String
+  state: String
+  phone: String
+}
+
+type ClientSummary {
+  totalLoansAsClient: Int!
+  totalLoansAsCollateral: Int!
+  activeLoansAsClient: Int!
+  activeLoansAsCollateral: Int!
+  totalAmountRequestedAsClient: Decimal!
+  totalAmountPaidAsClient: Decimal!
+  currentPendingDebtAsClient: Decimal!
+  hasBeenClient: Boolean!
+  hasBeenCollateral: Boolean!
+}
+
+type LoanHistoryDetail {
+  id: ID!
+  signDate: DateTime!
+  signDateFormatted: String!
+  finishedDate: DateTime
+  finishedDateFormatted: String
+  loanType: String!
+  amountRequested: Decimal!
+  totalAmountDue: Decimal!
+  interestAmount: Decimal!
+  totalPaid: Decimal!
+  pendingDebt: Decimal!
+  daysSinceSign: Int!
+  status: String!
+  statusDescription: String!
+  wasRenewed: Boolean!
+  weekDuration: Int!
+  rate: Decimal!
+  leadName: String
+  routeName: String
+  paymentsCount: Int!
+  payments: [LoanPaymentDetail!]!
+  noPaymentPeriods: [NoPaymentPeriod!]!
+  renewedFrom: ID
+  renewedTo: ID
+  avalName: String
+  avalPhone: String
+  clientName: String
+  clientDui: String
+}
+
+type LoanPaymentDetail {
+  id: ID!
+  amount: Decimal!
+  receivedAt: DateTime!
+  receivedAtFormatted: String!
+  type: String!
+  paymentMethod: String!
+  paymentNumber: Int!
+  balanceBeforePayment: Decimal!
+  balanceAfterPayment: Decimal!
+}
+
+type NoPaymentPeriod {
+  id: ID!
+  startDate: DateTime!
+  endDate: DateTime!
+  startDateFormatted: String!
+  endDateFormatted: String!
+  weekCount: Int!
+}
+
 # Pagination Types
 type PageInfo {
   hasNextPage: Boolean!
@@ -516,6 +632,20 @@ type Query {
     locationId: ID
     limit: Int
   ): [PersonalData!]! @auth
+
+  # Client History (historial de clientes)
+  searchClients(
+    searchTerm: String!
+    routeId: ID
+    locationId: ID
+    limit: Int
+  ): [ClientSearchResult!]! @auth
+
+  getClientHistory(
+    clientId: ID!
+    routeId: ID
+    locationId: ID
+  ): ClientHistoryData! @auth
 
   # Reports
   financialReport(routeIds: [ID!]!, year: Int!, month: Int!): FinancialReport! @requireRole(roles: [ADMIN])

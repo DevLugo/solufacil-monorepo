@@ -24,6 +24,7 @@ import {
   ChevronRight,
   BookOpen,
   CalendarDays,
+  History,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -65,6 +66,11 @@ const navigation: NavItem[] = [
     title: 'Clientes',
     href: '/clientes',
     icon: Users,
+  },
+  {
+    title: 'Historial Clientes',
+    href: '/historial-clientes',
+    icon: History,
   },
   {
     title: 'Reportes',
