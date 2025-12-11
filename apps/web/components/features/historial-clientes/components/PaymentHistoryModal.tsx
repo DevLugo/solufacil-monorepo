@@ -17,9 +17,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
-import { formatCurrency, formatDate } from '../utils'
+import { formatCurrency, formatDate, generatePaymentChronology } from '../utils'
 import { paymentLegendItems, coverageRowStyles } from '../constants'
-import type { LoanHistoryDetail, LoanPaymentDetail } from '../types'
+import type { LoanHistoryDetail, PaymentChronologyItem } from '../types'
 
 interface PaymentHistoryModalProps {
   loan: LoanHistoryDetail
@@ -27,57 +27,101 @@ interface PaymentHistoryModalProps {
   onClose: () => void
 }
 
-interface PaymentWithDebt extends LoanPaymentDetail {
-  remainingDebt: number
-  isDoublePayment: boolean
-}
-
 export function PaymentHistoryModal({ loan, isOpen, onClose }: PaymentHistoryModalProps) {
-  // Use balanceAfterPayment from API (already calculated with totalAmountDue = amountGived + profitAmount)
-  const paymentsWithDebt = useMemo((): PaymentWithDebt[] => {
-    if (!loan.payments || loan.payments.length === 0) return []
-
-    // Sort payments by date
-    const sortedPayments = [...loan.payments].sort(
-      (a, b) => new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime()
-    )
-
-    // Detect double payments (same date)
-    const paymentDates = sortedPayments.map(p => formatDate(p.receivedAt))
-    const duplicateDates = paymentDates.filter(
-      (date, index) => paymentDates.indexOf(date) !== index
-    )
-
-    // Use API's balanceAfterPayment which is already correctly calculated
-    return sortedPayments.map((payment): PaymentWithDebt => {
-      const isDoublePayment = duplicateDates.includes(formatDate(payment.receivedAt))
-
-      return {
-        ...payment,
-        remainingDebt: payment.balanceAfterPayment,
-        isDoublePayment,
-      }
+  // Generate payment chronology with week-by-week analysis
+  const chronology = useMemo((): PaymentChronologyItem[] => {
+    return generatePaymentChronology({
+      signDate: loan.signDate,
+      finishedDate: loan.finishedDate,
+      status: loan.status,
+      wasRenewed: loan.wasRenewed,
+      amountGived: loan.amountRequested,
+      profitAmount: loan.interestAmount,
+      totalAmountDue: loan.totalAmountDue,
+      weekDuration: loan.weekDuration,
+      payments: loan.payments.map((p) => ({
+        id: p.id,
+        receivedAt: p.receivedAt,
+        receivedAtFormatted: p.receivedAtFormatted,
+        amount: p.amount,
+        paymentMethod: p.paymentMethod,
+        balanceBeforePayment: p.balanceBeforePayment,
+        balanceAfterPayment: p.balanceAfterPayment,
+        paymentNumber: p.paymentNumber,
+      })),
     })
-  }, [loan.payments])
+  }, [loan])
 
   // Calculate expected weekly payment
   const expectedWeekly = loan.weekDuration > 0 ? loan.totalAmountDue / loan.weekDuration : 0
 
-  const getRowStyles = (payment: PaymentWithDebt, expectedWeekly: number) => {
-    if (payment.isDoublePayment) {
-      return 'bg-info/5 border-l-4 border-l-info'
+  // Get row styles based on coverage type and payment count
+  const getRowStyles = (item: PaymentChronologyItem): string => {
+    // Priority 1: Multiple payments in the same week (2 or more)
+    if (item.type === 'PAYMENT' && item.description.includes('/')) {
+      const match = item.description.match(/\((\d+)\/(\d+)\)/)
+      if (match) {
+        const total = parseInt(match[2], 10)
+        if (total >= 2) {
+          return 'bg-info/5 border-l-4 border-l-info'
+        }
+      }
     }
-    // Determine if payment was full, partial, or overpaid
-    if (payment.amount >= expectedWeekly * 1.5) {
-      return 'bg-success/5 border-l-4 border-l-success' // Overpaid
+
+    // Priority 2: NO_PAYMENT items - use coverage type directly
+    if (item.type === 'NO_PAYMENT') {
+      if (item.coverageType) {
+        return coverageRowStyles[item.coverageType] || ''
+      }
+      return 'bg-destructive/5 border-l-4 border-l-destructive' // Default: MISS
     }
-    if (payment.amount >= expectedWeekly) {
-      return '' // Normal full payment
+
+    // Priority 3: PAYMENT items - check weeklyPaid for overpaid
+    if (item.type === 'PAYMENT' && item.weeklyPaid !== undefined && item.weeklyExpected) {
+      // Overpaid: weeklyPaid >= expectedWeekly × 1.5
+      if (item.weeklyPaid >= item.weeklyExpected * 1.5) {
+        return 'bg-success/5 border-l-4 border-l-success'
+      }
     }
-    if (payment.amount > 0) {
-      return 'bg-warning/5 border-l-4 border-l-warning' // Partial
+
+    // Priority 4: Use coverage type for styling
+    if (item.coverageType) {
+      // FULL coverage: normal payment (no special style)
+      if (item.coverageType === 'FULL') {
+        return '' // Normal full payment (no special style)
+      }
+      // Other coverage types use their styles
+      return coverageRowStyles[item.coverageType] || ''
     }
-    return 'bg-destructive/5 border-l-4 border-l-destructive' // Missed
+
+    // Fallback: Calculate based on amount if no coverage type or weeklyPaid
+    if (item.type === 'PAYMENT' && item.amount && expectedWeekly > 0) {
+      if (item.amount >= expectedWeekly * 1.5) {
+        return 'bg-success/5 border-l-4 border-l-success' // Overpaid
+      }
+      if (item.amount >= expectedWeekly) {
+        return '' // Normal full payment
+      }
+      if (item.amount > 0) {
+        return 'bg-warning/5 border-l-4 border-l-warning' // Partial
+      }
+    }
+
+    // Default: Missed payment
+    return 'bg-destructive/5 border-l-4 border-l-destructive'
+  }
+
+  // Get badge text for multiple payments in same week
+  const getBadgeText = (item: PaymentChronologyItem): string | null => {
+    if (item.type === 'PAYMENT' && item.description.includes('/')) {
+      // Extract count from description like "Pago #1 (1/2)" or "Pago #2 (2/2)"
+      const match = item.description.match(/\((\d+)\/(\d+)\)/)
+      if (match) {
+        const total = parseInt(match[2], 10)
+        return total >= 2 ? `${total}x` : null
+      }
+    }
+    return null
   }
 
   return (
@@ -148,44 +192,67 @@ export function PaymentHistoryModal({ loan, isOpen, onClose }: PaymentHistoryMod
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paymentsWithDebt.map((payment, idx) => (
-                    <TableRow
-                      key={payment.id}
-                      className={cn(getRowStyles(payment, expectedWeekly), 'text-xs')}
-                    >
-                      <TableCell className="font-medium text-muted-foreground px-2 py-1.5">
-                        {payment.paymentNumber || idx + 1}
-                      </TableCell>
-                      <TableCell className="px-2 py-1.5">
-                        <div className="flex items-center gap-1">
-                          <span className="whitespace-nowrap">{payment.receivedAtFormatted || formatDate(payment.receivedAt)}</span>
-                          {payment.isDoublePayment && (
-                            <span className="text-[8px] font-bold text-info">2x</span>
+                  {chronology.map((item, idx) => {
+                    const badgeText = getBadgeText(item)
+                    const isNoPayment = item.type === 'NO_PAYMENT'
+
+                    return (
+                      <TableRow
+                        key={item.id}
+                        className={cn(getRowStyles(item), 'text-xs')}
+                      >
+                        <TableCell className="font-medium text-muted-foreground px-2 py-1.5">
+                          {item.paymentNumber || item.weekIndex || idx + 1}
+                        </TableCell>
+                        <TableCell className="px-2 py-1.5">
+                          <div className="flex items-center gap-1">
+                            <span className="whitespace-nowrap">{item.dateFormatted}</span>
+                            {badgeText && (
+                              <span className="text-[8px] font-bold text-info">{badgeText}</span>
+                            )}
+                          </div>
+                          {isNoPayment && (
+                            <div className="text-[10px] text-muted-foreground mt-0.5">
+                              {item.description}
+                              {item.weekCount && item.weekCount > 1 && (
+                                <span className="ml-1 text-[9px] opacity-75">
+                                  ({item.weekCount} semanas)
+                                </span>
+                              )}
+                            </div>
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right px-2 py-1.5 font-medium">
-                        {formatCurrency(payment.amount)}
-                      </TableCell>
-                      <TableCell className="text-right px-2 py-1.5 font-medium">
-                        <span
-                          className={cn(
-                            payment.remainingDebt === 0
-                              ? 'text-success'
-                              : 'text-destructive'
+                        </TableCell>
+                        <TableCell className="text-right px-2 py-1.5 font-medium">
+                          {isNoPayment ? (
+                            <span className="text-muted-foreground italic">-</span>
+                          ) : (
+                            formatCurrency(item.amount || 0)
                           )}
-                        >
-                          {formatCurrency(payment.remainingDebt)}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell className="text-right px-2 py-1.5 font-medium">
+                          {item.balanceAfter !== undefined ? (
+                            <span
+                              className={cn(
+                                item.balanceAfter === 0
+                                  ? 'text-success'
+                                  : 'text-destructive'
+                              )}
+                            >
+                              {formatCurrency(item.balanceAfter)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </div>
 
             {/* Empty state if no payments */}
-            {paymentsWithDebt.length === 0 && (
+            {chronology.length === 0 && (
               <div className="text-center py-8 text-muted-foreground text-sm">
                 Sin pagos registrados
               </div>

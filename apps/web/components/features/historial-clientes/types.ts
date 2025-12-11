@@ -62,6 +62,7 @@ export interface LoanHistoryDetail {
   signDateFormatted: string
   finishedDate: string | null
   finishedDateFormatted: string | null
+  renewedDate: string | null
   loanType: string
   amountRequested: number
   totalAmountDue: number
@@ -70,7 +71,6 @@ export interface LoanHistoryDetail {
   pendingDebt: number
   daysSinceSign: number
   status: LoanStatus
-  statusDescription: string
   wasRenewed: boolean
   weekDuration: number
   rate: number

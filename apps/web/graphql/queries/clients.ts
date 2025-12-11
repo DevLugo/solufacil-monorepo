@@ -85,6 +85,7 @@ export const GET_CLIENT_HISTORY_QUERY = gql`
         signDateFormatted
         finishedDate
         finishedDateFormatted
+        renewedDate
         loanType
         amountRequested
         totalAmountDue
@@ -93,7 +94,6 @@ export const GET_CLIENT_HISTORY_QUERY = gql`
         pendingDebt
         daysSinceSign
         status
-        statusDescription
         wasRenewed
         weekDuration
         rate
@@ -132,6 +132,7 @@ export const GET_CLIENT_HISTORY_QUERY = gql`
         signDateFormatted
         finishedDate
         finishedDateFormatted
+        renewedDate
         loanType
         amountRequested
         totalAmountDue
@@ -140,7 +141,6 @@ export const GET_CLIENT_HISTORY_QUERY = gql`
         pendingDebt
         daysSinceSign
         status
-        statusDescription
         wasRenewed
         weekDuration
         rate

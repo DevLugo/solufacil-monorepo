@@ -267,6 +267,7 @@ export class LoanRepository {
       totalPaid?: Decimal
       pendingAmountStored?: Decimal
       finishedDate?: Date | null
+      renewedDate?: Date | null
       comissionAmount?: Decimal
     }
   ) {

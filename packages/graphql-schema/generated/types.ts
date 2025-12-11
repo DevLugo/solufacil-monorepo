@@ -483,6 +483,8 @@ export type LoanHistoryDetail = {
   paymentsCount: Scalars['Int']['output'];
   pendingDebt: Scalars['Decimal']['output'];
   rate: Scalars['Decimal']['output'];
+  renewedDate?: Maybe<Scalars['DateTime']['output']>;
+  renewedDateFormatted?: Maybe<Scalars['String']['output']>;
   renewedFrom?: Maybe<Scalars['ID']['output']>;
   renewedTo?: Maybe<Scalars['ID']['output']>;
   routeName?: Maybe<Scalars['String']['output']>;
@@ -1949,6 +1951,8 @@ export type LoanHistoryDetailResolvers<ContextType = GraphQLContext, ParentType 
   paymentsCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   pendingDebt?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
   rate?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+  renewedDate?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
+  renewedDateFormatted?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   renewedFrom?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
   renewedTo?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
   routeName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;

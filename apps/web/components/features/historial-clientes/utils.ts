@@ -104,6 +104,7 @@ interface LoanDataForChronology {
   finishedDate?: string | null
   status?: string
   badDebtDate?: string | null
+  wasRenewed?: boolean
   amountGived?: number
   profitAmount?: number
   totalAmountDue?: number
@@ -130,14 +131,16 @@ export const generatePaymentChronology = (
   const signDate = new Date(loan.signDate)
   const now = new Date()
 
+  // Check if loan is finished or renewed - don't show "no payment" after this
+  const isFinished = loan.status === 'FINISHED' || loan.status === 'RENOVATED'
+  const isRenewed = loan.wasRenewed === true || loan.status === 'RENOVATED'
+  const finishedDate = loan.finishedDate ? new Date(loan.finishedDate) : null
+
   // Determine end date for evaluation
   let endDate: Date
 
-  if (
-    loan.finishedDate &&
-    (loan.status === 'FINISHED' || loan.status === 'RENOVATED')
-  ) {
-    endDate = new Date(loan.finishedDate)
+  if (finishedDate && isFinished) {
+    endDate = finishedDate
   } else if (loan.badDebtDate) {
     endDate = new Date(loan.badDebtDate)
   } else {
@@ -150,12 +153,9 @@ export const generatePaymentChronology = (
 
   // Calculate total weeks
   let totalWeeks: number
-  if (
-    loan.finishedDate &&
-    (loan.status === 'FINISHED' || loan.status === 'RENOVATED')
-  ) {
+  if (finishedDate && isFinished) {
     totalWeeks = Math.ceil(
-      (new Date(loan.finishedDate).getTime() - signDate.getTime()) /
+      (finishedDate.getTime() - signDate.getTime()) /
         (7 * 24 * 60 * 60 * 1000)
     )
   } else if (loan.badDebtDate) {
@@ -183,6 +183,10 @@ export const generatePaymentChronology = (
   const totalDue = loan.totalAmountDue ?? (loan.amountGived || 0) + (loan.profitAmount || 0)
   const durationWeeks = loan.weekDuration || 16
   const expectedWeekly = durationWeeks > 0 ? totalDue / durationWeeks : 0
+
+  // Track running balance for calculating balanceAfter
+  // Start with total debt, will be reduced by payments
+  let runningBalance = totalDue
 
   // Generate chronology week by week
   for (let week = 1; week <= totalWeeks; week++) {
@@ -229,9 +233,15 @@ export const generatePaymentChronology = (
       coverageType = 'COVERED_BY_SURPLUS'
     else if (weeklyPaid > 0) coverageType = 'PARTIAL'
 
+    // Calculate balance before this week (before any payments in this week)
+    const balanceBeforeWeek = runningBalance
+
     // Add payments found in this week
     if (paymentsInWeek.length > 0) {
       paymentsInWeek.forEach((payment, index) => {
+        const paymentAmount = payment.amount || 0
+        runningBalance = Math.max(0, runningBalance - paymentAmount)
+
         chronology.push({
           id: `payment-${payment.id}`,
           date: payment.receivedAt,
@@ -257,16 +267,23 @@ export const generatePaymentChronology = (
       })
     } else {
       // Check if we should show "no payment"
-      const isLoanFinished =
-        loan.finishedDate &&
-        (loan.status === 'FINISHED' || loan.status === 'RENOVATED')
+      // Don't show "no payment" if loan is finished or renewed
       const weekIsBeforeFinish =
-        !loan.finishedDate || weekPaymentDate <= new Date(loan.finishedDate)
+        !finishedDate || weekPaymentDate <= finishedDate
       const weekIsBeforeDeadDebt =
         !loan.badDebtDate || weekPaymentDate <= new Date(loan.badDebtDate)
 
+      // Only show "no payment" if:
+      // 1. Week is in the past
+      // 2. Week is before finish date (if finished)
+      // 3. Week is before bad debt date (if bad debt)
+      // 4. Loan is NOT finished or renewed (don't show after finish/renewal)
       const shouldShowNoPayment =
-        now > weekSunday && weekIsBeforeFinish && weekIsBeforeDeadDebt
+        now > weekSunday &&
+        weekIsBeforeFinish &&
+        weekIsBeforeDeadDebt &&
+        !isFinished &&
+        !isRenewed
 
       if (shouldShowNoPayment) {
         const coverageForNoPayment: CoverageType =
@@ -277,6 +294,11 @@ export const generatePaymentChronology = (
           coverageForNoPayment === 'COVERED_BY_SURPLUS'
             ? 'Sin pago (cubierto por sobrepago)'
             : 'Sin pago'
+
+        // Calculate balance after: no payment received, so balance doesn't change
+        // The balance remains the same because no payment was made
+        // (Balance only decreases when actual payments are received)
+        const balanceAfter = runningBalance
 
         chronology.push({
           id: `no-payment-${week}`,
@@ -291,13 +313,157 @@ export const generatePaymentChronology = (
           surplusBefore,
           surplusAfter: surplusBefore - expectedWeekly,
           coverageType: coverageForNoPayment,
+          balanceBefore: balanceBeforeWeek,
+          balanceAfter,
         })
       }
     }
   }
 
-  // Sort chronology by date
-  return chronology.sort(
+  // Condense consecutive "no payment" weeks (more than 4)
+  const condensedChronology: PaymentChronologyItem[] = []
+  let noPaymentGroup: PaymentChronologyItem[] = []
+
+  for (let i = 0; i < chronology.length; i++) {
+    const item = chronology[i]
+    const isNoPayment = item.type === 'NO_PAYMENT'
+    const prevItem = i > 0 ? chronology[i - 1] : null
+    const isConsecutive =
+      prevItem &&
+      prevItem.type === 'NO_PAYMENT' &&
+      item.weekIndex !== undefined &&
+      prevItem.weekIndex !== undefined &&
+      item.weekIndex === (prevItem.weekIndex || 0) + 1
+
+    if (isNoPayment) {
+      // Check if this is consecutive with previous no payment
+      if (isConsecutive || noPaymentGroup.length === 0) {
+        noPaymentGroup.push(item)
+      } else {
+        // Not consecutive - process previous group first
+        if (noPaymentGroup.length > 4) {
+          const firstWeek = noPaymentGroup[0]
+          const lastWeek = noPaymentGroup[noPaymentGroup.length - 1]
+          const totalWeeks = noPaymentGroup.length
+
+          const totalSurplusBefore = firstWeek.surplusBefore || 0
+          const totalSurplusAfter = lastWeek.surplusAfter || 0
+          const coverageType = noPaymentGroup.every(
+            (n) => n.coverageType === 'COVERED_BY_SURPLUS'
+          )
+            ? 'COVERED_BY_SURPLUS'
+            : 'MISS'
+
+          condensedChronology.push({
+            id: `no-payment-condensed-${firstWeek.weekIndex}-${lastWeek.weekIndex}`,
+            date: firstWeek.date,
+            dateFormatted: `${formatDate(firstWeek.date)} - ${formatDate(lastWeek.date)}`,
+            type: 'NO_PAYMENT',
+            description:
+              coverageType === 'COVERED_BY_SURPLUS'
+                ? `${totalWeeks} semanas sin pago (cubierto por sobrepago)`
+                : `${totalWeeks} semanas sin pago`,
+            weekCount: totalWeeks,
+            weekIndex: firstWeek.weekIndex,
+            weeklyExpected: firstWeek.weeklyExpected || 0,
+            weeklyPaid: 0,
+            surplusBefore: totalSurplusBefore,
+            surplusAfter: totalSurplusAfter,
+            coverageType,
+            balanceBefore: firstWeek.balanceBefore,
+            balanceAfter: lastWeek.balanceAfter,
+          })
+        } else {
+          // Add individual no payment items if <= 4
+          condensedChronology.push(...noPaymentGroup)
+        }
+        // Start new group
+        noPaymentGroup = [item]
+      }
+    } else {
+      // Payment item - process any pending group first
+      if (noPaymentGroup.length > 4) {
+        const firstWeek = noPaymentGroup[0]
+        const lastWeek = noPaymentGroup[noPaymentGroup.length - 1]
+        const totalWeeks = noPaymentGroup.length
+
+        const totalSurplusBefore = firstWeek.surplusBefore || 0
+        const totalSurplusAfter = lastWeek.surplusAfter || 0
+        const coverageType = noPaymentGroup.every(
+          (n) => n.coverageType === 'COVERED_BY_SURPLUS'
+        )
+          ? 'COVERED_BY_SURPLUS'
+          : 'MISS'
+
+        condensedChronology.push({
+          id: `no-payment-condensed-${firstWeek.weekIndex}-${lastWeek.weekIndex}`,
+          date: firstWeek.date,
+          dateFormatted: `${formatDate(firstWeek.date)} - ${formatDate(lastWeek.date)}`,
+          type: 'NO_PAYMENT',
+          description:
+            coverageType === 'COVERED_BY_SURPLUS'
+              ? `${totalWeeks} semanas sin pago (cubierto por sobrepago)`
+              : `${totalWeeks} semanas sin pago`,
+          weekCount: totalWeeks,
+          weekIndex: firstWeek.weekIndex,
+          weeklyExpected: firstWeek.weeklyExpected || 0,
+          weeklyPaid: 0,
+          surplusBefore: totalSurplusBefore,
+          surplusAfter: totalSurplusAfter,
+          coverageType,
+          balanceBefore: firstWeek.balanceBefore,
+          balanceAfter: lastWeek.balanceAfter,
+        })
+      } else {
+        // Add individual no payment items if <= 4
+        condensedChronology.push(...noPaymentGroup)
+      }
+
+      // Reset group and add current payment
+      noPaymentGroup = []
+      condensedChronology.push(item)
+    }
+  }
+
+  // Handle remaining group at the end
+  if (noPaymentGroup.length > 4) {
+    const firstWeek = noPaymentGroup[0]
+    const lastWeek = noPaymentGroup[noPaymentGroup.length - 1]
+    const totalWeeks = noPaymentGroup.length
+
+    const totalSurplusBefore = firstWeek.surplusBefore || 0
+    const totalSurplusAfter = lastWeek.surplusAfter || 0
+    const coverageType = noPaymentGroup.every(
+      (n) => n.coverageType === 'COVERED_BY_SURPLUS'
+    )
+      ? 'COVERED_BY_SURPLUS'
+      : 'MISS'
+
+    condensedChronology.push({
+      id: `no-payment-condensed-${firstWeek.weekIndex}-${lastWeek.weekIndex}`,
+      date: firstWeek.date,
+      dateFormatted: `${formatDate(firstWeek.date)} - ${formatDate(lastWeek.date)}`,
+      type: 'NO_PAYMENT',
+      description:
+        coverageType === 'COVERED_BY_SURPLUS'
+          ? `${totalWeeks} semanas sin pago (cubierto por sobrepago)`
+          : `${totalWeeks} semanas sin pago`,
+      weekCount: totalWeeks,
+      weekIndex: firstWeek.weekIndex,
+      weeklyExpected: firstWeek.weeklyExpected || 0,
+      weeklyPaid: 0,
+      surplusBefore: totalSurplusBefore,
+      surplusAfter: totalSurplusAfter,
+      coverageType,
+      balanceBefore: firstWeek.balanceBefore,
+      balanceAfter: lastWeek.balanceAfter,
+    })
+  } else if (noPaymentGroup.length > 0) {
+    condensedChronology.push(...noPaymentGroup)
+  }
+
+  // Sort condensed chronology by date
+  return condensedChronology.sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   )
 }

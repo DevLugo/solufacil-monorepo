@@ -68,6 +68,7 @@ export interface LoanHistoryDetail {
   signDateFormatted: string
   finishedDate: Date | null
   finishedDateFormatted: string | null
+  renewedDate: Date | null
   loanType: string
   amountRequested: string
   totalAmountDue: string
@@ -76,7 +77,6 @@ export interface LoanHistoryDetail {
   pendingDebt: string
   daysSinceSign: number
   status: string
-  statusDescription: string
   wasRenewed: boolean
   weekDuration: number
   rate: string
@@ -123,16 +123,6 @@ export class ClientHistoryService {
       month: '2-digit',
       day: '2-digit',
     })
-  }
-
-  private getStatusDescription(status: string): string {
-    const descriptions: Record<string, string> = {
-      ACTIVE: 'Activo',
-      FINISHED: 'Terminado',
-      RENOVATED: 'Renovado',
-      CANCELLED: 'Cancelado',
-    }
-    return descriptions[status] || status
   }
 
   async searchClients(input: SearchClientsInput): Promise<ClientSearchResult[]> {
@@ -438,7 +428,7 @@ export class ClientHistoryService {
     }
 
     // Map loans to detail format
-    // allLoans is used to check if a loan was renewed (another loan has previousLoan = this loan's id)
+    // allLoans is used to find the loan that renewed this one (for renewedTo field)
     const mapLoanToDetail = (
       loan: any,
       isCollateral: boolean,
@@ -487,12 +477,16 @@ export class ClientHistoryService {
       // Get borrower info for loans as collateral
       const borrowerData = loan.borrowerRelation?.personalDataRelation
 
-      // Check if this loan was renewed - exactly like Keystone:
-      // A loan was renewed if another loan has previousLoan = this loan's id
-      const wasRenewed = allLoans.some((l: any) => l.previousLoan === loan.id)
+      // Check if this loan was renewed - simple check: if renewedDate exists, it was renewed
+      const wasRenewed = !!loan.renewedDate
+
+      // Determine the correct status: if renewedDate exists, status should be RENOVATED
+      const correctStatus = wasRenewed ? 'RENOVATED' : loan.status
 
       // Find the loan that renewed this one (for renewedTo field)
-      const renewingLoan = allLoans.find((l: any) => l.previousLoan === loan.id)
+      const renewingLoan = loan.renewedBy
+        ? loan.renewedBy
+        : allLoans.find((l: any) => l.previousLoan === loan.id)
 
       return {
         id: loan.id,
@@ -502,6 +496,7 @@ export class ClientHistoryService {
         finishedDateFormatted: loan.finishedDate
           ? this.formatDate(new Date(loan.finishedDate))
           : null,
+        renewedDate: loan.renewedDate,
         loanType: loan.loantypeRelation?.name || 'N/A',
         amountRequested: loan.requestedAmount,
         totalAmountDue: totalAmountDue.toString(),
@@ -509,8 +504,7 @@ export class ClientHistoryService {
         totalPaid: loan.totalPaid,
         pendingDebt: loan.pendingAmountStored,
         daysSinceSign,
-        status: loan.status,
-        statusDescription: this.getStatusDescription(loan.status),
+        status: correctStatus,
         wasRenewed,
         weekDuration: loan.loantypeRelation?.weekDuration || 0,
         rate: loan.loantypeRelation?.rate || '0',
@@ -533,14 +527,17 @@ export class ClientHistoryService {
       }
     }
 
+    // Combine all loans to find renewing loans across both types (for renewedTo field)
+    const allLoansCombined = [...loansAsClient, ...loansAsCollateral]
+
     return {
       client: clientInfo,
       summary,
       loansAsClient: loansAsClient.map((l) =>
-        mapLoanToDetail(l, false, loansAsClient)
+        mapLoanToDetail(l, false, allLoansCombined)
       ),
       loansAsCollateral: loansAsCollateral.map((l) =>
-        mapLoanToDetail(l, true, loansAsCollateral)
+        mapLoanToDetail(l, true, allLoansCombined)
       ),
     }
   }

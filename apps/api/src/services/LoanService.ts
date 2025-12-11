@@ -219,7 +219,7 @@ export class LoanService {
       // Marcar el préstamo anterior como RENOVATED
       await this.loanRepository.update(input.previousLoanId, {
         status: 'RENOVATED',
-        finishedDate: new Date(),
+        renewedDate: input.signDate,
       })
     }
 
@@ -513,14 +513,21 @@ export class LoanService {
             )
           }
 
-          pendingProfit = new Decimal(previousLoan.pendingAmountStored.toString())
+          // Calcular el profit pendiente del préstamo anterior usando la función centralizada
+          // Solo la PORCIÓN de profit de la deuda pendiente se hereda (no la deuda total)
+          const { profitHeredado } = calculateProfitHeredado(
+            new Decimal(previousLoan.pendingAmountStored.toString()),
+            new Decimal(previousLoan.profitAmount.toString()),
+            new Decimal(previousLoan.totalDebtAcquired.toString())
+          )
+          pendingProfit = profitHeredado
 
           // Marcar préstamo anterior como RENOVATED
           await tx.loan.update({
             where: { id: loanInput.previousLoanId },
             data: {
               status: 'RENOVATED',
-              finishedDate: input.signDate,
+              renewedDate: input.signDate,
             },
           })
         }

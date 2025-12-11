@@ -363,6 +363,7 @@ type LoanHistoryDetail {
   signDateFormatted: String!
   finishedDate: DateTime
   finishedDateFormatted: String
+  renewedDate: DateTime
   loanType: String!
   amountRequested: Decimal!
   totalAmountDue: Decimal!
@@ -371,7 +372,6 @@ type LoanHistoryDetail {
   pendingDebt: Decimal!
   daysSinceSign: Int!
   status: String!
-  statusDescription: String!
   wasRenewed: Boolean!
   weekDuration: Int!
   rate: Decimal!
