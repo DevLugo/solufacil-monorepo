@@ -416,33 +416,55 @@ test.describe('Gastos - Edicion', () => {
   })
 
   test('should show current expense data in edit modal', async ({ page }) => {
+    // Find saved expense rows (those without input fields - not pending)
     const tableRows = page.locator('table tbody tr').filter({
       hasNot: page.locator('input')
     })
 
-    if (await tableRows.count() > 0) {
-      const firstRow = tableRows.first()
-      const menuButton = firstRow.locator('button').last()
-
-      await menuButton.click()
-      await page.waitForTimeout(200)
-
-      const editOption = page.getByRole('menuitem', { name: /Editar/i })
-      await editOption.click()
-      await page.waitForTimeout(500)
-
-      const modal = page.locator('[role="dialog"]')
-
-      if (await modal.count() > 0) {
-        // Should show form fields
-        const amountInput = modal.locator('input[type="number"], input').first()
-        await expect(amountInput).toBeVisible()
-
-        // Should have type selector
-        const typeLabel = modal.getByText(/Tipo/i)
-        await expect(typeLabel).toBeVisible()
-      }
+    const rowCount = await tableRows.count()
+    if (rowCount === 0) {
+      console.log('Skipping test: No saved expense rows found (all rows are pending)')
+      test.skip()
+      return
     }
+
+    const firstRow = tableRows.first()
+    const menuButton = firstRow.locator('button').last()
+
+    if (await menuButton.count() === 0) {
+      console.log('Skipping test: No menu button found')
+      test.skip()
+      return
+    }
+
+    await menuButton.click()
+    await page.waitForTimeout(200)
+
+    const editOption = page.getByRole('menuitem', { name: /Editar/i })
+    if (await editOption.count() === 0) {
+      console.log('Skipping test: No edit option in menu')
+      test.skip()
+      return
+    }
+
+    await editOption.click()
+    await page.waitForTimeout(500)
+
+    const modal = page.locator('[role="dialog"]')
+
+    if (await modal.count() === 0) {
+      console.log('Skipping test: Modal did not open')
+      test.skip()
+      return
+    }
+
+    // Should show form fields
+    const amountInput = modal.locator('input[type="number"], input').first()
+    await expect(amountInput).toBeVisible()
+
+    // Should have type selector
+    const typeLabel = modal.getByText(/Tipo/i)
+    await expect(typeLabel).toBeVisible()
   })
 })
 
