@@ -21,22 +21,16 @@ export class LoantypeRepository {
     name: string
     weekDuration: number
     rate: number | Decimal
-    interestRate: number | Decimal
     loanPaymentComission: number | Decimal
     loanGrantedComission: number | Decimal
-    maxAmount?: number | Decimal
-    maxTerm?: number
   }): Promise<Loantype> {
     return this.prisma.loantype.create({
       data: {
         name: data.name,
         weekDuration: data.weekDuration,
         rate: data.rate,
-        interestRate: data.interestRate,
         loanPaymentComission: data.loanPaymentComission,
         loanGrantedComission: data.loanGrantedComission,
-        maxAmount: data.maxAmount,
-        maxTerm: data.maxTerm,
       },
     })
   }
@@ -47,12 +41,8 @@ export class LoantypeRepository {
       name?: string
       weekDuration?: number
       rate?: number | Decimal
-      interestRate?: number | Decimal
       loanPaymentComission?: number | Decimal
       loanGrantedComission?: number | Decimal
-      maxAmount?: number | Decimal
-      maxTerm?: number
-      isActive?: boolean
     }
   ): Promise<Loantype> {
     return this.prisma.loantype.update({

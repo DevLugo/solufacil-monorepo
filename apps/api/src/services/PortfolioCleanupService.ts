@@ -84,9 +84,9 @@ export class PortfolioCleanupService {
     const loansInOtherCleanups = await this.prisma.loan.findMany({
       where: {
         id: { in: input.loanIds },
-        cleanupExcludedById: { not: null },
+        excludedByCleanup: { not: null },
       },
-      select: { id: true, cleanupExcludedById: true },
+      select: { id: true, excludedByCleanup: true },
     })
 
     if (loansInOtherCleanups.length > 0) {
@@ -142,7 +142,7 @@ export class PortfolioCleanupService {
       id,
       {
         name: cleanup.name,
-        routeId: cleanup.routeId,
+        route: cleanup.route,
         excludedLoansCount: cleanup.excludedLoansCount,
       },
       auditContext,
@@ -153,7 +153,7 @@ export class PortfolioCleanupService {
   }
 
   async getSummary(routeId?: string) {
-    const where = routeId ? { routeId } : {}
+    const where = routeId ? { route: routeId } : {}
 
     const cleanups = await this.prisma.portfolioCleanup.findMany({
       where,
@@ -201,12 +201,12 @@ export class PortfolioCleanupService {
     return this.prisma.loan.findMany({
       where,
       include: {
-        borrower: {
+        borrowerRelation: {
           include: {
             personalDataRelation: true,
           },
         },
-        lead: {
+        leadRelation: {
           include: {
             personalDataRelation: true,
           },

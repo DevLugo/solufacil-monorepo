@@ -27,7 +27,7 @@ export class AuditLogRepository {
         operation: data.operation,
         modelName: data.modelName,
         recordId: data.recordId,
-        userId: data.userId,
+        user: data.userId,
         userName: data.userName,
         userEmail: data.userEmail,
         userRole: data.userRole,
@@ -68,7 +68,7 @@ export class AuditLogRepository {
     }
 
     if (options?.userId) {
-      where.userId = options.userId
+      where.user = options.userId
     }
 
     if (options?.fromDate || options?.toDate) {
@@ -87,7 +87,7 @@ export class AuditLogRepository {
       skip: options?.offset ?? 0,
       orderBy: { createdAt: 'desc' },
       include: {
-        user: {
+        userRelation: {
           select: {
             id: true,
             email: true,
@@ -106,7 +106,7 @@ export class AuditLogRepository {
       },
       orderBy: { createdAt: 'desc' },
       include: {
-        user: {
+        userRelation: {
           select: {
             id: true,
             email: true,

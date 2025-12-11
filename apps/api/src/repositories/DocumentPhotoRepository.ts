@@ -8,16 +8,16 @@ export class DocumentPhotoRepository {
       where: { id },
       include: {
         personalDataRelation: true,
-        loan: {
+        loanRelation: {
           include: {
-            borrower: {
+            borrowerRelation: {
               include: {
                 personalDataRelation: true,
               },
             },
           },
         },
-        uploadedBy: true,
+        uploadedByRelation: true,
       },
     })
   }
@@ -34,11 +34,11 @@ export class DocumentPhotoRepository {
     const where: Prisma.DocumentPhotoWhereInput = {}
 
     if (options?.loanId) {
-      where.loanId = options.loanId
+      where.loan = options.loanId
     }
 
     if (options?.personalDataId) {
-      where.personalDataId = options.personalDataId
+      where.personalData = options.personalDataId
     }
 
     if (options?.documentType) {
@@ -60,16 +60,16 @@ export class DocumentPhotoRepository {
       orderBy: { createdAt: 'desc' },
       include: {
         personalDataRelation: true,
-        loan: {
+        loanRelation: {
           include: {
-            borrower: {
+            borrowerRelation: {
               include: {
                 personalDataRelation: true,
               },
             },
           },
         },
-        uploadedBy: true,
+        uploadedByRelation: true,
       },
     })
   }
@@ -94,17 +94,17 @@ export class DocumentPhotoRepository {
         documentType: data.documentType,
         title: data.title,
         description: data.description,
-        personalDataId: data.personalDataId,
-        loanId: data.loanId,
-        uploadedById: data.uploadedById,
+        personalData: data.personalDataId,
+        loan: data.loanId,
+        uploadedBy: data.uploadedById,
         isError: data.isError ?? false,
         errorDescription: data.errorDescription,
         isMissing: data.isMissing ?? false,
       },
       include: {
         personalDataRelation: true,
-        loan: true,
-        uploadedBy: true,
+        loanRelation: true,
+        uploadedByRelation: true,
       },
     })
   }
@@ -124,8 +124,8 @@ export class DocumentPhotoRepository {
       data,
       include: {
         personalDataRelation: true,
-        loan: true,
-        uploadedBy: true,
+        loanRelation: true,
+        uploadedByRelation: true,
       },
     })
   }
@@ -149,7 +149,7 @@ export class DocumentPhotoRepository {
         OR: [{ isError: true }, { isMissing: true }],
         ...(options?.routeId
           ? {
-              loan: {
+              loanRelation: {
                 snapshotRouteId: options.routeId,
               },
             }
@@ -157,14 +157,14 @@ export class DocumentPhotoRepository {
       },
       include: {
         personalDataRelation: true,
-        loan: {
+        loanRelation: {
           include: {
-            borrower: {
+            borrowerRelation: {
               include: {
                 personalDataRelation: true,
               },
             },
-            lead: {
+            leadRelation: {
               include: {
                 personalDataRelation: true,
                 routes: true,
@@ -172,7 +172,7 @@ export class DocumentPhotoRepository {
             },
           },
         },
-        uploadedBy: true,
+        uploadedByRelation: true,
       },
       orderBy: { createdAt: 'desc' },
     })

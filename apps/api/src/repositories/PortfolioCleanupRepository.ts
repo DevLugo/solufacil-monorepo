@@ -8,10 +8,10 @@ export class PortfolioCleanupRepository {
     return this.prisma.portfolioCleanup.findUnique({
       where: { id },
       include: {
-        route: true,
+        routeRelation: true,
         loansExcluded: {
           include: {
-            borrower: {
+            borrowerRelation: {
               include: {
                 personalDataRelation: true,
               },
@@ -32,7 +32,7 @@ export class PortfolioCleanupRepository {
     const where: Prisma.PortfolioCleanupWhereInput = {}
 
     if (options?.routeId) {
-      where.routeId = options.routeId
+      where.route = options.routeId
     }
 
     if (options?.fromDate || options?.toDate) {
@@ -51,12 +51,12 @@ export class PortfolioCleanupRepository {
       skip: options?.offset ?? 0,
       orderBy: { cleanupDate: 'desc' },
       include: {
-        route: true,
+        routeRelation: true,
         loansExcluded: {
           select: {
             id: true,
             pendingAmountStored: true,
-            borrower: {
+            borrowerRelation: {
               include: {
                 personalDataRelation: {
                   select: {
@@ -100,8 +100,8 @@ export class PortfolioCleanupRepository {
         cleanupDate: data.cleanupDate,
         fromDate: data.fromDate,
         toDate: data.toDate,
-        routeId: data.routeId,
-        executedById: data.executedById,
+        route: data.routeId,
+        executedBy: data.executedById,
         excludedLoansCount,
         excludedAmount,
         loansExcluded: {
@@ -109,10 +109,10 @@ export class PortfolioCleanupRepository {
         },
       },
       include: {
-        route: true,
+        routeRelation: true,
         loansExcluded: {
           include: {
-            borrower: {
+            borrowerRelation: {
               include: {
                 personalDataRelation: true,
               },

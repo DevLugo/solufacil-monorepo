@@ -4,8 +4,8 @@
 export interface LoanSnapshot {
   snapshotLeadId: string
   snapshotLeadAssignedAt: Date
-  snapshotRouteId: string | null
-  snapshotRouteName: string | null
+  snapshotRouteId?: string
+  snapshotRouteName?: string
 }
 
 /**
@@ -15,8 +15,8 @@ export interface LoanSnapshot {
 export function createLoanSnapshot(
   leadId: string,
   leadName: string,
-  routeId: string | null,
-  routeName: string | null
+  routeId?: string,
+  routeName?: string
 ): LoanSnapshot {
   return {
     snapshotLeadId: leadId,

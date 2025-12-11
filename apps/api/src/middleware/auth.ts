@@ -1,9 +1,11 @@
-import jwt from 'jsonwebtoken'
+import jwt, { SignOptions } from 'jsonwebtoken'
 import { GraphQLError } from 'graphql'
 import type { GraphQLContext } from '@solufacil/graphql-schema'
 import { UserRole } from '@solufacil/database'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-me'
+const ACCESS_TOKEN_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '15m') as SignOptions['expiresIn']
+const REFRESH_TOKEN_EXPIRES_IN = (process.env.JWT_REFRESH_EXPIRES_IN || '7d') as SignOptions['expiresIn']
 
 export interface JWTPayload {
   userId: string
@@ -90,7 +92,7 @@ export function generateAccessToken(user: {
       role: user.role,
     },
     JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
+    { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
   )
 }
 
@@ -100,6 +102,6 @@ export function generateAccessToken(user: {
 export function generateRefreshToken(userId: string): string {
   const refreshSecret = process.env.JWT_REFRESH_SECRET || 'default-refresh-secret'
   return jwt.sign({ userId }, refreshSecret, {
-    expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+    expiresIn: REFRESH_TOKEN_EXPIRES_IN,
   })
 }

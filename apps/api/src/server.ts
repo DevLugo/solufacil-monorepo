@@ -40,7 +40,7 @@ async function startServer() {
     express.json(),
     expressMiddleware(server, {
       context: createContext,
-    })
+    }) as unknown as express.RequestHandler
   )
 
   // PDF Export endpoint

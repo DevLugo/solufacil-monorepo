@@ -81,7 +81,7 @@ export const accountResolvers = {
 
     transactionsSource: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.transaction.findMany({
-        where: { sourceAccountId: parent.id },
+        where: { sourceAccount: parent.id },
         orderBy: { date: 'desc' },
         take: 50,
       })
@@ -89,7 +89,7 @@ export const accountResolvers = {
 
     transactionsDestination: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.transaction.findMany({
-        where: { destinationAccountId: parent.id },
+        where: { destinationAccount: parent.id },
         orderBy: { date: 'desc' },
         take: 50,
       })

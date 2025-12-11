@@ -309,6 +309,12 @@ importers:
 
   packages/graphql-schema:
     dependencies:
+      '@solufacil/database':
+        specifier: workspace:^
+        version: link:../database
+      decimal.js:
+        specifier: ^10.4.3
+        version: 10.6.0
       graphql:
         specifier: ^16.8.1
         version: 16.12.0

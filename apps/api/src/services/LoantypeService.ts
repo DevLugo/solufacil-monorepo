@@ -7,23 +7,16 @@ export interface CreateLoantypeInput {
   name: string
   weekDuration: number
   rate: number | string
-  interestRate: number | string
   loanPaymentComission: number | string
   loanGrantedComission: number | string
-  maxAmount?: number | string
-  maxTerm?: number
 }
 
 export interface UpdateLoantypeInput {
   name?: string
   weekDuration?: number
   rate?: number | string
-  interestRate?: number | string
   loanPaymentComission?: number | string
   loanGrantedComission?: number | string
-  maxAmount?: number | string
-  maxTerm?: number
-  isActive?: boolean
 }
 
 export class LoantypeService {
@@ -53,11 +46,8 @@ export class LoantypeService {
       name: input.name,
       weekDuration: input.weekDuration,
       rate: new Decimal(input.rate),
-      interestRate: new Decimal(input.interestRate),
       loanPaymentComission: new Decimal(input.loanPaymentComission),
       loanGrantedComission: new Decimal(input.loanGrantedComission),
-      maxAmount: input.maxAmount ? new Decimal(input.maxAmount) : undefined,
-      maxTerm: input.maxTerm,
     })
   }
 
@@ -74,12 +64,8 @@ export class LoantypeService {
     if (input.name !== undefined) updateData.name = input.name
     if (input.weekDuration !== undefined) updateData.weekDuration = input.weekDuration
     if (input.rate !== undefined) updateData.rate = new Decimal(input.rate)
-    if (input.interestRate !== undefined) updateData.interestRate = new Decimal(input.interestRate)
     if (input.loanPaymentComission !== undefined) updateData.loanPaymentComission = new Decimal(input.loanPaymentComission)
     if (input.loanGrantedComission !== undefined) updateData.loanGrantedComission = new Decimal(input.loanGrantedComission)
-    if (input.maxAmount !== undefined) updateData.maxAmount = new Decimal(input.maxAmount)
-    if (input.maxTerm !== undefined) updateData.maxTerm = input.maxTerm
-    if (input.isActive !== undefined) updateData.isActive = input.isActive
 
     return this.loantypeRepository.update(id, updateData)
   }

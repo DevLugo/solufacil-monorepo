@@ -155,12 +155,12 @@ export const documentResolvers = {
       return context.prisma.loan.findUnique({
         where: { id: parent.loanId },
         include: {
-          borrower: {
+          borrowerRelation: {
             include: {
               personalDataRelation: true,
             },
           },
-          loantype: true,
+          loantypeRelation: true,
         },
       })
     },

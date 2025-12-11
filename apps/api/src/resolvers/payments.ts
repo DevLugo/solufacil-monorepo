@@ -48,7 +48,7 @@ export const paymentResolvers = {
         },
       })
       console.log('All payments in date range:', allPaymentsInRange.length)
-      allPaymentsInRange.forEach((p, i) => {
+      allPaymentsInRange.forEach((p: typeof allPaymentsInRange[number], i: number) => {
         console.log(`  Payment ${i}: id=${p.id}, leadPaymentReceived=${p.leadPaymentReceived}, LPR.lead=${p.leadPaymentReceivedRelation?.lead}`)
       })
 
@@ -62,7 +62,7 @@ export const paymentResolvers = {
         },
       })
       console.log('All LeadPaymentReceived for lead:', allLPRForLead.length)
-      allLPRForLead.forEach((lpr, i) => {
+      allLPRForLead.forEach((lpr: typeof allLPRForLead[number], i: number) => {
         console.log(`  LPR ${i}: id=${lpr.id}, createdAt=${lpr.createdAt}, payments count=${lpr.payments.length}`)
       })
 
@@ -116,7 +116,7 @@ export const paymentResolvers = {
         take: 5,
       })
       console.log('Últimos 5 LeadPaymentReceived para este lead:')
-      allLPR.forEach((lpr, i) => {
+      allLPR.forEach((lpr: typeof allLPR[number], i: number) => {
         console.log(`  ${i}: id=${lpr.id}, createdAt=${lpr.createdAt.toISOString()}`)
       })
 
@@ -172,6 +172,7 @@ export const paymentResolvers = {
           cashPaidAmount: string
           bankPaidAmount: string
           falcoAmount?: string
+          paymentDate: Date | string
           payments: {
             loanId: string
             amount: string

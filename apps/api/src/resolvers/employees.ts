@@ -45,10 +45,10 @@ export const employeeResolvers = {
             phones?: { number: string }[]
             addresses?: {
               street: string
-              numberInterior?: string
-              numberExterior?: string
-              zipCode?: string
-              locationId: string
+              interiorNumber?: string
+              exteriorNumber?: string
+              postalCode?: string
+              location: string
             }[]
           }
           routeIds?: string[]
