@@ -6,8 +6,19 @@ const TEST_USER = {
   password: 'test1234',
 }
 
-// Helper to login
+// Helper to login - with storageState support
 async function login(page: Page) {
+  // Try to go directly to dashboard (will work if storageState is valid)
+  await page.goto('/dashboard')
+  await page.waitForLoadState('networkidle')
+
+  // Check if we're already logged in (storageState worked)
+  const currentUrl = page.url()
+  if (currentUrl.includes('/dashboard') || currentUrl.includes('/transacciones')) {
+    return // Already logged in via storageState
+  }
+
+  // Not logged in, perform manual login
   await page.goto('/login')
   await page.waitForLoadState('networkidle')
 
@@ -486,13 +497,9 @@ test.describe('Créditos - Cancelación de Préstamo', () => {
 
   test('should show cancel confirmation dialog', async ({ page }) => {
     const tableRows = page.locator('table tbody tr')
-    const rowCount = await tableRows.count()
 
-    if (rowCount === 0) {
-      console.log('Skipping test: No table rows found')
-      test.skip()
-      return
-    }
+    // Wait for table to have data - this should be guaranteed by database having loans
+    await expect(tableRows.first()).toBeVisible({ timeout: 10000 })
 
     // Click delete button on first row (usually second button)
     const firstRow = tableRows.first()
@@ -501,11 +508,7 @@ test.describe('Créditos - Cancelación de Préstamo', () => {
       .or(firstRow.locator('button[aria-label*="cancelar" i]'))
       .or(firstRow.locator('button').last())
 
-    if (await deleteButton.count() === 0) {
-      console.log('Skipping test: No delete button found')
-      test.skip()
-      return
-    }
+    await expect(deleteButton.first()).toBeVisible({ timeout: 5000 })
 
     await deleteButton.first().click()
     await page.waitForTimeout(500)
@@ -514,15 +517,8 @@ test.describe('Créditos - Cancelación de Préstamo', () => {
     const confirmDialog = page.getByText(/Cancelar Cr.dito/i)
       .or(page.locator('[role="alertdialog"]'))
       .or(page.locator('[role="dialog"]'))
-    const hasDialog = await confirmDialog.count() > 0
 
-    if (!hasDialog) {
-      console.log('Skipping test: No confirmation dialog appeared')
-      test.skip()
-      return
-    }
-
-    await expect(confirmDialog.first()).toBeVisible()
+    await expect(confirmDialog.first()).toBeVisible({ timeout: 5000 })
 
     // Should have confirm and cancel buttons - try multiple patterns
     const confirmButton = page.getByRole('button', { name: /S., cancelar/i })
@@ -848,11 +844,8 @@ test.describe('Créditos - Balance de Cuenta (Integración)', () => {
     // Get initial balance
     const initialBalance = await getAccountBalance(page)
 
-    // Skip if no balance available (would indicate no account set up)
-    if (initialBalance === 0) {
-      console.log('Skipping test: No initial balance found')
-      return
-    }
+    // Balance should be available - verified by global setup
+    expect(initialBalance).toBeGreaterThan(0)
 
     // Open create modal
     await openCreateLoansModal(page)
@@ -864,10 +857,7 @@ test.describe('Créditos - Balance de Cuenta (Integración)', () => {
     if (!clientSelected) {
       // Fallback to regular selection - will need high amount to overcome potential debt
       const fallbackSelected = await selectClient(page)
-      if (!fallbackSelected) {
-        console.log('Skipping test: No clients available')
-        return
-      }
+      expect(fallbackSelected).toBeTruthy()
     }
 
     // Configure loan - high amount in case fallback selected client with existing debt
@@ -936,10 +926,8 @@ test.describe('Créditos - Balance de Cuenta (Integración)', () => {
     // Get initial balance from page first
     const initialBalance = await getAccountBalance(page)
 
-    if (initialBalance === 0) {
-      console.log('Skipping test: No initial balance found')
-      return
-    }
+    // Balance should be available - verified by global setup
+    expect(initialBalance).toBeGreaterThan(0)
 
     // Open create modal
     await openCreateLoansModal(page)
@@ -1004,10 +992,8 @@ test.describe('Créditos - Balance de Cuenta (Integración)', () => {
     // Get initial balance
     const initialBalance = await getAccountBalance(page)
 
-    if (initialBalance === 0) {
-      console.log('Skipping test: No initial balance found')
-      return
-    }
+    // Balance should be available - verified by global setup
+    expect(initialBalance).toBeGreaterThan(0)
 
     // Open create modal
     await openCreateLoansModal(page)
@@ -1019,10 +1005,7 @@ test.describe('Créditos - Balance de Cuenta (Integración)', () => {
     if (!clientSelected) {
       // Fallback: try regular selection with a very high amount
       const fallbackSelected = await selectClient(page)
-      if (!fallbackSelected) {
-        console.log('Skipping test: No clients available')
-        return
-      }
+      expect(fallbackSelected).toBeTruthy()
     }
 
     // Configure loan - use 200000 in case fallback selected client with active loan
@@ -1135,10 +1118,7 @@ test.describe('Créditos - Balance de Cuenta (Integración)', () => {
     if (!clientSelected) {
       // Try with different search term
       const retrySelect = await selectClient(page, 'a')
-      if (!retrySelect) {
-        console.log('Skipping test: No clients available')
-        return
-      }
+      expect(retrySelect).toBeTruthy()
     }
 
     // Configure loan with HIGH amount to ensure amountGived > 0

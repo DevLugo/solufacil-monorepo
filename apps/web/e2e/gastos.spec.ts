@@ -10,8 +10,19 @@ const TEST_USER = {
 // HELPERS
 // ============================================================================
 
-// Helper to login
+// Helper to login - with storageState support
 async function login(page: Page) {
+  // Try to go directly to dashboard (will work if storageState is valid)
+  await page.goto('/dashboard')
+  await page.waitForLoadState('networkidle')
+
+  // Check if we're already logged in (storageState worked)
+  const currentUrl = page.url()
+  if (currentUrl.includes('/dashboard') || currentUrl.includes('/transacciones')) {
+    return // Already logged in via storageState
+  }
+
+  // Not logged in, perform manual login
   await page.goto('/login')
   await page.waitForLoadState('networkidle')
 
@@ -66,19 +77,41 @@ async function getAccountBalance(page: Page, accountType: string): Promise<numbe
 
 // Helper to get any account balance from the balances card
 async function getAnyAccountBalance(page: Page): Promise<{ name: string; balance: number }> {
-  const accountCards = page.locator('[class*="border rounded-lg"]').filter({
-    has: page.locator('text=/\\$[\\d,]+/')
-  })
+  // Wait for account cards to load
+  await page.waitForSelector('.pt-6', { timeout: 5000 }).catch(() => null)
 
-  if (await accountCards.count() > 0) {
-    const firstCard = accountCards.first()
-    const nameText = await firstCard.locator('span, p').first().textContent()
-    const balanceText = await firstCard.locator('text=/\\$[\\d,]+\\.?\\d*/').textContent()
-    return {
-      name: nameText || 'Unknown',
-      balance: parseBalance(balanceText)
+  // Try multiple selectors for account cards
+  const cardContents = page.locator('.pt-6')
+
+  if (await cardContents.count() > 0) {
+    const firstCard = cardContents.first()
+
+    // Get account name
+    const nameElement = firstCard.locator('p.text-sm.text-muted-foreground').first()
+    const nameText = await nameElement.textContent().catch(() => null)
+
+    // Get balance
+    const balanceElement = firstCard.locator('p.text-xl.font-bold').first()
+    const balanceText = await balanceElement.textContent().catch(() => null)
+
+    if (nameText && balanceText) {
+      return {
+        name: nameText.trim(),
+        balance: parseBalance(balanceText),
+      }
     }
   }
+
+  // Fallback: try looking for any dollar amount on the page
+  const balanceLocator = page.locator('text=/\\$[\\d,]+\\.?\\d*/').first()
+  if (await balanceLocator.count() > 0) {
+    const text = await balanceLocator.textContent()
+    return {
+      name: 'Unknown',
+      balance: parseBalance(text),
+    }
+  }
+
   return { name: '', balance: 0 }
 }
 
@@ -132,6 +165,63 @@ async function fillExpenseRow(
         }
       }
     }
+  }
+}
+
+// Helper to ensure there are saved expenses (creates one if none exist)
+async function ensureSavedExpensesExist(page: Page): Promise<void> {
+  // Check if there are saved expense rows (not pending)
+  const savedRows = page.locator('table tbody tr').filter({
+    hasNot: page.locator('input'),
+  })
+
+  const savedCount = await savedRows.count()
+  if (savedCount > 0) {
+    return // Expenses already exist
+  }
+
+  console.log('No saved expenses found, creating one...')
+
+  // Add a new expense
+  await addExpenseRow(page)
+  await page.waitForTimeout(500)
+
+  // Find the new row and fill it
+  const tableBody = page.locator('table tbody')
+  const newRow = tableBody.locator('tr').filter({ has: page.locator('input') }).first()
+
+  // Select expense type (first dropdown)
+  const typeButton = newRow.locator('button[role="combobox"]').first()
+  if (await typeButton.count() > 0) {
+    await typeButton.click()
+    await page.waitForTimeout(200)
+    const option = page.getByRole('option').first()
+    if (await option.count() > 0) {
+      await option.click()
+    }
+  }
+
+  // Enter amount
+  const amountInput = newRow.locator('input[type="text"], input[type="number"], input').first()
+  await amountInput.fill('100')
+  await page.waitForTimeout(200)
+
+  // Select account (if there's a second dropdown)
+  const buttons = newRow.locator('button[role="combobox"]')
+  if (await buttons.count() > 1) {
+    await buttons.nth(1).click()
+    await page.waitForTimeout(200)
+    const accountOption = page.getByRole('option').first()
+    if (await accountOption.count() > 0) {
+      await accountOption.click()
+    }
+  }
+
+  // Save
+  const saveButton = page.getByRole('button', { name: /Guardar cambios/i })
+  if (await saveButton.isEnabled()) {
+    await saveButton.click()
+    await page.waitForTimeout(2000)
   }
 }
 
@@ -311,10 +401,8 @@ test.describe('Gastos - Balance al Crear', () => {
     // Get initial account balance
     const initialAccount = await getAnyAccountBalance(page)
 
-    if (initialAccount.balance === 0) {
-      console.log('Skipping test: No account balance found')
-      return
-    }
+    // Should have accounts with balance - this is guaranteed by global setup
+    expect(initialAccount.name).not.toBe('')
 
     // Add expense
     await addExpenseRow(page)
@@ -375,95 +463,80 @@ test.describe('Gastos - Edicion', () => {
     await login(page)
     await goToTransactions(page)
     await setupGastosTab(page)
+    // Ensure saved expenses exist for all edit tests
+    await ensureSavedExpensesExist(page)
   })
 
   test('should show edit option in dropdown menu', async ({ page }) => {
     const tableRows = page.locator('table tbody tr').filter({
-      hasNot: page.locator('input')
+      hasNot: page.locator('input'),
     })
 
-    if (await tableRows.count() > 0) {
-      const firstRow = tableRows.first()
-      const menuButton = firstRow.locator('button').last()
-
-      await menuButton.click()
-      await page.waitForTimeout(200)
-
-      const editOption = page.getByRole('menuitem', { name: /Editar/i })
-      await expect(editOption).toBeVisible()
-    }
-  })
-
-  test('should open edit modal when clicking edit', async ({ page }) => {
-    const tableRows = page.locator('table tbody tr').filter({
-      hasNot: page.locator('input')
-    })
-
-    if (await tableRows.count() > 0) {
-      const firstRow = tableRows.first()
-      const menuButton = firstRow.locator('button').last()
-
-      await menuButton.click()
-      await page.waitForTimeout(200)
-
-      const editOption = page.getByRole('menuitem', { name: /Editar/i })
-      await editOption.click()
-
-      // Modal should open
-      const modal = page.locator('[role="dialog"]')
-      await expect(modal).toBeVisible({ timeout: 3000 })
-    }
-  })
-
-  test('should show current expense data in edit modal', async ({ page }) => {
-    // Find saved expense rows (those without input fields - not pending)
-    const tableRows = page.locator('table tbody tr').filter({
-      hasNot: page.locator('input')
-    })
-
-    const rowCount = await tableRows.count()
-    if (rowCount === 0) {
-      console.log('Skipping test: No saved expense rows found (all rows are pending)')
-      test.skip()
-      return
-    }
+    await expect(tableRows.first()).toBeVisible({ timeout: 5000 })
 
     const firstRow = tableRows.first()
     const menuButton = firstRow.locator('button').last()
-
-    if (await menuButton.count() === 0) {
-      console.log('Skipping test: No menu button found')
-      test.skip()
-      return
-    }
 
     await menuButton.click()
     await page.waitForTimeout(200)
 
     const editOption = page.getByRole('menuitem', { name: /Editar/i })
-    if (await editOption.count() === 0) {
-      console.log('Skipping test: No edit option in menu')
-      test.skip()
-      return
-    }
+    await expect(editOption).toBeVisible()
+  })
+
+  test('should open edit modal when clicking edit', async ({ page }) => {
+    const tableRows = page.locator('table tbody tr').filter({
+      hasNot: page.locator('input'),
+    })
+
+    await expect(tableRows.first()).toBeVisible({ timeout: 5000 })
+
+    const firstRow = tableRows.first()
+    const menuButton = firstRow.locator('button').last()
+
+    await menuButton.click()
+    await page.waitForTimeout(200)
+
+    const editOption = page.getByRole('menuitem', { name: /Editar/i })
+    await editOption.click()
+
+    // Modal should open
+    const modal = page.locator('[role="dialog"]')
+    await expect(modal).toBeVisible({ timeout: 3000 })
+  })
+
+  test('should show current expense data in edit modal', async ({ page }) => {
+    // Find saved expense rows (those without input fields - not pending)
+    // ensureSavedExpensesExist is called in beforeEach
+    const tableRows = page.locator('table tbody tr').filter({
+      hasNot: page.locator('input'),
+    })
+
+    // Should have at least one saved expense row
+    await expect(tableRows.first()).toBeVisible({ timeout: 5000 })
+
+    const firstRow = tableRows.first()
+    const menuButton = firstRow.locator('button').last()
+    await expect(menuButton).toBeVisible()
+
+    await menuButton.click()
+    await page.waitForTimeout(200)
+
+    const editOption = page.getByRole('menuitem', { name: /Editar/i })
+    await expect(editOption).toBeVisible()
 
     await editOption.click()
     await page.waitForTimeout(500)
 
     const modal = page.locator('[role="dialog"]')
-
-    if (await modal.count() === 0) {
-      console.log('Skipping test: Modal did not open')
-      test.skip()
-      return
-    }
+    await expect(modal).toBeVisible({ timeout: 3000 })
 
     // Should show form fields
     const amountInput = modal.locator('input[type="number"], input').first()
     await expect(amountInput).toBeVisible()
 
-    // Should have type selector
-    const typeLabel = modal.getByText(/Tipo/i)
+    // Should have type selector (use exact label text to avoid matching combobox placeholder)
+    const typeLabel = modal.getByText('Tipo de Gasto')
     await expect(typeLabel).toBeVisible()
   })
 })
@@ -477,56 +550,56 @@ test.describe('Gastos - Balance al Editar', () => {
     await login(page)
     await goToTransactions(page)
     await setupGastosTab(page)
+    await ensureSavedExpensesExist(page)
   })
 
   test('should update balance when editing expense amount', async ({ page }) => {
     const tableRows = page.locator('table tbody tr').filter({
-      hasNot: page.locator('input')
+      hasNot: page.locator('input'),
     })
 
-    if (await tableRows.count() > 0) {
-      // Get initial balance
-      const initialAccount = await getAnyAccountBalance(page)
+    await expect(tableRows.first()).toBeVisible({ timeout: 5000 })
 
-      // Open edit modal
-      const firstRow = tableRows.first()
-      const menuButton = firstRow.locator('button').last()
-      await menuButton.click()
-      await page.waitForTimeout(200)
+    // Get initial balance
+    const initialAccount = await getAnyAccountBalance(page)
 
-      const editOption = page.getByRole('menuitem', { name: /Editar/i })
-      await editOption.click()
-      await page.waitForTimeout(500)
+    // Open edit modal
+    const firstRow = tableRows.first()
+    const menuButton = firstRow.locator('button').last()
+    await menuButton.click()
+    await page.waitForTimeout(200)
 
-      const modal = page.locator('[role="dialog"]')
+    const editOption = page.getByRole('menuitem', { name: /Editar/i })
+    await editOption.click()
+    await page.waitForTimeout(500)
 
-      if (await modal.count() > 0) {
-        // Get current amount
-        const amountInput = modal.locator('input[type="number"], input').first()
-        const currentAmount = await amountInput.inputValue()
-        const currentAmountNum = parseFloat(currentAmount) || 0
+    const modal = page.locator('[role="dialog"]')
+    await expect(modal).toBeVisible({ timeout: 3000 })
 
-        // Change amount (increase by 50)
-        const newAmount = currentAmountNum + 50
-        await amountInput.fill(newAmount.toString())
-        await page.waitForTimeout(200)
+    // Get current amount
+    const amountInput = modal.locator('input[type="number"], input').first()
+    const currentAmount = await amountInput.inputValue()
+    const currentAmountNum = parseFloat(currentAmount) || 0
 
-        // Save
-        const saveButton = modal.getByRole('button', { name: /Guardar/i })
-        await saveButton.click()
+    // Change amount (increase by 50)
+    const newAmount = currentAmountNum + 50
+    await amountInput.fill(newAmount.toString())
+    await page.waitForTimeout(200)
 
-        // Wait for modal to close and data to refresh
-        await expect(modal).not.toBeVisible({ timeout: 5000 })
-        await page.waitForTimeout(1000)
+    // Save
+    const saveButton = modal.getByRole('button', { name: /Guardar/i })
+    await saveButton.click()
 
-        // Verify balance changed
-        const finalAccount = await getAnyAccountBalance(page)
+    // Wait for modal to close and data to refresh
+    await expect(modal).not.toBeVisible({ timeout: 5000 })
+    await page.waitForTimeout(1000)
 
-        // Balance should be different (50 more was spent)
-        // Note: We increased expense, so balance decreases
-        expect(finalAccount.balance).toBeLessThanOrEqual(initialAccount.balance)
-      }
-    }
+    // Verify balance changed
+    const finalAccount = await getAnyAccountBalance(page)
+
+    // Balance should be different (50 more was spent)
+    // Note: We increased expense, so balance decreases
+    expect(finalAccount.balance).toBeLessThanOrEqual(initialAccount.balance)
   })
 })
 
@@ -539,70 +612,71 @@ test.describe('Gastos - Eliminacion', () => {
     await login(page)
     await goToTransactions(page)
     await setupGastosTab(page)
+    await ensureSavedExpensesExist(page)
   })
 
   test('should show delete option in dropdown menu', async ({ page }) => {
     const tableRows = page.locator('table tbody tr').filter({
-      hasNot: page.locator('input')
+      hasNot: page.locator('input'),
     })
 
-    if (await tableRows.count() > 0) {
-      const firstRow = tableRows.first()
-      const menuButton = firstRow.locator('button').last()
+    await expect(tableRows.first()).toBeVisible({ timeout: 5000 })
 
-      await menuButton.click()
-      await page.waitForTimeout(200)
+    const firstRow = tableRows.first()
+    const menuButton = firstRow.locator('button').last()
 
-      const deleteOption = page.getByRole('menuitem', { name: /Eliminar/i })
-      await expect(deleteOption).toBeVisible()
-    }
+    await menuButton.click()
+    await page.waitForTimeout(200)
+
+    const deleteOption = page.getByRole('menuitem', { name: /Eliminar/i })
+    await expect(deleteOption).toBeVisible()
   })
 
   test('should show confirmation dialog when clicking delete', async ({ page }) => {
     const tableRows = page.locator('table tbody tr').filter({
-      hasNot: page.locator('input')
+      hasNot: page.locator('input'),
     })
 
-    if (await tableRows.count() > 0) {
-      const firstRow = tableRows.first()
-      const menuButton = firstRow.locator('button').last()
+    await expect(tableRows.first()).toBeVisible({ timeout: 5000 })
 
-      await menuButton.click()
-      await page.waitForTimeout(200)
+    const firstRow = tableRows.first()
+    const menuButton = firstRow.locator('button').last()
 
-      const deleteOption = page.getByRole('menuitem', { name: /Eliminar/i })
-      await deleteOption.click()
+    await menuButton.click()
+    await page.waitForTimeout(200)
 
-      // Confirmation dialog should appear
-      const confirmDialog = page.getByText(/Eliminar gasto/i)
-      await expect(confirmDialog).toBeVisible({ timeout: 3000 })
-    }
+    const deleteOption = page.getByRole('menuitem', { name: /Eliminar/i })
+    await deleteOption.click()
+
+    // Confirmation dialog should appear
+    const confirmDialog = page.getByText(/Eliminar gasto/i)
+    await expect(confirmDialog).toBeVisible({ timeout: 3000 })
   })
 
   test('should close dialog when clicking cancel', async ({ page }) => {
     const tableRows = page.locator('table tbody tr').filter({
-      hasNot: page.locator('input')
+      hasNot: page.locator('input'),
     })
 
-    if (await tableRows.count() > 0) {
-      const firstRow = tableRows.first()
-      const menuButton = firstRow.locator('button').last()
+    await expect(tableRows.first()).toBeVisible({ timeout: 5000 })
 
-      await menuButton.click()
-      await page.waitForTimeout(200)
+    const firstRow = tableRows.first()
+    const menuButton = firstRow.locator('button').last()
 
-      const deleteOption = page.getByRole('menuitem', { name: /Eliminar/i })
-      await deleteOption.click()
-      await page.waitForTimeout(300)
+    await menuButton.click()
+    await page.waitForTimeout(200)
 
-      // Click cancel
-      const cancelButton = page.getByRole('button', { name: /Cancelar/i })
-      await cancelButton.click()
+    const deleteOption = page.getByRole('menuitem', { name: /Eliminar/i })
+    await deleteOption.click()
+    await page.waitForTimeout(300)
 
-      // Dialog should close
-      const confirmDialog = page.locator('[role="alertdialog"]')
-      await expect(confirmDialog).not.toBeVisible({ timeout: 3000 })
-    }
+    // Click cancel
+    const cancelButton = page.getByRole('button', { name: /Cancelar/i })
+    await cancelButton.click()
+
+    // Dialog should close
+    const confirmDialog = page.locator('[role="alertdialog"]')
+    await expect(confirmDialog).not.toBeVisible({ timeout: 3000 })
   })
 })
 

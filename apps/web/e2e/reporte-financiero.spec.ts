@@ -47,9 +47,20 @@ interface AccountInfo {
 // ============================================================================
 
 /**
- * Login to the application
+ * Login to the application - with storageState support
  */
 async function login(page: Page) {
+  // Try to go directly to dashboard (will work if storageState is valid)
+  await page.goto('/dashboard')
+  await page.waitForLoadState('networkidle')
+
+  // Check if we're already logged in (storageState worked)
+  const currentUrl = page.url()
+  if (currentUrl.includes('/dashboard') || currentUrl.includes('/transacciones')) {
+    return // Already logged in via storageState
+  }
+
+  // Not logged in, perform manual login
   await page.goto('/login')
   await page.waitForLoadState('networkidle')
 
