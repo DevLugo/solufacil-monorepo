@@ -206,7 +206,6 @@ export class LoanRepository {
     collateralIds?: string[]
     previousLoan?: string
     snapshotLeadId?: string
-    snapshotLeadName?: string
     snapshotLeadAssignedAt?: Date
     snapshotRouteId?: string
     snapshotRouteName?: string
@@ -219,6 +218,8 @@ export class LoanRepository {
         profitAmount: data.profitAmount,
         totalDebtAcquired: data.totalDebtAcquired,
         expectedWeeklyPayment: data.expectedWeeklyPayment,
+        totalPaid: new Decimal(0),
+        comissionAmount: new Decimal(0),
         pendingAmountStored: data.pendingAmountStored,
         borrower: data.borrower,
         loantype: data.loantype,
@@ -226,7 +227,6 @@ export class LoanRepository {
         lead: data.lead,
         previousLoan: data.previousLoan,
         snapshotLeadId: data.snapshotLeadId,
-        snapshotLeadName: data.snapshotLeadName,
         snapshotLeadAssignedAt: data.snapshotLeadAssignedAt,
         snapshotRouteId: data.snapshotRouteId,
         snapshotRouteName: data.snapshotRouteName,

@@ -24,8 +24,9 @@ describe('Profit Calculations', () => {
     })
 
     it('rounds to 2 decimal places', () => {
+      // 1000 × 0.333 = 333.0 (toDecimalPlaces(2) doesn't add trailing decimals)
       const result = calculateProfit(new Decimal(1000), new Decimal(0.333))
-      expect(result.toNumber()).toBe(333.3)
+      expect(result.toNumber()).toBe(333)
     })
   })
 

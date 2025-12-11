@@ -9,7 +9,7 @@ import { AccountRepository } from '../repositories/AccountRepository'
 import { TransactionRepository } from '../repositories/TransactionRepository'
 import { PaymentRepository } from '../repositories/PaymentRepository'
 import { PersonalDataRepository } from '../repositories/PersonalDataRepository'
-import { calculateLoanMetrics, createLoanSnapshot, calculatePaymentProfit } from '@solufacil/business-logic'
+import { calculateLoanMetrics, createLoanSnapshot, calculatePaymentProfit, calculateProfitHeredado } from '@solufacil/business-logic'
 import { generateClientCode } from '@solufacil/shared'
 
 export interface CreateLoanInput {
@@ -207,8 +207,14 @@ export class LoanService {
         })
       }
 
-      // Obtener el profit pendiente del préstamo anterior
-      pendingProfit = new Decimal(previousLoan.pendingAmountStored.toString())
+      // Calcular el profit pendiente del préstamo anterior usando la función centralizada
+      // Solo la PORCIÓN de profit de la deuda pendiente se hereda (no la deuda total)
+      const { profitHeredado } = calculateProfitHeredado(
+        new Decimal(previousLoan.pendingAmountStored.toString()),
+        new Decimal(previousLoan.profitAmount.toString()),
+        new Decimal(previousLoan.totalDebtAcquired.toString())
+      )
+      pendingProfit = profitHeredado
 
       // Marcar el préstamo anterior como RENOVATED
       await this.loanRepository.update(input.previousLoanId, {
