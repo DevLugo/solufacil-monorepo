@@ -51,6 +51,23 @@ enum AccountType {
   TRAVEL_EXPENSES
 }
 
+enum PeriodType {
+  WEEKLY
+  MONTHLY
+}
+
+enum Trend {
+  UP
+  DOWN
+  STABLE
+}
+
+enum CVStatus {
+  AL_CORRIENTE
+  EN_CV
+  EXCLUIDO
+}
+
 # Directives
 directive @auth on FIELD_DEFINITION | OBJECT
 directive @requireRole(roles: [UserRole!]!) on FIELD_DEFINITION | OBJECT
@@ -497,6 +514,178 @@ type BadDebtSummary {
   byRoute: [BadDebtData!]!
 }
 
+# Portfolio Report Types (Reporte de Cartera)
+type WeekRange {
+  start: DateTime!
+  end: DateTime!
+  weekNumber: Int!
+  year: Int!
+}
+
+type ClientBalanceData {
+  nuevos: Int!
+  terminadosSinRenovar: Int!
+  renovados: Int!
+  balance: Int!
+  trend: Trend!
+}
+
+type PeriodComparison {
+  previousClientesActivos: Int!
+  previousClientesEnCV: Int!
+  previousBalance: Int!
+  cvChange: Int!
+  balanceChange: Int!
+}
+
+type PortfolioSummary {
+  totalClientesActivos: Int!
+  clientesAlCorriente: Int!
+  clientesEnCV: Int!
+  "Promedio de clientes en CV de las semanas completadas (solo para reportes mensuales)"
+  promedioCV: Int
+  "Número de semanas completadas usadas para calcular el promedio"
+  semanasCompletadas: Int
+  "Total de semanas en el período"
+  totalSemanas: Int
+  clientBalance: ClientBalanceData!
+  comparison: PeriodComparison
+}
+
+type WeeklyPortfolioData {
+  weekRange: WeekRange!
+  clientesActivos: Int!
+  clientesEnCV: Int!
+  balance: Int!
+  "Si la semana ya está completada (pasó el domingo)"
+  isCompleted: Boolean!
+}
+
+type LocationBreakdown {
+  locationId: ID!
+  locationName: String!
+  routeId: ID
+  routeName: String
+  clientesActivos: Int!
+  clientesAlCorriente: Int!
+  clientesEnCV: Int!
+  balance: Int!
+}
+
+type RenovationKPIs {
+  totalRenovaciones: Int!
+  totalCierresSinRenovar: Int!
+  tasaRenovacion: Decimal!
+  tendencia: Trend!
+}
+
+type PortfolioReport {
+  reportDate: DateTime!
+  periodType: PeriodType!
+  year: Int!
+  month: Int
+  weekNumber: Int
+  summary: PortfolioSummary!
+  weeklyData: [WeeklyPortfolioData!]!
+  byLocation: [LocationBreakdown!]!
+  renovationKPIs: RenovationKPIs!
+}
+
+type ActiveClientStatus {
+  loanId: ID!
+  borrowerId: ID!
+  clientName: String!
+  pendingAmount: Decimal!
+  cvStatus: CVStatus!
+  daysSinceLastPayment: Int
+  locationName: String!
+  routeName: String!
+}
+
+type PDFGenerationResult {
+  success: Boolean!
+  url: String
+  base64: String
+  filename: String!
+  generatedAt: DateTime!
+  error: String
+}
+
+input PortfolioFiltersInput {
+  locationIds: [ID!]
+  routeIds: [ID!]
+  loantypeIds: [ID!]
+}
+
+# Locality Report Types (Vista por Localidad con desglose semanal)
+enum ClientCategory {
+  NUEVO
+  RENOVADO
+  REINTEGRO
+  ACTIVO
+  FINALIZADO
+  EN_CV
+}
+
+type LocalityWeekData {
+  weekRange: WeekRange!
+  clientesActivos: Int!
+  clientesAlCorriente: Int!
+  clientesEnCV: Int!
+  nuevos: Int!
+  renovados: Int!
+  reintegros: Int!
+  finalizados: Int!
+  balance: Int!
+  "Si la semana ya está completada (pasó el domingo)"
+  isCompleted: Boolean!
+}
+
+type LocalitySummary {
+  totalClientesActivos: Int!
+  totalClientesAlCorriente: Int!
+  totalClientesEnCV: Int!
+  totalNuevos: Int!
+  totalRenovados: Int!
+  totalReintegros: Int!
+  totalFinalizados: Int!
+  balance: Int!
+  cvPromedio: Float!
+  porcentajePagando: Float!
+}
+
+type LocalityBreakdownDetail {
+  localityId: ID!
+  localityName: String!
+  routeId: ID
+  routeName: String
+  weeklyData: [LocalityWeekData!]!
+  summary: LocalitySummary!
+}
+
+type LocalityReport {
+  periodType: PeriodType!
+  year: Int!
+  month: Int
+  weekNumber: Int
+  weeks: [WeekRange!]!
+  localities: [LocalityBreakdownDetail!]!
+  totals: LocalitySummary!
+}
+
+type LocalityClientDetail {
+  loanId: ID!
+  clientName: String!
+  clientCode: String!
+  amountGived: Decimal!
+  pendingAmount: Decimal!
+  signDate: DateTime!
+  cvStatus: CVStatus!
+  daysSinceLastPayment: Int
+  loanType: String!
+  category: ClientCategory!
+}
+
 # Annual Financial Report Types
 type AnnualFinancialReport {
   routes: [RouteInfo!]!
@@ -653,6 +842,22 @@ type Query {
   badDebtByMonth(year: Int!, month: Int!): [BadDebtData!]! @requireRole(roles: [ADMIN])
   badDebtSummary: BadDebtSummary! @requireRole(roles: [ADMIN])
   loansForBadDebt(routeId: ID): [Loan!]! @auth
+
+  # Portfolio Report (Reporte de Cartera)
+  portfolioReportWeekly(year: Int!, weekNumber: Int!, filters: PortfolioFiltersInput): PortfolioReport! @auth
+  portfolioReportMonthly(year: Int!, month: Int!, filters: PortfolioFiltersInput): PortfolioReport! @auth
+  activeClientsWithCVStatus(filters: PortfolioFiltersInput): [ActiveClientStatus!]! @auth
+  currentActiveWeek: WeekRange! @auth
+
+  # Locality Report (Vista por Localidad con desglose semanal)
+  portfolioByLocality(year: Int!, month: Int!, filters: PortfolioFiltersInput): LocalityReport! @auth
+  localityClients(
+    localityId: ID!
+    year: Int!
+    month: Int!
+    weekNumber: Int
+    category: ClientCategory
+  ): [LocalityClientDetail!]! @auth
 
   # Documents
   documentPhoto(id: ID!): DocumentPhoto @auth
@@ -1006,6 +1211,15 @@ type Mutation {
   # Loan types
   createLoantype(input: CreateLoantypeInput!): Loantype! @requireRole(roles: [ADMIN])
   updateLoantype(id: ID!, input: UpdateLoantypeInput!): Loantype! @requireRole(roles: [ADMIN])
+
+  # Portfolio Report PDF
+  generatePortfolioReportPDF(
+    periodType: PeriodType!
+    year: Int!
+    month: Int
+    weekNumber: Int
+    filters: PortfolioFiltersInput
+  ): PDFGenerationResult! @auth
 
   # Documents
   uploadDocumentPhoto(input: UploadDocumentInput!): DocumentPhoto! @auth

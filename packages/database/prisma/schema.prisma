@@ -197,7 +197,8 @@ model Loan {
 
   snapshotLeadId         String?
   snapshotLeadAssignedAt DateTime?
-  snapshotRouteId        String    @default("")
+  snapshotRouteId        String?
+  snapshotRoute          Route?   @relation("LoanSnapshotRoute", fields: [snapshotRouteId], references: [id])
   snapshotRouteName      String    @default("")
 
   previousLoan String? @unique
@@ -420,6 +421,7 @@ model Route {
   locations         Location[]
   portfolioCleanups PortfolioCleanup[]
   reportConfigs     ReportConfig[]     @relation("ReportConfigRoutes")
+  snapshotLoans     Loan[]             @relation("LoanSnapshotRoute")
 }
 
 model Location {

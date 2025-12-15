@@ -905,3 +905,4 @@ flowchart TD
 
 5. **Precisión Decimal**: Los montos se formatean con 0 decimales para mejor legibilidad en tablas.
 
+

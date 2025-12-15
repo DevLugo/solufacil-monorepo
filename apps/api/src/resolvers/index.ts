@@ -10,6 +10,7 @@ import { transactionResolvers } from './transactions'
 import { accountResolvers } from './accounts'
 import { routeResolvers } from './routes'
 import { reportResolvers } from './reports'
+import { portfolioReportResolvers } from './portfolioReport'
 import { documentResolvers } from './documents'
 import { personalDataResolvers } from './personalData'
 import { clientResolvers } from './clients'
@@ -29,6 +30,7 @@ export const resolvers = {
     ...accountResolvers.Query,
     ...routeResolvers.Query,
     ...reportResolvers.Query,
+    ...portfolioReportResolvers.Query,
     ...documentResolvers.Query,
     ...personalDataResolvers.Query,
     ...clientResolvers.Query,
@@ -45,6 +47,7 @@ export const resolvers = {
     ...transactionResolvers.Mutation,
     ...accountResolvers.Mutation,
     ...routeResolvers.Mutation,
+    ...portfolioReportResolvers.Mutation,
     ...documentResolvers.Mutation,
     ...personalDataResolvers.Mutation,
   },

@@ -186,10 +186,13 @@ async function migrateTable(tableName: string): Promise<MigrationResult> {
         break
 
       case 'TelegramUser':
+        // Set platformUser to NULL if user doesn't exist in target
         insertQuery = `
           INSERT INTO "${TARGET_SCHEMA}"."TelegramUser" (id, "chatId", name, username, "isActive", "registeredAt", "lastActivity", "reportsReceived", "isInRecipientsList", notes, "platformUser", "createdAt", "updatedAt")
-          SELECT id, "chatId", COALESCE(name, ''), COALESCE(username, ''), "isActive", "registeredAt", COALESCE("lastActivity", NOW()), "reportsReceived", "isInRecipientsList", COALESCE(notes, ''), "platformUser", NOW(), NOW()
-          FROM "${SOURCE_SCHEMA}"."TelegramUser"
+          SELECT t.id, t."chatId", COALESCE(t.name, ''), COALESCE(t.username, ''), t."isActive", t."registeredAt", COALESCE(t."lastActivity", NOW()), t."reportsReceived", t."isInRecipientsList", COALESCE(t.notes, ''),
+            CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."User" WHERE id = t."platformUser") THEN t."platformUser" ELSE NULL END,
+            NOW(), NOW()
+          FROM "${SOURCE_SCHEMA}"."TelegramUser" t
           ON CONFLICT (id) DO NOTHING
         `
         break
@@ -215,11 +218,14 @@ async function migrateTable(tableName: string): Promise<MigrationResult> {
         break
 
       case 'Employee':
+        // Set user to NULL if user doesn't exist in target (User table may be empty)
         insertQuery = `
           INSERT INTO "${TARGET_SCHEMA}"."Employee" (id, "oldId", type, "personalData", "user", "createdAt", "updatedAt")
-          SELECT id, "oldId", type::text::"${TARGET_SCHEMA}"."EmployeeType", "personalData", "user", NOW(), NOW()
-          FROM "${SOURCE_SCHEMA}"."Employee"
-          WHERE "personalData" IS NOT NULL
+          SELECT e.id, e."oldId", e.type::text::"${TARGET_SCHEMA}"."EmployeeType", e."personalData",
+            CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."User" WHERE id = e."user") THEN e."user" ELSE NULL END,
+            NOW(), NOW()
+          FROM "${SOURCE_SCHEMA}"."Employee" e
+          WHERE e."personalData" IS NOT NULL
           ON CONFLICT (id) DO NOTHING
         `
         break
@@ -243,32 +249,45 @@ async function migrateTable(tableName: string): Promise<MigrationResult> {
         break
 
       case 'PortfolioCleanup':
+        // Only insert if executedBy exists in Employee (executedBy is NOT NULL in schema)
         insertQuery = `
           INSERT INTO "${TARGET_SCHEMA}"."PortfolioCleanup" (id, name, description, "cleanupDate", "fromDate", "toDate", "excludedLoansCount", "excludedAmount", route, "executedBy", "createdAt", "updatedAt")
-          SELECT id, name, COALESCE(description, ''), "cleanupDate", "fromDate", "toDate", COALESCE("excludedLoansCount", 0), COALESCE("excludedAmount", 0), route, "executedBy", "createdAt", COALESCE("updatedAt", "createdAt", NOW())
-          FROM "${SOURCE_SCHEMA}"."PortfolioCleanup"
+          SELECT p.id, p.name, COALESCE(p.description, ''), p."cleanupDate", p."fromDate", p."toDate", COALESCE(p."excludedLoansCount", 0), COALESCE(p."excludedAmount", 0), p.route, p."executedBy",
+            p."createdAt", COALESCE(p."updatedAt", p."createdAt", NOW())
+          FROM "${SOURCE_SCHEMA}"."PortfolioCleanup" p
+          WHERE p."executedBy" IS NOT NULL
+            AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Employee" WHERE id = p."executedBy")
           ON CONFLICT (id) DO NOTHING
         `
         break
 
       case 'LeadPaymentReceived':
+        // Only insert if lead exists in Employee
         insertQuery = `
           INSERT INTO "${TARGET_SCHEMA}"."LeadPaymentReceived" (id, "expectedAmount", "paidAmount", "cashPaidAmount", "bankPaidAmount", "falcoAmount", "paymentStatus", lead, agent, "createdAt", "updatedAt")
-          SELECT id, COALESCE("expectedAmount", 0), COALESCE("paidAmount", 0), COALESCE("cashPaidAmount", 0), COALESCE("bankPaidAmount", 0), COALESCE("falcoAmount", 0), "paymentStatus", lead, agent, "createdAt", COALESCE("updatedAt", "createdAt", NOW())
-          FROM "${SOURCE_SCHEMA}"."LeadPaymentReceived"
-          WHERE lead IS NOT NULL
+          SELECT lpr.id, COALESCE(lpr."expectedAmount", 0), COALESCE(lpr."paidAmount", 0), COALESCE(lpr."cashPaidAmount", 0), COALESCE(lpr."bankPaidAmount", 0), COALESCE(lpr."falcoAmount", 0), lpr."paymentStatus", lpr.lead,
+            CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Employee" WHERE id = lpr.agent) THEN lpr.agent ELSE NULL END,
+            lpr."createdAt", COALESCE(lpr."updatedAt", lpr."createdAt", NOW())
+          FROM "${SOURCE_SCHEMA}"."LeadPaymentReceived" lpr
+          WHERE lpr.lead IS NOT NULL
+            AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Employee" WHERE id = lpr.lead)
           ON CONFLICT (id) DO NOTHING
         `
         break
 
       case 'Loan':
         // grantor and lead are optional - borrower and loantype are required
-        // First insert loans without previousLoan to avoid constraint issues
+        // Set grantor/lead/excludedByCleanup to NULL if they don't exist in their respective tables
         insertQuery = `
           INSERT INTO "${TARGET_SCHEMA}"."Loan" (id, "oldId", "requestedAmount", "amountGived", "signDate", "finishedDate", "renewedDate", "badDebtDate", "isDeceased", "profitAmount", "totalDebtAcquired", "expectedWeeklyPayment", "totalPaid", "pendingAmountStored", "comissionAmount", status, borrower, loantype, grantor, lead, "snapshotLeadId", "snapshotLeadAssignedAt", "snapshotRouteId", "snapshotRouteName", "previousLoan", "excludedByCleanup", "createdAt", "updatedAt")
-          SELECT id, "oldId", COALESCE("requestedAmount", 0), COALESCE("amountGived", 0), "signDate", "finishedDate", "renewedDate", "badDebtDate", COALESCE("isDeceased", false), COALESCE("profitAmount", 0), COALESCE("totalDebtAcquired", 0), COALESCE("expectedWeeklyPayment", 0), COALESCE("totalPaid", 0), COALESCE("pendingAmountStored", 0), COALESCE("comissionAmount", 0), status::text::"${TARGET_SCHEMA}"."LoanStatus", borrower, loantype, grantor, lead, COALESCE("snapshotLeadId", ''), "snapshotLeadAssignedAt", COALESCE("snapshotRouteId", ''), COALESCE("snapshotRouteName", ''), NULL, "excludedByCleanup", "createdAt", COALESCE("updatedAt", "createdAt", NOW())
-          FROM "${SOURCE_SCHEMA}"."Loan"
-          WHERE borrower IS NOT NULL AND loantype IS NOT NULL
+          SELECT l.id, l."oldId", COALESCE(l."requestedAmount", 0), COALESCE(l."amountGived", 0), l."signDate", l."finishedDate", l."renewedDate", l."badDebtDate", COALESCE(l."isDeceased", false), COALESCE(l."profitAmount", 0), COALESCE(l."totalDebtAcquired", 0), COALESCE(l."expectedWeeklyPayment", 0), COALESCE(l."totalPaid", 0), COALESCE(l."pendingAmountStored", 0), COALESCE(l."comissionAmount", 0), l.status::text::"${TARGET_SCHEMA}"."LoanStatus", l.borrower, l.loantype,
+            CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Employee" WHERE id = l.grantor) THEN l.grantor ELSE NULL END,
+            CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Employee" WHERE id = l.lead) THEN l.lead ELSE NULL END,
+            COALESCE(l."snapshotLeadId", ''), l."snapshotLeadAssignedAt", COALESCE(l."snapshotRouteId", ''), COALESCE(l."snapshotRouteName", ''), NULL,
+            CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."PortfolioCleanup" WHERE id = l."excludedByCleanup") THEN l."excludedByCleanup" ELSE NULL END,
+            l."createdAt", COALESCE(l."updatedAt", l."createdAt", NOW())
+          FROM "${SOURCE_SCHEMA}"."Loan" l
+          WHERE l.borrower IS NOT NULL AND l.loantype IS NOT NULL
           ON CONFLICT (id) DO NOTHING
         `
         break
@@ -417,19 +436,19 @@ async function migrateTable(tableName: string): Promise<MigrationResult> {
 }
 
 async function migrateEmployeeRoutes(): Promise<MigrationResult> {
-  // En origen, Employee tiene una FK directa a Route
+  // En origen, Employee tiene una FK directa a Route (1:N)
   // En destino, es una relación M:M via _RouteEmployees
-  // Only insert for employees that exist in target
+  // In Prisma M:M _RouteEmployees: A = Route ID, B = Employee ID (alphabetical order based on model names)
   try {
-    const checkSource = await pool.query(`
-      SELECT e.id as employee_id, e.routes as route_id
+    // Count source records that will be migrated
+    const countSource = await pool.query(`
+      SELECT COUNT(*)::int as count
       FROM "${SOURCE_SCHEMA}"."Employee" e
       WHERE e.routes IS NOT NULL
         AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Employee" WHERE id = e.id)
         AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Route" WHERE id = e.routes)
     `)
-
-    const sourceCount = checkSource.rows.length
+    const sourceCount = countSource.rows[0].count
 
     if (sourceCount === 0) {
       return {
@@ -440,13 +459,17 @@ async function migrateEmployeeRoutes(): Promise<MigrationResult> {
       }
     }
 
-    for (const row of checkSource.rows) {
-      await pool.query(`
-        INSERT INTO "${TARGET_SCHEMA}"."_RouteEmployees" ("A", "B")
-        VALUES ($1, $2)
-        ON CONFLICT ("A", "B") DO NOTHING
-      `, [row.employee_id, row.route_id])
-    }
+    // Use INSERT...SELECT for atomic operation
+    // In this schema based on FK constraints: A = Employee ID, B = Route ID
+    await pool.query(`
+      INSERT INTO "${TARGET_SCHEMA}"."_RouteEmployees" ("A", "B")
+      SELECT e.id, e.routes
+      FROM "${SOURCE_SCHEMA}"."Employee" e
+      WHERE e.routes IS NOT NULL
+        AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Employee" WHERE id = e.id)
+        AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Route" WHERE id = e.routes)
+      ON CONFLICT ("A", "B") DO NOTHING
+    `)
 
     const targetCountResult = await pool.query(`SELECT COUNT(*) as count FROM "${TARGET_SCHEMA}"."_RouteEmployees"`)
     const targetCount = parseInt(targetCountResult.rows[0].count, 10)
@@ -540,10 +563,122 @@ const JUNCTION_TABLES: Record<string, { sourceTable: string; targetTable: string
   '_ReportConfig_telegramUsers': { sourceTable: '_ReportConfig_telegramUsers', targetTable: '_ReportConfigRecipients' },
 }
 
+/**
+ * Sincroniza el snapshotRouteId de los préstamos con la ruta del líder asignado.
+ *
+ * CONTEXTO:
+ * - Cada Loan tiene un campo `snapshotRouteId` que indica la ruta del préstamo
+ * - Cada Loan tiene un `lead` (Employee) que puede tener múltiples rutas asignadas via M:M (_RouteEmployees)
+ * - Este UPDATE sincroniza el snapshotRouteId con la ruta del líder
+ *
+ * NOTA IMPORTANTE:
+ * - Si un líder tiene MÚLTIPLES rutas asignadas, se selecciona la primera alfabéticamente
+ * - El orden alfabético es: CIUDAD < RUTA 3A < RUTA 3B < RUTA1A < RUTA1B < RUTA2
+ * - Esto significa que RUTA 3A/3B tienen prioridad sobre RUTA1A/1B (espacio < dígito)
+ *
+ * Ejecutado: 2025-12-15
+ */
+async function syncSnapshotRouteIdWithLeadRoute(): Promise<MigrationResult> {
+  try {
+    // Primero contamos cuántos préstamos serán afectados
+    // In this schema: A = Employee ID, B = Route ID (based on FK constraints)
+    const countBefore = await pool.query(`
+      SELECT COUNT(*)::int as count
+      FROM "${TARGET_SCHEMA}"."Loan" l
+      WHERE l.lead IS NOT NULL
+        AND EXISTS (
+          SELECT 1 FROM "${TARGET_SCHEMA}"."_RouteEmployees" re
+          WHERE re."A" = l.lead
+        )
+    `)
+    const sourceCount = countBefore.rows[0].count
+
+    // UPDATE: Sincroniza snapshotRouteId con la primera ruta del líder (alfabéticamente)
+    const updateResult = await pool.query(`
+      UPDATE "${TARGET_SCHEMA}"."Loan" l
+      SET "snapshotRouteId" = subq.route_id
+      FROM (
+        SELECT DISTINCT ON (e.id)
+          e.id as employee_id,
+          r.id as route_id
+        FROM "${TARGET_SCHEMA}"."Employee" e
+        JOIN "${TARGET_SCHEMA}"."_RouteEmployees" re ON e.id = re."A"
+        JOIN "${TARGET_SCHEMA}"."Route" r ON re."B" = r.id
+        WHERE e.type = 'LEAD'
+        ORDER BY e.id, r.name
+      ) subq
+      WHERE l.lead = subq.employee_id
+    `)
+
+    return {
+      table: 'Loan.snapshotRouteId sync',
+      sourceCount,
+      targetCount: updateResult.rowCount || 0,
+      success: true,
+    }
+  } catch (error) {
+    return {
+      table: 'Loan.snapshotRouteId sync',
+      sourceCount: 0,
+      targetCount: 0,
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    }
+  }
+}
+
+/**
+ * Limpia todas las tablas del schema destino antes de la migración.
+ * Se ejecuta en orden inverso para respetar las foreign keys.
+ */
+async function cleanTargetSchema(): Promise<void> {
+  console.log('🧹 Limpiando tablas del schema destino...\n')
+
+  // Orden inverso de MIGRATION_ORDER + junction tables
+  const cleanOrder = [
+    // Junction tables primero (no tienen dependencias)
+    '_LoanCollaterals',
+    '_RouteAccounts',
+    '_ReportConfigRoutes',
+    '_ReportConfigRecipients',
+    '_RouteEmployees',
+    // Luego en orden inverso de dependencias
+    ...MIGRATION_ORDER.slice().reverse(),
+  ]
+
+  for (const tableName of cleanOrder) {
+    try {
+      // Verificar si la tabla existe
+      const checkTable = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema = $1 AND table_name = $2
+        )
+      `, [TARGET_SCHEMA, tableName])
+
+      if (checkTable.rows[0].exists) {
+        await pool.query(`TRUNCATE TABLE "${TARGET_SCHEMA}"."${tableName}" CASCADE`)
+        console.log(`   ✅ ${tableName} limpiada`)
+      }
+    } catch (error) {
+      // Ignorar errores de tablas que no existen
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      if (!errorMessage.includes('does not exist')) {
+        console.log(`   ⚠️  ${tableName}: ${errorMessage}`)
+      }
+    }
+  }
+
+  console.log('')
+}
+
 async function main() {
   console.log('🚀 Iniciando migración de datos...\n')
   console.log(`   Origen: ${SOURCE_SCHEMA}`)
   console.log(`   Destino: ${TARGET_SCHEMA}\n`)
+
+  // PASO 1: Limpiar todas las tablas del destino
+  await cleanTargetSchema()
 
   const results: MigrationResult[] = []
 
@@ -591,6 +726,16 @@ async function main() {
     } else {
       console.log(`❌ Error: ${result.error}`)
     }
+  }
+
+  // Sincronizar snapshotRouteId con la ruta del líder
+  console.log('\n📋 Sincronizando Loan.snapshotRouteId con ruta del líder...\n')
+  const syncResult = await syncSnapshotRouteIdWithLeadRoute()
+  results.push(syncResult)
+  if (syncResult.success) {
+    console.log(`   ✅ ${syncResult.sourceCount} préstamos elegibles → ${syncResult.targetCount} actualizados`)
+  } else {
+    console.log(`   ❌ Error: ${syncResult.error}`)
   }
 
   // Resumen

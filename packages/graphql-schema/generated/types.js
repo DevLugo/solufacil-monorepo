@@ -6,6 +6,21 @@ export var AccountType;
     AccountType["PrepaidGas"] = "PREPAID_GAS";
     AccountType["TravelExpenses"] = "TRAVEL_EXPENSES";
 })(AccountType || (AccountType = {}));
+export var CvStatus;
+(function (CvStatus) {
+    CvStatus["AlCorriente"] = "AL_CORRIENTE";
+    CvStatus["EnCv"] = "EN_CV";
+    CvStatus["Excluido"] = "EXCLUIDO";
+})(CvStatus || (CvStatus = {}));
+export var ClientCategory;
+(function (ClientCategory) {
+    ClientCategory["Activo"] = "ACTIVO";
+    ClientCategory["EnCv"] = "EN_CV";
+    ClientCategory["Finalizado"] = "FINALIZADO";
+    ClientCategory["Nuevo"] = "NUEVO";
+    ClientCategory["Reintegro"] = "REINTEGRO";
+    ClientCategory["Renovado"] = "RENOVADO";
+})(ClientCategory || (ClientCategory = {}));
 export var DocumentType;
 (function (DocumentType) {
     DocumentType["Domicilio"] = "DOMICILIO";
@@ -31,6 +46,11 @@ export var PaymentMethod;
     PaymentMethod["Cash"] = "CASH";
     PaymentMethod["MoneyTransfer"] = "MONEY_TRANSFER";
 })(PaymentMethod || (PaymentMethod = {}));
+export var PeriodType;
+(function (PeriodType) {
+    PeriodType["Monthly"] = "MONTHLY";
+    PeriodType["Weekly"] = "WEEKLY";
+})(PeriodType || (PeriodType = {}));
 export var TransactionType;
 (function (TransactionType) {
     TransactionType["Expense"] = "EXPENSE";
@@ -38,6 +58,12 @@ export var TransactionType;
     TransactionType["Investment"] = "INVESTMENT";
     TransactionType["Transfer"] = "TRANSFER";
 })(TransactionType || (TransactionType = {}));
+export var Trend;
+(function (Trend) {
+    Trend["Down"] = "DOWN";
+    Trend["Stable"] = "STABLE";
+    Trend["Up"] = "UP";
+})(Trend || (Trend = {}));
 export var UserRole;
 (function (UserRole) {
     UserRole["Admin"] = "ADMIN";

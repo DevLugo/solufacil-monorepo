@@ -2,6 +2,11 @@
 export * from './calculations/profit'
 export * from './calculations/payment'
 export * from './calculations/metrics'
+export * from './calculations/active-week'
+export * from './calculations/portfolio'
+
+// Export types
+export * from './types/portfolio'
 
 // Export validators
 export * from './validators/loan-validator'

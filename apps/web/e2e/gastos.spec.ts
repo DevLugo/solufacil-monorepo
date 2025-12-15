@@ -259,6 +259,9 @@ test.describe('Gastos - Visualizacion', () => {
   test('should display gastos table with headers', async ({ page }) => {
     await setupGastosTab(page)
 
+    // Ensure at least one expense exists so table is rendered
+    await ensureSavedExpensesExist(page)
+
     // Should show table headers - use role to be specific
     const tipoHeader = page.getByRole('columnheader', { name: /Tipo/i })
     const montoHeader = page.getByRole('columnheader', { name: /Monto/i })
