@@ -175,6 +175,21 @@ export declare enum CvStatus {
     EnCv = "EN_CV",
     Excluido = "EXCLUIDO"
 }
+export type CleanupLoanPreview = {
+    __typename?: 'CleanupLoanPreview';
+    clientCode: Scalars['String']['output'];
+    clientName: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    pendingAmount: Scalars['Decimal']['output'];
+    routeName: Scalars['String']['output'];
+    signDate: Scalars['DateTime']['output'];
+};
+export type CleanupPreview = {
+    __typename?: 'CleanupPreview';
+    sampleLoans: Array<CleanupLoanPreview>;
+    totalLoans: Scalars['Int']['output'];
+    totalPendingAmount: Scalars['Decimal']['output'];
+};
 export type ClientAddressInfo = {
     __typename?: 'ClientAddressInfo';
     city?: Maybe<Scalars['String']['output']>;
@@ -336,6 +351,13 @@ export type CreatePersonalDataInput = {
 };
 export type CreatePhoneInput = {
     number: Scalars['String']['input'];
+};
+export type CreatePortfolioCleanupInput = {
+    cleanupDate: Scalars['DateTime']['input'];
+    description?: InputMaybe<Scalars['String']['input']>;
+    maxSignDate: Scalars['DateTime']['input'];
+    name: Scalars['String']['input'];
+    routeId?: InputMaybe<Scalars['String']['input']>;
 };
 export type CreateRouteInput = {
     name: Scalars['String']['input'];
@@ -612,6 +634,7 @@ export type LocalityReport = {
 };
 export type LocalitySummary = {
     __typename?: 'LocalitySummary';
+    alCorrientePromedio: Scalars['Float']['output'];
     balance: Scalars['Int']['output'];
     cvPromedio: Scalars['Float']['output'];
     porcentajePagando: Scalars['Float']['output'];
@@ -712,11 +735,13 @@ export type Mutation = {
     createLoanPayment: LoanPayment;
     createLoansInBatch: Array<Loan>;
     createLoantype: Loantype;
+    createPortfolioCleanup: PortfolioCleanup;
     createRoute: Route;
     createTransaction: Transaction;
     createUser: User;
     deleteDocumentPhoto: Scalars['Boolean']['output'];
     deleteLoanPayment: LoanPayment;
+    deletePortfolioCleanup: Scalars['Boolean']['output'];
     deleteTransaction: Scalars['Boolean']['output'];
     deleteUser: Scalars['Boolean']['output'];
     finishLoan: Loan;
@@ -739,6 +764,7 @@ export type Mutation = {
     updateLoantype: Loantype;
     updatePersonalData: PersonalData;
     updatePhone: Phone;
+    updatePortfolioCleanup: PortfolioCleanup;
     updateRoute: Route;
     updateTransaction: Transaction;
     updateUser: User;
@@ -779,6 +805,9 @@ export type MutationCreateLoansInBatchArgs = {
 export type MutationCreateLoantypeArgs = {
     input: CreateLoantypeInput;
 };
+export type MutationCreatePortfolioCleanupArgs = {
+    input: CreatePortfolioCleanupInput;
+};
 export type MutationCreateRouteArgs = {
     input: CreateRouteInput;
 };
@@ -792,6 +821,9 @@ export type MutationDeleteDocumentPhotoArgs = {
     id: Scalars['ID']['input'];
 };
 export type MutationDeleteLoanPaymentArgs = {
+    id: Scalars['ID']['input'];
+};
+export type MutationDeletePortfolioCleanupArgs = {
     id: Scalars['ID']['input'];
 };
 export type MutationDeleteTransactionArgs = {
@@ -873,6 +905,10 @@ export type MutationUpdatePersonalDataArgs = {
 };
 export type MutationUpdatePhoneArgs = {
     input: UpdatePhoneInput;
+};
+export type MutationUpdatePortfolioCleanupArgs = {
+    id: Scalars['ID']['input'];
+    input: UpdatePortfolioCleanupInput;
 };
 export type MutationUpdateRouteArgs = {
     id: Scalars['ID']['input'];
@@ -962,6 +998,19 @@ export type Phone = {
     number: Scalars['String']['output'];
     personalData: PersonalData;
 };
+export type PortfolioCleanup = {
+    __typename?: 'PortfolioCleanup';
+    cleanupDate: Scalars['DateTime']['output'];
+    createdAt: Scalars['DateTime']['output'];
+    description?: Maybe<Scalars['String']['output']>;
+    excludedAmount: Scalars['Decimal']['output'];
+    excludedLoansCount: Scalars['Int']['output'];
+    executedBy: User;
+    id: Scalars['ID']['output'];
+    name: Scalars['String']['output'];
+    route?: Maybe<Route>;
+    toDate?: Maybe<Scalars['DateTime']['output']>;
+};
 export type PortfolioFiltersInput = {
     loantypeIds?: InputMaybe<Array<Scalars['ID']['input']>>;
     locationIds?: InputMaybe<Array<Scalars['ID']['input']>>;
@@ -1021,8 +1070,10 @@ export type Query = {
     locations: Array<Location>;
     me?: Maybe<User>;
     portfolioByLocality: LocalityReport;
+    portfolioCleanups: Array<PortfolioCleanup>;
     portfolioReportMonthly: PortfolioReport;
     portfolioReportWeekly: PortfolioReport;
+    previewPortfolioCleanup: CleanupPreview;
     route?: Maybe<Route>;
     routes: Array<Route>;
     searchBorrowers: Array<BorrowerSearchResult>;
@@ -1134,6 +1185,10 @@ export type QueryPortfolioByLocalityArgs = {
     month: Scalars['Int']['input'];
     year: Scalars['Int']['input'];
 };
+export type QueryPortfolioCleanupsArgs = {
+    limit?: InputMaybe<Scalars['Int']['input']>;
+    offset?: InputMaybe<Scalars['Int']['input']>;
+};
 export type QueryPortfolioReportMonthlyArgs = {
     filters?: InputMaybe<PortfolioFiltersInput>;
     month: Scalars['Int']['input'];
@@ -1143,6 +1198,10 @@ export type QueryPortfolioReportWeeklyArgs = {
     filters?: InputMaybe<PortfolioFiltersInput>;
     weekNumber: Scalars['Int']['input'];
     year: Scalars['Int']['input'];
+};
+export type QueryPreviewPortfolioCleanupArgs = {
+    maxSignDate: Scalars['DateTime']['input'];
+    routeId?: InputMaybe<Scalars['ID']['input']>;
 };
 export type QueryRouteArgs = {
     id: Scalars['ID']['input'];
@@ -1340,6 +1399,11 @@ export type UpdatePhoneInput = {
     personalDataId: Scalars['ID']['input'];
     phoneId?: InputMaybe<Scalars['ID']['input']>;
 };
+export type UpdatePortfolioCleanupInput = {
+    cleanupDate?: InputMaybe<Scalars['DateTime']['input']>;
+    description?: InputMaybe<Scalars['String']['input']>;
+    name?: InputMaybe<Scalars['String']['input']>;
+};
 export type UpdateRouteInput = {
     isActive?: InputMaybe<Scalars['Boolean']['input']>;
     name?: InputMaybe<Scalars['String']['input']>;
@@ -1448,6 +1512,8 @@ export type ResolversTypes = ResolversObject<{
     Borrower: ResolverTypeWrapper<Borrower>;
     BorrowerSearchResult: ResolverTypeWrapper<BorrowerSearchResult>;
     CVStatus: CvStatus;
+    CleanupLoanPreview: ResolverTypeWrapper<CleanupLoanPreview>;
+    CleanupPreview: ResolverTypeWrapper<CleanupPreview>;
     ClientAddressInfo: ResolverTypeWrapper<ClientAddressInfo>;
     ClientBalanceData: ResolverTypeWrapper<ClientBalanceData>;
     ClientCategory: ClientCategory;
@@ -1468,6 +1534,7 @@ export type ResolversTypes = ResolversObject<{
     CreateLoantypeInput: CreateLoantypeInput;
     CreatePersonalDataInput: CreatePersonalDataInput;
     CreatePhoneInput: CreatePhoneInput;
+    CreatePortfolioCleanupInput: CreatePortfolioCleanupInput;
     CreateRouteInput: CreateRouteInput;
     CreateSingleLoanInput: CreateSingleLoanInput;
     CreateTransactionInput: CreateTransactionInput;
@@ -1515,6 +1582,7 @@ export type ResolversTypes = ResolversObject<{
     PeriodType: PeriodType;
     PersonalData: ResolverTypeWrapper<PersonalData>;
     Phone: ResolverTypeWrapper<Phone>;
+    PortfolioCleanup: ResolverTypeWrapper<PortfolioCleanup>;
     PortfolioFiltersInput: PortfolioFiltersInput;
     PortfolioReport: ResolverTypeWrapper<PortfolioReport>;
     PortfolioSummary: ResolverTypeWrapper<PortfolioSummary>;
@@ -1543,6 +1611,7 @@ export type ResolversTypes = ResolversObject<{
     UpdatePaymentForLeadInput: UpdatePaymentForLeadInput;
     UpdatePersonalDataInput: UpdatePersonalDataInput;
     UpdatePhoneInput: UpdatePhoneInput;
+    UpdatePortfolioCleanupInput: UpdatePortfolioCleanupInput;
     UpdateRouteInput: UpdateRouteInput;
     UpdateTransactionInput: UpdateTransactionInput;
     UpdateUserInput: UpdateUserInput;
@@ -1567,6 +1636,8 @@ export type ResolversParentTypes = ResolversObject<{
     Boolean: Scalars['Boolean']['output'];
     Borrower: Borrower;
     BorrowerSearchResult: BorrowerSearchResult;
+    CleanupLoanPreview: CleanupLoanPreview;
+    CleanupPreview: CleanupPreview;
     ClientAddressInfo: ClientAddressInfo;
     ClientBalanceData: ClientBalanceData;
     ClientHistoryData: ClientHistoryData;
@@ -1586,6 +1657,7 @@ export type ResolversParentTypes = ResolversObject<{
     CreateLoantypeInput: CreateLoantypeInput;
     CreatePersonalDataInput: CreatePersonalDataInput;
     CreatePhoneInput: CreatePhoneInput;
+    CreatePortfolioCleanupInput: CreatePortfolioCleanupInput;
     CreateRouteInput: CreateRouteInput;
     CreateSingleLoanInput: CreateSingleLoanInput;
     CreateTransactionInput: CreateTransactionInput;
@@ -1628,6 +1700,7 @@ export type ResolversParentTypes = ResolversObject<{
     PeriodComparison: PeriodComparison;
     PersonalData: PersonalData;
     Phone: Phone;
+    PortfolioCleanup: PortfolioCleanup;
     PortfolioFiltersInput: PortfolioFiltersInput;
     PortfolioReport: PortfolioReport;
     PortfolioSummary: PortfolioSummary;
@@ -1654,6 +1727,7 @@ export type ResolversParentTypes = ResolversObject<{
     UpdatePaymentForLeadInput: UpdatePaymentForLeadInput;
     UpdatePersonalDataInput: UpdatePersonalDataInput;
     UpdatePhoneInput: UpdatePhoneInput;
+    UpdatePortfolioCleanupInput: UpdatePortfolioCleanupInput;
     UpdateRouteInput: UpdateRouteInput;
     UpdateTransactionInput: UpdateTransactionInput;
     UpdateUserInput: UpdateUserInput;
@@ -1758,6 +1832,21 @@ export type BorrowerSearchResultResolvers<ContextType = GraphQLContext, ParentTy
     locationName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
     pendingDebtAmount?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
     personalData?: Resolver<ResolversTypes['PersonalData'], ParentType, ContextType>;
+    __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+export type CleanupLoanPreviewResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['CleanupLoanPreview'] = ResolversParentTypes['CleanupLoanPreview']> = ResolversObject<{
+    clientCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+    clientName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+    id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+    pendingAmount?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+    routeName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+    signDate?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+    __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+export type CleanupPreviewResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['CleanupPreview'] = ResolversParentTypes['CleanupPreview']> = ResolversObject<{
+    sampleLoans?: Resolver<Array<ResolversTypes['CleanupLoanPreview']>, ParentType, ContextType>;
+    totalLoans?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+    totalPendingAmount?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
     __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 export type ClientAddressInfoResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ClientAddressInfo'] = ResolversParentTypes['ClientAddressInfo']> = ResolversObject<{
@@ -2063,6 +2152,7 @@ export type LocalityReportResolvers<ContextType = GraphQLContext, ParentType ext
     __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 export type LocalitySummaryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['LocalitySummary'] = ResolversParentTypes['LocalitySummary']> = ResolversObject<{
+    alCorrientePromedio?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
     balance?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
     cvPromedio?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
     porcentajePagando?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
@@ -2162,11 +2252,13 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
     createLoanPayment?: Resolver<ResolversTypes['LoanPayment'], ParentType, ContextType, RequireFields<MutationCreateLoanPaymentArgs, 'input'>>;
     createLoansInBatch?: Resolver<Array<ResolversTypes['Loan']>, ParentType, ContextType, RequireFields<MutationCreateLoansInBatchArgs, 'input'>>;
     createLoantype?: Resolver<ResolversTypes['Loantype'], ParentType, ContextType, RequireFields<MutationCreateLoantypeArgs, 'input'>>;
+    createPortfolioCleanup?: Resolver<ResolversTypes['PortfolioCleanup'], ParentType, ContextType, RequireFields<MutationCreatePortfolioCleanupArgs, 'input'>>;
     createRoute?: Resolver<ResolversTypes['Route'], ParentType, ContextType, RequireFields<MutationCreateRouteArgs, 'input'>>;
     createTransaction?: Resolver<ResolversTypes['Transaction'], ParentType, ContextType, RequireFields<MutationCreateTransactionArgs, 'input'>>;
     createUser?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationCreateUserArgs, 'input'>>;
     deleteDocumentPhoto?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteDocumentPhotoArgs, 'id'>>;
     deleteLoanPayment?: Resolver<ResolversTypes['LoanPayment'], ParentType, ContextType, RequireFields<MutationDeleteLoanPaymentArgs, 'id'>>;
+    deletePortfolioCleanup?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeletePortfolioCleanupArgs, 'id'>>;
     deleteTransaction?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteTransactionArgs, 'id'>>;
     deleteUser?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteUserArgs, 'id'>>;
     finishLoan?: Resolver<ResolversTypes['Loan'], ParentType, ContextType, RequireFields<MutationFinishLoanArgs, 'loanId'>>;
@@ -2189,6 +2281,7 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
     updateLoantype?: Resolver<ResolversTypes['Loantype'], ParentType, ContextType, RequireFields<MutationUpdateLoantypeArgs, 'id' | 'input'>>;
     updatePersonalData?: Resolver<ResolversTypes['PersonalData'], ParentType, ContextType, RequireFields<MutationUpdatePersonalDataArgs, 'fullName' | 'id'>>;
     updatePhone?: Resolver<ResolversTypes['Phone'], ParentType, ContextType, RequireFields<MutationUpdatePhoneArgs, 'input'>>;
+    updatePortfolioCleanup?: Resolver<ResolversTypes['PortfolioCleanup'], ParentType, ContextType, RequireFields<MutationUpdatePortfolioCleanupArgs, 'id' | 'input'>>;
     updateRoute?: Resolver<ResolversTypes['Route'], ParentType, ContextType, RequireFields<MutationUpdateRouteArgs, 'id' | 'input'>>;
     updateTransaction?: Resolver<ResolversTypes['Transaction'], ParentType, ContextType, RequireFields<MutationUpdateTransactionArgs, 'id' | 'input'>>;
     updateUser?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationUpdateUserArgs, 'id' | 'input'>>;
@@ -2253,6 +2346,19 @@ export type PhoneResolvers<ContextType = GraphQLContext, ParentType extends Reso
     personalData?: Resolver<ResolversTypes['PersonalData'], ParentType, ContextType>;
     __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
+export type PortfolioCleanupResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['PortfolioCleanup'] = ResolversParentTypes['PortfolioCleanup']> = ResolversObject<{
+    cleanupDate?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+    createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+    description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+    excludedAmount?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+    excludedLoansCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+    executedBy?: Resolver<ResolversTypes['User'], ParentType, ContextType>;
+    id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+    name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+    route?: Resolver<Maybe<ResolversTypes['Route']>, ParentType, ContextType>;
+    toDate?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
+    __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
 export type PortfolioReportResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['PortfolioReport'] = ResolversParentTypes['PortfolioReport']> = ResolversObject<{
     byLocation?: Resolver<Array<ResolversTypes['LocationBreakdown']>, ParentType, ContextType>;
     month?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
@@ -2303,8 +2409,10 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
     locations?: Resolver<Array<ResolversTypes['Location']>, ParentType, ContextType, Partial<QueryLocationsArgs>>;
     me?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType>;
     portfolioByLocality?: Resolver<ResolversTypes['LocalityReport'], ParentType, ContextType, RequireFields<QueryPortfolioByLocalityArgs, 'month' | 'year'>>;
+    portfolioCleanups?: Resolver<Array<ResolversTypes['PortfolioCleanup']>, ParentType, ContextType, Partial<QueryPortfolioCleanupsArgs>>;
     portfolioReportMonthly?: Resolver<ResolversTypes['PortfolioReport'], ParentType, ContextType, RequireFields<QueryPortfolioReportMonthlyArgs, 'month' | 'year'>>;
     portfolioReportWeekly?: Resolver<ResolversTypes['PortfolioReport'], ParentType, ContextType, RequireFields<QueryPortfolioReportWeeklyArgs, 'weekNumber' | 'year'>>;
+    previewPortfolioCleanup?: Resolver<ResolversTypes['CleanupPreview'], ParentType, ContextType, RequireFields<QueryPreviewPortfolioCleanupArgs, 'maxSignDate'>>;
     route?: Resolver<Maybe<ResolversTypes['Route']>, ParentType, ContextType, RequireFields<QueryRouteArgs, 'id'>>;
     routes?: Resolver<Array<ResolversTypes['Route']>, ParentType, ContextType>;
     searchBorrowers?: Resolver<Array<ResolversTypes['BorrowerSearchResult']>, ParentType, ContextType, RequireFields<QuerySearchBorrowersArgs, 'searchTerm'>>;
@@ -2420,6 +2528,8 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
     BadDebtSummary?: BadDebtSummaryResolvers<ContextType>;
     Borrower?: BorrowerResolvers<ContextType>;
     BorrowerSearchResult?: BorrowerSearchResultResolvers<ContextType>;
+    CleanupLoanPreview?: CleanupLoanPreviewResolvers<ContextType>;
+    CleanupPreview?: CleanupPreviewResolvers<ContextType>;
     ClientAddressInfo?: ClientAddressInfoResolvers<ContextType>;
     ClientBalanceData?: ClientBalanceDataResolvers<ContextType>;
     ClientHistoryData?: ClientHistoryDataResolvers<ContextType>;
@@ -2461,6 +2571,7 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
     PeriodComparison?: PeriodComparisonResolvers<ContextType>;
     PersonalData?: PersonalDataResolvers<ContextType>;
     Phone?: PhoneResolvers<ContextType>;
+    PortfolioCleanup?: PortfolioCleanupResolvers<ContextType>;
     PortfolioReport?: PortfolioReportResolvers<ContextType>;
     PortfolioSummary?: PortfolioSummaryResolvers<ContextType>;
     Query?: QueryResolvers<ContextType>;

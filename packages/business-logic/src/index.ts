@@ -4,6 +4,7 @@ export * from './calculations/payment'
 export * from './calculations/metrics'
 export * from './calculations/active-week'
 export * from './calculations/portfolio'
+export * from './calculations/vdo'
 
 // Export types
 export * from './types/portfolio'

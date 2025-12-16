@@ -10,13 +10,15 @@ export function formatDate(date: Date): string {
 }
 
 /**
- * Obtiene la fecha de inicio de la semana
+ * Obtiene la fecha de inicio de la semana (lunes) según ISO 8601
+ * Resetea horas a 00:00:00.000
  */
 export function getStartOfWeek(date: Date): Date {
   const d = new Date(date)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1) // Lunes como inicio
-  return new Date(d.setDate(diff))
+  const isoDow = (d.getDay() + 6) % 7 // 0 = Lunes, 6 = Domingo
+  d.setDate(d.getDate() - isoDow)
+  d.setHours(0, 0, 0, 0)
+  return d
 }
 
 /**
@@ -44,4 +46,44 @@ export function getWeekNumber(date: Date): number {
 export function daysBetween(date1: Date, date2: Date): number {
   const oneDay = 24 * 60 * 60 * 1000
   return Math.round(Math.abs((date1.getTime() - date2.getTime()) / oneDay))
+}
+
+/**
+ * Formatea una fecha en formato corto (dd/mm/aaaa)
+ * Acepta Date, string o null
+ */
+export function formatDateShort(date: Date | string | null): string {
+  if (!date) return ''
+  const d = typeof date === 'string' ? new Date(date) : date
+  return d.toLocaleDateString('es-MX', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  })
+}
+
+/**
+ * Formatea una fecha en formato muy compacto (dd/mm/aa)
+ */
+export function formatDateCompact(date: Date): string {
+  return date.toLocaleDateString('es-MX', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit'
+  })
+}
+
+/**
+ * Obtiene el nombre del mes de una fecha
+ */
+export function getMonthName(date: Date): string {
+  return date.toLocaleDateString('es-MX', { month: 'long' })
+}
+
+/**
+ * Calcula el número de semana dentro del mes
+ */
+export function getWeekNumberInMonth(date: Date): number {
+  const dayOfMonth = date.getDate()
+  return Math.ceil(dayOfMonth / 7)
 }

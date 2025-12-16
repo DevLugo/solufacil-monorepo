@@ -61,7 +61,16 @@ export const personalDataResolvers = {
   },
 
   PersonalData: {
-    // Los phones y addresses ya vienen incluidos normalmente
+    // Resolver para addresses que retorna array vacío si es null
+    addresses: (parent: { addresses?: unknown[] | null }) => {
+      return parent.addresses ?? []
+    },
+
+    // Resolver para phones que retorna array vacío si es null
+    phones: (parent: { phones?: unknown[] | null }) => {
+      return parent.phones ?? []
+    },
+
     employee: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
       return context.prisma.employee.findFirst({
         where: { personalData: parent.id },

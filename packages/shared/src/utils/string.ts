@@ -27,3 +27,23 @@ export function formatPhoneNumber(phone: string): string {
   }
   return phone
 }
+
+/**
+ * Genera un código corto alfanumérico desde un ID
+ * Útil para mostrar IDs largos de forma compacta
+ */
+export function generateShortCode(id?: string, length: number = 6): string {
+  if (!id) return ''
+  const base = id.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
+  return base.slice(-length)
+}
+
+/**
+ * Convierte un string a slug (URL-friendly)
+ */
+export function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^\w-]+/g, '')
+}

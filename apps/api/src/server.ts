@@ -9,6 +9,7 @@ import { createContext } from './context'
 import { prisma } from '@solufacil/database'
 import { ClientHistoryService } from './services/ClientHistoryService'
 import { PdfService } from './services/PdfService'
+import { ListadoPDFService } from './services/ListadoPDFService'
 
 async function startServer() {
   const app = express()
@@ -43,9 +44,10 @@ async function startServer() {
     }) as unknown as express.RequestHandler
   )
 
-  // PDF Export endpoint
+  // PDF Export endpoints
   const clientHistoryService = new ClientHistoryService(prisma)
   const pdfService = new PdfService()
+  const listadoPDFService = new ListadoPDFService(prisma)
 
   app.post(
     '/api/export-client-history-pdf',
@@ -71,6 +73,54 @@ async function startServer() {
         res.send(pdfBuffer)
       } catch (error) {
         console.error('PDF generation error:', error)
+        res.status(500).json({ error: 'Failed to generate PDF' })
+      }
+    }
+  )
+
+  // Generar Listados endpoint
+  app.get(
+    '/api/generar-listados',
+    cors(corsOptions),
+    async (req, res) => {
+      try {
+        const { localityId, routeId, localityName, routeName, leaderName, leaderId, weekMode } = req.query
+
+        if (!localityId || !routeId || !localityName || !routeName) {
+          res.status(400).json({
+            error: 'Missing required parameters: localityId, routeId, localityName, routeName'
+          })
+          return
+        }
+
+        const pdfBuffer = await listadoPDFService.generateListadoPDF({
+          localityId: localityId as string,
+          routeId: routeId as string,
+          localityName: localityName as string,
+          routeName: routeName as string,
+          leaderName: (leaderName as string) || 'Sin asignar',
+          leaderId: leaderId as string,
+          weekMode: (weekMode as string) === 'current' ? 'current' : 'next'
+        })
+
+        // Generar nombre de archivo
+        const localitySlug = (localityName as string).replace(/\s+/g, '_').toLowerCase()
+        const currentDate = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: '2-digit' })
+        const currentMonthName = new Date().toLocaleDateString('es-MX', { month: 'long' })
+
+        // Calcular número de semana del mes
+        const today = new Date()
+        const dayOfMonth = today.getDate()
+        const weekNumberInMonth = Math.ceil(dayOfMonth / 7)
+        const weekNumber = (weekMode as string) === 'next' ? weekNumberInMonth + 1 : weekNumberInMonth
+
+        const filename = `listado_${localitySlug}_semana_${weekNumber}_${currentMonthName}_${currentDate}.pdf`
+
+        res.setHeader('Content-Type', 'application/pdf')
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`)
+        res.send(pdfBuffer)
+      } catch (error) {
+        console.error('Error generating listado PDF:', error)
         res.status(500).json({ error: 'Failed to generate PDF' })
       }
     }

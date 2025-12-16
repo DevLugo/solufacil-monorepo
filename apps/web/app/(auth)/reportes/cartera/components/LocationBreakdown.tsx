@@ -33,10 +33,13 @@ interface RouteDeltas {
   clientesDelta: number
   pagandoDelta: number
   cvDelta: number
-  // Last week values (not averages)
+  // Last week values (for Clientes which shows last week total)
   lastWeekClientes: number
   lastWeekPagando: number
   lastWeekCV: number
+  // Averages (for Pagando and CV which show averages)
+  pagandoPromedio: number
+  cvPromedio: number
 }
 
 // Inline delta badge
@@ -65,10 +68,10 @@ function RouteCard({
   deltas?: RouteDeltas
   onClick: () => void
 }) {
-  // Use last week values if available, otherwise fall back to location data
+  // Clientes = last week total, Pagando/CV = averages
   const clientes = deltas?.lastWeekClientes ?? location.clientesActivos
-  const pagando = deltas?.lastWeekPagando ?? location.clientesAlCorriente
-  const cv = deltas?.lastWeekCV ?? location.clientesEnCV
+  const pagando = deltas?.pagandoPromedio ?? location.clientesAlCorriente
+  const cv = deltas?.cvPromedio ?? location.clientesEnCV
 
   const cvPercentage = clientes > 0 ? (cv / clientes) * 100 : 0
   const pagandoPercentage = clientes > 0 ? (pagando / clientes) * 100 : 0
@@ -170,6 +173,10 @@ function RouteCardsView({
       let lastWeekClientes = 0
       let lastWeekPagando = 0
       let lastWeekCV = 0
+      // For averages: sum all values across all completed weeks
+      let totalPagandoSum = 0
+      let totalCvSum = 0
+      let totalCompletedWeeks = 0
 
       for (const loc of localities) {
         const weeklyData = loc.weeklyData || []
@@ -186,8 +193,23 @@ function RouteCardsView({
           lastWeekClientes += lastWeek.clientesActivos
           lastWeekPagando += lastWeek.clientesAlCorriente
           lastWeekCV += lastWeek.clientesEnCV
+
+          // Sum all completed weeks for average calculation
+          for (const week of completedWeeks) {
+            totalPagandoSum += week.clientesAlCorriente
+            totalCvSum += week.clientesEnCV
+            totalCompletedWeeks++
+          }
         }
       }
+
+      // Calculate averages
+      const pagandoPromedio = totalCompletedWeeks > 0
+        ? Math.round(totalPagandoSum / totalCompletedWeeks)
+        : lastWeekPagando
+      const cvPromedio = totalCompletedWeeks > 0
+        ? Math.round(totalCvSum / totalCompletedWeeks)
+        : lastWeekCV
 
       deltasMap.set(routeId, {
         clientesDelta: lastWeekClientes - firstWeekClientes,
@@ -196,6 +218,8 @@ function RouteCardsView({
         lastWeekClientes,
         lastWeekPagando,
         lastWeekCV,
+        pagandoPromedio,
+        cvPromedio,
       })
     }
 
@@ -214,19 +238,19 @@ function RouteCardsView({
       { activos: 0, alCorriente: 0, enCV: 0, balance: 0 }
     )
 
-    // Calculate total deltas and last week totals from weekly data
+    // Calculate total deltas, last week totals, and averages from weekly data
     let totalPagandoDelta = 0
     let totalCvDelta = 0
     let lastWeekClientes = 0
-    let lastWeekPagando = 0
-    let lastWeekCV = 0
+    let totalPagandoPromedio = 0
+    let totalCvPromedio = 0
 
     for (const deltas of routeDeltas.values()) {
       totalPagandoDelta += deltas.pagandoDelta
       totalCvDelta += deltas.cvDelta
       lastWeekClientes += deltas.lastWeekClientes
-      lastWeekPagando += deltas.lastWeekPagando
-      lastWeekCV += deltas.lastWeekCV
+      totalPagandoPromedio += deltas.pagandoPromedio
+      totalCvPromedio += deltas.cvPromedio
     }
 
     return {
@@ -234,8 +258,9 @@ function RouteCardsView({
       pagandoDelta: totalPagandoDelta,
       cvDelta: totalCvDelta,
       lastWeekClientes: lastWeekClientes || base.activos,
-      lastWeekPagando: lastWeekPagando || base.alCorriente,
-      lastWeekCV: lastWeekCV || base.enCV,
+      // Use averages for Pagando and CV
+      pagandoPromedio: totalPagandoPromedio || base.alCorriente,
+      cvPromedio: totalCvPromedio || base.enCV,
     }
   }, [locations, routeDeltas])
 
@@ -271,7 +296,7 @@ function RouteCardsView({
           </div>
           <div className="bg-green-50 dark:bg-green-950/30 rounded px-3 py-2">
             <div className="flex items-center justify-center">
-              <span className="text-2xl font-bold text-green-600 dark:text-green-400">{totals.lastWeekPagando}</span>
+              <span className="text-2xl font-bold text-green-600 dark:text-green-400">{totals.pagandoPromedio}</span>
               <InlineDelta value={totals.pagandoDelta} />
             </div>
             <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
@@ -280,7 +305,7 @@ function RouteCardsView({
           </div>
           <div className="bg-red-50 dark:bg-red-950/30 rounded px-3 py-2">
             <div className="flex items-center justify-center">
-              <span className="text-2xl font-bold text-red-600 dark:text-red-400">{totals.lastWeekCV}</span>
+              <span className="text-2xl font-bold text-red-600 dark:text-red-400">{totals.cvPromedio}</span>
               <InlineDelta value={totals.cvDelta} inverted />
             </div>
             <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
@@ -294,16 +319,16 @@ function RouteCardsView({
             <div className="h-2 rounded-full bg-muted overflow-hidden flex">
               <div
                 className="h-full bg-green-500 dark:bg-green-600"
-                style={{ width: `${(totals.lastWeekPagando / totals.lastWeekClientes) * 100}%` }}
+                style={{ width: `${(totals.pagandoPromedio / totals.lastWeekClientes) * 100}%` }}
               />
               <div
                 className="h-full bg-red-500 dark:bg-red-600"
-                style={{ width: `${(totals.lastWeekCV / totals.lastWeekClientes) * 100}%` }}
+                style={{ width: `${(totals.cvPromedio / totals.lastWeekClientes) * 100}%` }}
               />
             </div>
             <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{((totals.lastWeekPagando / totals.lastWeekClientes) * 100).toFixed(0)}% pagando</span>
-              <span>{((totals.lastWeekCV / totals.lastWeekClientes) * 100).toFixed(0)}% CV</span>
+              <span>{((totals.pagandoPromedio / totals.lastWeekClientes) * 100).toFixed(0)}% pagando</span>
+              <span>{((totals.cvPromedio / totals.lastWeekClientes) * 100).toFixed(0)}% CV</span>
             </div>
           </div>
         )}
@@ -367,11 +392,12 @@ export function LocationBreakdown({
   }
 
   // Filter localities by selected route for drill-down view
+  // IMPORTANT: Use same matching logic as RouteCardsView routeDeltas (loc.routeId || loc.localityId)
   const filteredLocalityReport = useMemo(() => {
     if (!localityReport || !selectedRouteId) return localityReport
 
     const filteredLocalities = localityReport.localities.filter(
-      (loc) => loc.routeId === selectedRouteId
+      (loc) => (loc.routeId || loc.localityId) === selectedRouteId
     )
 
     // Recalculate totals for filtered data
@@ -404,16 +430,17 @@ export function LocationBreakdown({
       }
     )
 
-    // Calculate averages (with fallback for cached data without new fields)
+    // Calculate averages - SUM locality averages (not average of averages)
+    // This matches the RouteCard calculation which sums weekly averages
     if (filteredLocalities.length > 0) {
       totals.alCorrientePromedio = filteredLocalities.reduce(
         (sum, loc) => sum + (loc.summary.alCorrientePromedio ?? loc.summary.totalClientesAlCorriente ?? 0),
         0
-      ) / filteredLocalities.length
+      )
       totals.cvPromedio = filteredLocalities.reduce(
         (sum, loc) => sum + (loc.summary.cvPromedio ?? loc.summary.totalClientesEnCV ?? 0),
         0
-      ) / filteredLocalities.length
+      )
       totals.porcentajePagando = totals.totalClientesActivos > 0
         ? (totals.totalClientesAlCorriente / totals.totalClientesActivos) * 100
         : 0

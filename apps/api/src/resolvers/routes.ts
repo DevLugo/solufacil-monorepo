@@ -70,7 +70,16 @@ export const routeResolvers = {
         include: {
           employees: {
             include: {
-              personalDataRelation: true,
+              personalDataRelation: {
+                include: {
+                  addresses: {
+                    include: {
+                      locationRelation: true,
+                    },
+                  },
+                  phones: true,
+                },
+              },
             },
           },
         },
