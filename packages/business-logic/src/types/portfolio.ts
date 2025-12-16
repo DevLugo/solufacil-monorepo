@@ -81,6 +81,8 @@ export interface LoanForPortfolio {
   excludedByCleanup: string | null
   /** ID del préstamo anterior (null si es primer préstamo) */
   previousLoan: string | null
+  /** Status del préstamo (usado como fallback para renovaciones) */
+  status?: string
 }
 
 /**

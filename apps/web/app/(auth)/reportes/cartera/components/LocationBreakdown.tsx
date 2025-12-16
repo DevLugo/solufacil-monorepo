@@ -8,10 +8,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { MapPin, Users, UserX, UserCheck, ChevronRight, ArrowLeft, Route } from 'lucide-react'
+import { MapPin, ChevronRight, ArrowLeft, Route } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type {
   LocationBreakdown as LocationBreakdownType,
@@ -29,87 +28,110 @@ interface LocationBreakdownProps {
   month: number
 }
 
+// Route deltas calculated from weekly data
+interface RouteDeltas {
+  clientesDelta: number
+  pagandoDelta: number
+  cvDelta: number
+  // Last week values (not averages)
+  lastWeekClientes: number
+  lastWeekPagando: number
+  lastWeekCV: number
+}
+
+// Inline delta badge
+function InlineDelta({ value, inverted = false }: { value: number; inverted?: boolean }) {
+  if (value === 0) return null
+  const isPositive = inverted ? value < 0 : value > 0
+  const isNegative = inverted ? value > 0 : value < 0
+
+  return (
+    <span className={cn(
+      'text-[10px] font-medium ml-1',
+      isPositive ? 'text-green-600' : isNegative ? 'text-red-600' : 'text-muted-foreground'
+    )}>
+      {value > 0 ? '+' : ''}{value}
+    </span>
+  )
+}
+
 // Clickable route card for drill-down navigation
 function RouteCard({
   location,
+  deltas,
   onClick,
 }: {
   location: LocationBreakdownType
+  deltas?: RouteDeltas
   onClick: () => void
 }) {
-  const cvPercentage = location.clientesActivos > 0
-    ? (location.clientesEnCV / location.clientesActivos) * 100
-    : 0
+  // Use last week values if available, otherwise fall back to location data
+  const clientes = deltas?.lastWeekClientes ?? location.clientesActivos
+  const pagando = deltas?.lastWeekPagando ?? location.clientesAlCorriente
+  const cv = deltas?.lastWeekCV ?? location.clientesEnCV
 
-  const alCorrientePercentage = location.clientesActivos > 0
-    ? (location.clientesAlCorriente / location.clientesActivos) * 100
-    : 0
+  const cvPercentage = clientes > 0 ? (cv / clientes) * 100 : 0
+  const pagandoPercentage = clientes > 0 ? (pagando / clientes) * 100 : 0
 
   return (
     <button
       onClick={onClick}
-      className="w-full text-left rounded-lg border bg-card p-4 hover:bg-muted/50 hover:border-primary/50 transition-all group cursor-pointer"
+      className="w-full text-left rounded-lg border bg-card p-3 hover:bg-muted/50 hover:border-primary/50 transition-all group cursor-pointer"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Route className="h-4 w-4 text-muted-foreground" />
-          <h4 className="font-semibold">{location.routeName || location.locationName}</h4>
+          <h4 className="font-semibold text-sm">{location.routeName || location.locationName}</h4>
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
       </div>
 
-      {/* Stats - Equal visual weight for Activos, OK, and CV */}
-      <div className="grid grid-cols-3 gap-2 text-center mb-3">
-        <div className="bg-muted/50 rounded p-2">
-          <span className="text-lg font-bold">{location.clientesActivos}</span>
-          <p className="text-xs text-muted-foreground">Activos</p>
+      {/* Stats - Clientes (última semana), Pagando y CV (promedios) with inline deltas */}
+      <div className="grid grid-cols-3 gap-1.5 text-center mb-2">
+        <div className="bg-muted/50 rounded px-2 py-1.5">
+          <div className="flex items-center justify-center">
+            <span className="text-base font-bold">{clientes}</span>
+            <InlineDelta value={location.balance} />
+          </div>
+          <p className="text-[10px] text-muted-foreground">Clientes</p>
         </div>
-        <div className="bg-green-50 dark:bg-green-950/30 rounded p-2">
-          <span className="text-lg font-bold text-green-600 dark:text-green-400">
-            {location.clientesAlCorriente}
-          </span>
-          <p className="text-xs text-muted-foreground">OK</p>
+        <div className="bg-green-50 dark:bg-green-950/30 rounded px-2 py-1.5">
+          <div className="flex items-center justify-center">
+            <span className="text-base font-bold text-green-600 dark:text-green-400">{pagando}</span>
+            <InlineDelta value={deltas?.pagandoDelta ?? 0} />
+          </div>
+          <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
+            Pagando <span className="text-[8px] font-semibold text-green-700 dark:text-green-300 bg-green-200 dark:bg-green-800/50 px-1.5 py-0.5 rounded-sm uppercase tracking-wide">prom</span>
+          </p>
         </div>
-        <div className="bg-red-50 dark:bg-red-950/30 rounded p-2">
-          <span className="text-lg font-bold text-red-600 dark:text-red-400">
-            {location.clientesEnCV}
-          </span>
-          <p className="text-xs text-muted-foreground">CV</p>
+        <div className="bg-red-50 dark:bg-red-950/30 rounded px-2 py-1.5">
+          <div className="flex items-center justify-center">
+            <span className="text-base font-bold text-red-600 dark:text-red-400">{cv}</span>
+            <InlineDelta value={deltas?.cvDelta ?? 0} inverted />
+          </div>
+          <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
+            CV <span className="text-[8px] font-semibold text-red-700 dark:text-red-300 bg-red-200 dark:bg-red-800/50 px-1.5 py-0.5 rounded-sm uppercase tracking-wide">prom</span>
+          </p>
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="space-y-1">
-        <div className="h-2 rounded-full bg-muted overflow-hidden flex">
+      <div className="space-y-0.5">
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden flex">
           <div
             className="h-full bg-green-500 dark:bg-green-600"
-            style={{ width: `${alCorrientePercentage}%` }}
+            style={{ width: `${pagandoPercentage}%` }}
           />
           <div
             className="h-full bg-red-500 dark:bg-red-600"
             style={{ width: `${cvPercentage}%` }}
           />
         </div>
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>OK: {alCorrientePercentage.toFixed(0)}%</span>
-          <span>CV: {cvPercentage.toFixed(0)}%</span>
+        <div className="flex justify-between text-[10px] text-muted-foreground">
+          <span>{pagandoPercentage.toFixed(0)}% pagando</span>
+          <span>{cvPercentage.toFixed(0)}% CV</span>
         </div>
-      </div>
-
-      {/* Balance */}
-      <div className="mt-3 pt-3 border-t flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Balance mensual</span>
-        <span className={cn(
-          'text-sm font-semibold',
-          location.balance > 0
-            ? 'text-green-600 dark:text-green-400'
-            : location.balance < 0
-              ? 'text-red-600 dark:text-red-400'
-              : 'text-muted-foreground'
-        )}>
-          {location.balance > 0 ? '+' : ''}{location.balance}
-        </span>
       </div>
     </button>
   )
@@ -117,21 +139,105 @@ function RouteCard({
 
 function RouteCardsView({
   locations,
+  localityReport,
   onRouteClick,
 }: {
   locations: LocationBreakdownType[]
+  localityReport?: LocalityReport | null
   onRouteClick: (routeId: string) => void
 }) {
+  // Calculate deltas from weekly data for each route
+  const routeDeltas = useMemo(() => {
+    if (!localityReport?.localities) return new Map<string, RouteDeltas>()
+
+    const deltasMap = new Map<string, RouteDeltas>()
+
+    // Group localities by route
+    const localitiesByRoute = new Map<string, typeof localityReport.localities>()
+    for (const loc of localityReport.localities) {
+      const routeId = loc.routeId || loc.localityId
+      if (!localitiesByRoute.has(routeId)) {
+        localitiesByRoute.set(routeId, [])
+      }
+      localitiesByRoute.get(routeId)!.push(loc)
+    }
+
+    // Calculate deltas for each route
+    for (const [routeId, localities] of localitiesByRoute) {
+      let firstWeekClientes = 0
+      let firstWeekPagando = 0
+      let firstWeekCV = 0
+      let lastWeekClientes = 0
+      let lastWeekPagando = 0
+      let lastWeekCV = 0
+
+      for (const loc of localities) {
+        const weeklyData = loc.weeklyData || []
+        const completedWeeks = weeklyData.filter(w => w.isCompleted)
+
+        if (completedWeeks.length >= 1) {
+          const firstWeek = completedWeeks[0]
+          const lastWeek = completedWeeks[completedWeeks.length - 1]
+
+          firstWeekClientes += firstWeek.clientesActivos
+          firstWeekPagando += firstWeek.clientesAlCorriente
+          firstWeekCV += firstWeek.clientesEnCV
+
+          lastWeekClientes += lastWeek.clientesActivos
+          lastWeekPagando += lastWeek.clientesAlCorriente
+          lastWeekCV += lastWeek.clientesEnCV
+        }
+      }
+
+      deltasMap.set(routeId, {
+        clientesDelta: lastWeekClientes - firstWeekClientes,
+        pagandoDelta: lastWeekPagando - firstWeekPagando,
+        cvDelta: lastWeekCV - firstWeekCV,
+        lastWeekClientes,
+        lastWeekPagando,
+        lastWeekCV,
+      })
+    }
+
+    return deltasMap
+  }, [localityReport])
+
   // Calculate totals
-  const totals = locations.reduce(
-    (acc, loc) => ({
-      activos: acc.activos + loc.clientesActivos,
-      alCorriente: acc.alCorriente + loc.clientesAlCorriente,
-      enCV: acc.enCV + loc.clientesEnCV,
-      balance: acc.balance + loc.balance,
-    }),
-    { activos: 0, alCorriente: 0, enCV: 0, balance: 0 }
-  )
+  const totals = useMemo(() => {
+    const base = locations.reduce(
+      (acc, loc) => ({
+        activos: acc.activos + loc.clientesActivos,
+        alCorriente: acc.alCorriente + loc.clientesAlCorriente,
+        enCV: acc.enCV + loc.clientesEnCV,
+        balance: acc.balance + loc.balance,
+      }),
+      { activos: 0, alCorriente: 0, enCV: 0, balance: 0 }
+    )
+
+    // Calculate total deltas and last week totals from weekly data
+    let totalPagandoDelta = 0
+    let totalCvDelta = 0
+    let lastWeekClientes = 0
+    let lastWeekPagando = 0
+    let lastWeekCV = 0
+
+    for (const deltas of routeDeltas.values()) {
+      totalPagandoDelta += deltas.pagandoDelta
+      totalCvDelta += deltas.cvDelta
+      lastWeekClientes += deltas.lastWeekClientes
+      lastWeekPagando += deltas.lastWeekPagando
+      lastWeekCV += deltas.lastWeekCV
+    }
+
+    return {
+      ...base,
+      pagandoDelta: totalPagandoDelta,
+      cvDelta: totalCvDelta,
+      lastWeekClientes: lastWeekClientes || base.activos,
+      lastWeekPagando: lastWeekPagando || base.alCorriente,
+      lastWeekCV: lastWeekCV || base.enCV,
+    }
+  }, [locations, routeDeltas])
 
   // Sort by clientes activos descending
   const sortedLocations = [...locations].sort(
@@ -152,20 +258,55 @@ function RouteCardsView({
 
   return (
     <div className="space-y-4">
-      {/* Summary badges */}
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="secondary">
-          <Users className="h-3 w-3 mr-1" />
-          {totals.activos} Activos
-        </Badge>
-        <Badge variant="secondary" className="bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400">
-          <UserCheck className="h-3 w-3 mr-1" />
-          {totals.alCorriente} OK
-        </Badge>
-        <Badge variant="secondary" className="bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400">
-          <UserX className="h-3 w-3 mr-1" />
-          {totals.enCV} CV
-        </Badge>
+      {/* Summary - Compact inline format matching the cards */}
+      <div className="rounded-lg border p-4 bg-muted/30">
+        <p className="text-sm font-medium mb-3">Resumen Total</p>
+        <div className="grid grid-cols-3 gap-3 text-center mb-3">
+          <div className="bg-muted/50 rounded px-3 py-2">
+            <div className="flex items-center justify-center">
+              <span className="text-2xl font-bold">{totals.lastWeekClientes}</span>
+              <InlineDelta value={totals.balance} />
+            </div>
+            <p className="text-xs text-muted-foreground">Clientes</p>
+          </div>
+          <div className="bg-green-50 dark:bg-green-950/30 rounded px-3 py-2">
+            <div className="flex items-center justify-center">
+              <span className="text-2xl font-bold text-green-600 dark:text-green-400">{totals.lastWeekPagando}</span>
+              <InlineDelta value={totals.pagandoDelta} />
+            </div>
+            <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+              Pagando <span className="text-[9px] font-semibold text-green-700 dark:text-green-300 bg-green-200 dark:bg-green-800/50 px-1.5 py-0.5 rounded-sm uppercase tracking-wide">prom</span>
+            </p>
+          </div>
+          <div className="bg-red-50 dark:bg-red-950/30 rounded px-3 py-2">
+            <div className="flex items-center justify-center">
+              <span className="text-2xl font-bold text-red-600 dark:text-red-400">{totals.lastWeekCV}</span>
+              <InlineDelta value={totals.cvDelta} inverted />
+            </div>
+            <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+              CV <span className="text-[9px] font-semibold text-red-700 dark:text-red-300 bg-red-200 dark:bg-red-800/50 px-1.5 py-0.5 rounded-sm uppercase tracking-wide">prom</span>
+            </p>
+          </div>
+        </div>
+        {/* Progress Bar */}
+        {totals.lastWeekClientes > 0 && (
+          <div className="space-y-1">
+            <div className="h-2 rounded-full bg-muted overflow-hidden flex">
+              <div
+                className="h-full bg-green-500 dark:bg-green-600"
+                style={{ width: `${(totals.lastWeekPagando / totals.lastWeekClientes) * 100}%` }}
+              />
+              <div
+                className="h-full bg-red-500 dark:bg-red-600"
+                style={{ width: `${(totals.lastWeekCV / totals.lastWeekClientes) * 100}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{((totals.lastWeekPagando / totals.lastWeekClientes) * 100).toFixed(0)}% pagando</span>
+              <span>{((totals.lastWeekCV / totals.lastWeekClientes) * 100).toFixed(0)}% CV</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Instruction */}
@@ -179,6 +320,7 @@ function RouteCardsView({
           <RouteCard
             key={location.locationId}
             location={location}
+            deltas={routeDeltas.get(location.routeId || location.locationId)}
             onClick={() => onRouteClick(location.routeId || location.locationId)}
           />
         ))}
@@ -346,6 +488,7 @@ export function LocationBreakdown({
             // Default: Show route cards
             <RouteCardsView
               locations={locations}
+              localityReport={localityReport}
               onRouteClick={handleRouteClick}
             />
           )}

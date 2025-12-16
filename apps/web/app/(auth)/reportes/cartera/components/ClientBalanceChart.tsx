@@ -43,7 +43,8 @@ export function ClientBalanceChart({ weeklyData, periodType }: ClientBalanceChar
       clientesActivos: week.clientesActivos,
       clientesEnCV: week.clientesEnCV,
       balance: week.balance,
-      alCorriente: week.clientesActivos - week.clientesEnCV,
+      // Only show "Pagando" for completed weeks
+      alCorriente: week.isCompleted ? week.clientesActivos - week.clientesEnCV : null,
     }))
   }, [weeklyData])
 
@@ -51,6 +52,10 @@ export function ClientBalanceChart({ weeklyData, periodType }: ClientBalanceChar
     clientesActivos: {
       label: 'Clientes Activos',
       color: 'hsl(var(--chart-2))',
+    },
+    alCorriente: {
+      label: 'Pagando',
+      color: 'hsl(var(--chart-4))',
     },
     clientesEnCV: {
       label: 'En CV',
@@ -86,12 +91,12 @@ export function ClientBalanceChart({ weeklyData, periodType }: ClientBalanceChar
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      {/* Clientes Activos vs CV Chart */}
+      {/* Clientes Activos, Pagando y CV Chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Clientes Activos vs CV</CardTitle>
+          <CardTitle className="text-lg">Estado de Clientes</CardTitle>
           <CardDescription>
-            Evolución semanal de clientes activos y cartera vencida
+            Evolución semanal: activos, pagando y en cartera vencida
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -128,6 +133,11 @@ export function ClientBalanceChart({ weeklyData, periodType }: ClientBalanceChar
                 radius={[4, 4, 0, 0]}
               />
               <Bar
+                dataKey="alCorriente"
+                fill="var(--color-alCorriente)"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
                 dataKey="clientesEnCV"
                 fill="var(--color-clientesEnCV)"
                 radius={[4, 4, 0, 0]}
@@ -140,9 +150,9 @@ export function ClientBalanceChart({ weeklyData, periodType }: ClientBalanceChar
       {/* Balance Trend Chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Tendencia de Balance</CardTitle>
+          <CardTitle className="text-lg">Balance de Clientes</CardTitle>
           <CardDescription>
-            Balance neto de clientes por semana
+            Ganancia o pérdida neta de clientes por semana (nuevos - finalizados)
           </CardDescription>
         </CardHeader>
         <CardContent>

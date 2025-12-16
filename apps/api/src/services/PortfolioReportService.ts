@@ -1026,6 +1026,7 @@ export class PortfolioReportService {
         badDebtDate: loan.badDebtDate,
         excludedByCleanup: loan.excludedByCleanup,
         previousLoan: loan.previousLoan,
+        status: loan.status,
         localityId: location?.id,
         localityName: location?.name,
         routeId,
@@ -1064,6 +1065,7 @@ export class PortfolioReportService {
         badDebtDate: loan.badDebtDate,
         excludedByCleanup: loan.excludedByCleanup,
         previousLoan: loan.previousLoan,
+        status: loan.status,
         localityId: location?.id,
         localityName: location?.name,
         routeId,
@@ -1102,6 +1104,7 @@ export class PortfolioReportService {
       badDebtDate: loan.badDebtDate,
       excludedByCleanup: loan.excludedByCleanup,
       previousLoan: loan.previousLoan,
+      status: loan.status,
     }
   }
 
@@ -1372,18 +1375,30 @@ export class PortfolioReportService {
       where: {
         ...whereClause,
         OR: [
+          // Loans with renewedDate in period
           {
             renewedDate: {
               gte: periodStart,
               lte: periodEnd,
             },
           },
+          // Loans that finished in period without renewal
           {
             finishedDate: {
               gte: periodStart,
               lte: periodEnd,
             },
             renewedDate: null,
+            status: { not: 'RENOVATED' },
+          },
+          // Fallback: Loans with status RENOVATED but no renewedDate (use finishedDate)
+          {
+            finishedDate: {
+              gte: periodStart,
+              lte: periodEnd,
+            },
+            renewedDate: null,
+            status: 'RENOVATED',
           },
         ],
       },
