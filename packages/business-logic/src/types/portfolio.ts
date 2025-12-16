@@ -353,7 +353,9 @@ export interface LocalitySummary {
   totalFinalizados: number
   /** Balance neto del mes */
   balance: number
-  /** Promedio de CV en el mes */
+  /** Promedio de clientes al corriente en semanas completadas */
+  alCorrientePromedio: number
+  /** Promedio de CV en semanas completadas */
   cvPromedio: number
   /** Porcentaje pagando promedio */
   porcentajePagando: number

@@ -4,6 +4,7 @@ export {
   usePeriodNavigation,
   useLocalityReport,
   useLocalityClients,
+  useAnnualPortfolioData,
 } from './usePortfolioReport'
 
 export type {
@@ -28,4 +29,6 @@ export type {
   LocalityBreakdownDetail,
   LocalityReport,
   LocalityClientDetail,
+  // Annual data types
+  AnnualPortfolioDataPoint,
 } from './usePortfolioReport'

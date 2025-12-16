@@ -39,6 +39,22 @@ function TrendIcon({ trend, className }: { trend: Trend; className?: string }) {
   return <Minus className={cn('h-4 w-4 text-muted-foreground', className)} />
 }
 
+type ValueType = 'promedio' | 'total' | 'porcentaje'
+
+function ValueTypeBadge({ type }: { type: ValueType }) {
+  const config = {
+    promedio: { label: 'PROM', className: 'bg-blue-100 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400' },
+    total: { label: 'TOTAL', className: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' },
+    porcentaje: { label: '%', className: 'bg-purple-100 dark:bg-purple-950/50 text-purple-700 dark:text-purple-400' },
+  }
+
+  return (
+    <Badge variant="outline" className={cn('text-[10px] px-1.5 py-0 h-4 font-medium', config[type].className)}>
+      {config[type].label}
+    </Badge>
+  )
+}
+
 function StatCard({
   title,
   value,
@@ -47,6 +63,7 @@ function StatCard({
   trend,
   change,
   variant = 'default',
+  valueType,
 }: {
   title: string
   value: number | string
@@ -55,6 +72,7 @@ function StatCard({
   trend?: Trend
   change?: number
   variant?: 'default' | 'success' | 'danger' | 'warning'
+  valueType?: ValueType
 }) {
   const variantClasses = {
     default: 'bg-muted/50',
@@ -77,7 +95,10 @@ function StatCard({
           <Icon className={cn('h-5 w-5', iconClasses[variant])} />
           <span className="text-sm font-medium text-muted-foreground">{title}</span>
         </div>
-        {trend && <TrendIcon trend={trend} />}
+        <div className="flex items-center gap-1">
+          {valueType && <ValueTypeBadge type={valueType} />}
+          {trend && <TrendIcon trend={trend} />}
+        </div>
       </div>
       <div className="mt-2 flex items-baseline gap-2">
         <span className="text-2xl font-bold">{value}</span>
@@ -136,6 +157,7 @@ export function PortfolioSummaryCard({ summary, renovationKPIs }: PortfolioSumma
             title="Clientes Activos"
             value={summary.totalClientesActivos}
             icon={Users}
+            valueType="total"
             description="Con saldo pendiente"
           />
           <StatCard
@@ -143,19 +165,21 @@ export function PortfolioSummaryCard({ summary, renovationKPIs }: PortfolioSumma
             value={summary.clientesAlCorriente}
             icon={UserCheck}
             variant="success"
-            description="Pagaron esta semana"
+            valueType="promedio"
+            description="Promedio semanal del mes"
           />
           <StatCard
             title="En Cartera Vencida"
             value={summary.clientesEnCV}
             icon={UserX}
             variant="danger"
+            valueType="promedio"
             description={
               summary.semanasCompletadas !== undefined && summary.semanasCompletadas === 0
                 ? 'Sin semanas completadas aún'
                 : summary.semanasCompletadas !== undefined
                   ? `Promedio de ${summary.semanasCompletadas} semana${summary.semanasCompletadas !== 1 ? 's' : ''} (${cvPercentage}%)`
-                  : `${cvPercentage}% del total`
+                  : `Promedio semanal (${cvPercentage}%)`
             }
             change={summary.comparison?.cvChange}
           />
@@ -164,16 +188,20 @@ export function PortfolioSummaryCard({ summary, renovationKPIs }: PortfolioSumma
             value={formatPercent(renovationKPIs.tasaRenovacion)}
             icon={RefreshCw}
             variant="warning"
+            valueType="porcentaje"
             trend={renovationKPIs.tendencia}
           />
         </div>
 
         {/* Balance de Clientes */}
         <div className="rounded-lg border bg-muted/30 p-4">
-          <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
-            Balance de Clientes
-          </h4>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Balance de Clientes
+            </h4>
+            <ValueTypeBadge type="total" />
+          </div>
           <div className="grid gap-4 sm:grid-cols-4">
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 text-green-600 dark:text-green-400">

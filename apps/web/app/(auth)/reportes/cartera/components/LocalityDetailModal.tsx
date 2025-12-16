@@ -41,6 +41,7 @@ interface LocalityDetailModalProps {
   locality: LocalityBreakdownDetail | null
   year: number
   month: number
+  weekNumber?: number
   onClose: () => void
 }
 
@@ -161,21 +162,24 @@ export function LocalityDetailModal({
   locality,
   year,
   month,
+  weekNumber,
   onClose,
 }: LocalityDetailModalProps) {
   const [selectedCategory, setSelectedCategory] = useState<ClientCategory | 'ALL'>('ALL')
   const { clients, stats, loading, getClients } = useLocalityClients()
 
-  // Fetch clients when locality changes
+  // Fetch clients and reset filter when locality or weekNumber changes
   useEffect(() => {
     if (locality) {
+      setSelectedCategory('ALL') // Reset filter when locality changes
       getClients({
         localityId: locality.localityId,
         year,
         month,
+        weekNumber, // Pass the specific week number if provided
       })
     }
-  }, [locality, year, month, getClients])
+  }, [locality, year, month, weekNumber, getClients])
 
   // Filter clients by category
   const filteredClients =

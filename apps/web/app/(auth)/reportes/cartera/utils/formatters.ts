@@ -63,12 +63,47 @@ export function formatDateRange(
 
 /**
  * Formats a week number with prefix (e.g., "S51").
+ * @deprecated Use formatWeekLabelWithMonth for better readability
  *
  * @param weekNumber - The ISO week number
  * @returns Formatted week label
  */
 export function formatWeekLabel(weekNumber: number): string {
   return `S${weekNumber}`
+}
+
+const MONTH_NAMES_SHORT = [
+  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+]
+
+/**
+ * Formats a week label with month context (e.g., "Sem 1 Dic").
+ * Calculates the week number within the month based on the start date.
+ *
+ * @param startDate - Start date of the week (ISO string or Date)
+ * @returns Formatted week label with month
+ */
+export function formatWeekLabelWithMonth(startDate: string | Date): string {
+  const date = typeof startDate === 'string' ? new Date(startDate) : startDate
+  const monthName = MONTH_NAMES_SHORT[date.getMonth()]
+
+  // Calculate week number within the month (1-5)
+  const dayOfMonth = date.getDate()
+  const weekOfMonth = Math.ceil(dayOfMonth / 7)
+
+  return `Sem ${weekOfMonth} ${monthName}`
+}
+
+/**
+ * Formats a month label (e.g., "Dic 2025").
+ *
+ * @param month - Month number (1-12)
+ * @param year - Year
+ * @returns Formatted month label
+ */
+export function formatMonthYearLabel(month: number, year: number): string {
+  return `${MONTH_NAMES_SHORT[month - 1]} ${year}`
 }
 
 /**

@@ -38,7 +38,7 @@ import { formatDateShort } from '../utils'
 interface LocalityWeeklyTableProps {
   report: LocalityReport | null
   loading?: boolean
-  onLocalityClick?: (locality: LocalityBreakdownDetail) => void
+  onLocalityClick?: (locality: LocalityBreakdownDetail, weekNumber?: number) => void
 }
 
 function WeekCell({ data, isCompleted }: { data: LocalityWeekData; isCompleted: boolean }) {
@@ -124,6 +124,12 @@ function WeekCell({ data, isCompleted }: { data: LocalityWeekData; isCompleted: 
 }
 
 function SummaryCell({ summary }: { summary: LocalityBreakdownDetail['summary'] }) {
+  // Fallback for backwards compatibility with NaN protection
+  const cvPromedioRaw = summary.cvPromedio ?? summary.totalClientesEnCV ?? 0
+  const cvPromedio = Number.isNaN(cvPromedioRaw) ? 0 : cvPromedioRaw
+  const porcentajePagandoRaw = summary.porcentajePagando ?? 0
+  const porcentajePagando = Number.isNaN(porcentajePagandoRaw) ? 0 : porcentajePagandoRaw
+
   return (
     <div className="space-y-1.5 min-w-[140px] bg-muted/30 rounded-md p-2">
       {/* Activos */}
@@ -156,10 +162,10 @@ function SummaryCell({ summary }: { summary: LocalityBreakdownDetail['summary'] 
       <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground">CV Prom:</span>
         <Badge
-          variant={summary.cvPromedio > 0 ? 'destructive' : 'secondary'}
+          variant={cvPromedio > 0 ? 'destructive' : 'secondary'}
           className="text-xs"
         >
-          {summary.cvPromedio.toFixed(1)}
+          {cvPromedio.toFixed(1)}
         </Badge>
       </div>
 
@@ -169,14 +175,14 @@ function SummaryCell({ summary }: { summary: LocalityBreakdownDetail['summary'] 
         <span
           className={cn(
             'font-medium',
-            summary.porcentajePagando >= 80
+            porcentajePagando >= 80
               ? 'text-green-600'
-              : summary.porcentajePagando >= 60
+              : porcentajePagando >= 60
                 ? 'text-yellow-600'
                 : 'text-red-600'
           )}
         >
-          {summary.porcentajePagando.toFixed(0)}%
+          {porcentajePagando.toFixed(0)}%
         </span>
       </div>
 
@@ -207,15 +213,15 @@ function LocalityRow({
 }: {
   locality: LocalityBreakdownDetail
   weeks: WeekRange[]
-  onLocalityClick?: (locality: LocalityBreakdownDetail) => void
+  onLocalityClick?: (locality: LocalityBreakdownDetail, weekNumber?: number) => void
 }) {
   return (
-    <TableRow
-      className="hover:bg-muted/50 cursor-pointer"
-      onClick={() => onLocalityClick?.(locality)}
-    >
-      {/* Locality Name */}
-      <TableCell className="sticky left-0 bg-background z-10 border-r">
+    <TableRow className="hover:bg-muted/50">
+      {/* Locality Name - clicking here opens modal with latest week */}
+      <TableCell
+        className="sticky left-0 bg-background z-10 border-r cursor-pointer hover:bg-muted"
+        onClick={() => onLocalityClick?.(locality)}
+      >
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           <div className="min-w-0">
@@ -230,15 +236,22 @@ function LocalityRow({
         </div>
       </TableCell>
 
-      {/* Week Cells */}
+      {/* Week Cells - clicking a specific week opens modal for that week */}
       {locality.weeklyData.map((weekData, idx) => (
-        <TableCell key={weeks[idx]?.weekNumber ?? idx} className="border-r">
+        <TableCell
+          key={weeks[idx]?.weekNumber ?? idx}
+          className="border-r cursor-pointer hover:bg-muted/70"
+          onClick={() => weekData.isCompleted && onLocalityClick?.(locality, weeks[idx]?.weekNumber)}
+        >
           <WeekCell data={weekData} isCompleted={weekData.isCompleted} />
         </TableCell>
       ))}
 
-      {/* Summary */}
-      <TableCell>
+      {/* Summary - clicking here opens modal with latest week */}
+      <TableCell
+        className="cursor-pointer hover:bg-muted/70"
+        onClick={() => onLocalityClick?.(locality)}
+      >
         <SummaryCell summary={locality.summary} />
       </TableCell>
     </TableRow>
@@ -261,6 +274,12 @@ function ConsolidatedSummary({ totals }: { totals: LocalityBreakdownDetail['summ
     ? ((totals.totalClientesEnCV / totals.totalClientesActivos) * 100).toFixed(1)
     : '0.0'
 
+  // Fallback for backwards compatibility with cached data
+  const alCorrientePromedioRaw = totals.alCorrientePromedio ?? totals.totalClientesAlCorriente ?? 0
+  const alCorrientePromedio = Number.isNaN(alCorrientePromedioRaw) ? 0 : alCorrientePromedioRaw
+  const cvPromedioRaw = totals.cvPromedio ?? totals.totalClientesEnCV ?? 0
+  const cvPromedio = Number.isNaN(cvPromedioRaw) ? 0 : cvPromedioRaw
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
       {/* Clientes Activos */}
@@ -268,47 +287,47 @@ function ConsolidatedSummary({ totals }: { totals: LocalityBreakdownDetail['summ
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Clientes Activos
+            Clientes Activos (Total)
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold">{totals.totalClientesActivos}</div>
-          <p className="text-xs text-muted-foreground mt-1">Total del período</p>
+          <p className="text-xs text-muted-foreground mt-1">Última semana completada</p>
         </CardContent>
       </Card>
 
-      {/* Al Corriente */}
+      {/* Al Corriente (Promedio) */}
       <Card className="border-green-200 dark:border-green-900">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <UserCheck className="h-4 w-4 text-green-600" />
-            Al Corriente
+            Al Corriente (Prom.)
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold text-green-600">
-            {totals.totalClientesAlCorriente}
+            {alCorrientePromedio.toFixed(1)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {totals.porcentajePagando.toFixed(1)}% pagando
+            Promedio semanal ({(totals.porcentajePagando ?? 0).toFixed(1)}%)
           </p>
         </CardContent>
       </Card>
 
-      {/* En CV */}
+      {/* En CV (Promedio) */}
       <Card className="border-red-200 dark:border-red-900">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <UserX className="h-4 w-4 text-red-600" />
-            En Cartera Vencida
+            En CV (Prom.)
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-3xl font-bold text-red-600">
-            {totals.totalClientesEnCV}
+            {cvPromedio.toFixed(1)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {cvPercentage}% del total
+            Promedio semanal ({cvPercentage}%)
           </p>
         </CardContent>
       </Card>
@@ -318,7 +337,7 @@ function ConsolidatedSummary({ totals }: { totals: LocalityBreakdownDetail['summ
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <RefreshCw className="h-4 w-4 text-blue-600" />
-            Renovados
+            Renovados (Total)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -336,7 +355,7 @@ function ConsolidatedSummary({ totals }: { totals: LocalityBreakdownDetail['summ
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
             <UserPlus className="h-4 w-4 text-emerald-600" />
-            Nuevos
+            Nuevos (Total)
           </CardTitle>
         </CardHeader>
         <CardContent>

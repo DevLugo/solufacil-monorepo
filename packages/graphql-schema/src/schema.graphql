@@ -650,6 +650,7 @@ type LocalitySummary {
   totalReintegros: Int!
   totalFinalizados: Int!
   balance: Int!
+  alCorrientePromedio: Float!
   cvPromedio: Float!
   porcentajePagando: Float!
 }
@@ -744,6 +745,49 @@ type MonthlyFinancialData {
   totalInvestment: Decimal!
   availableCash: Decimal!
   paymentsCount: Int!
+}
+
+# Portfolio Cleanup Types
+type PortfolioCleanup {
+  id: ID!
+  name: String!
+  description: String
+  cleanupDate: DateTime!
+  toDate: DateTime
+  excludedLoansCount: Int!
+  excludedAmount: Decimal!
+  route: Route
+  executedBy: User!
+  createdAt: DateTime!
+}
+
+type CleanupPreview {
+  totalLoans: Int!
+  totalPendingAmount: Decimal!
+  sampleLoans: [CleanupLoanPreview!]!
+}
+
+type CleanupLoanPreview {
+  id: ID!
+  clientName: String!
+  clientCode: String!
+  signDate: DateTime!
+  pendingAmount: Decimal!
+  routeName: String!
+}
+
+input CreatePortfolioCleanupInput {
+  name: String!
+  description: String
+  cleanupDate: DateTime!
+  maxSignDate: DateTime!
+  routeId: String
+}
+
+input UpdatePortfolioCleanupInput {
+  name: String
+  description: String
+  cleanupDate: DateTime
 }
 
 # Auth Types
@@ -858,6 +902,10 @@ type Query {
     weekNumber: Int
     category: ClientCategory
   ): [LocalityClientDetail!]! @auth
+
+  # Portfolio Cleanup
+  previewPortfolioCleanup(maxSignDate: DateTime!, routeId: ID): CleanupPreview! @requireRole(roles: [ADMIN])
+  portfolioCleanups(limit: Int, offset: Int): [PortfolioCleanup!]! @requireRole(roles: [ADMIN])
 
   # Documents
   documentPhoto(id: ID!): DocumentPhoto @auth
@@ -1220,6 +1268,11 @@ type Mutation {
     weekNumber: Int
     filters: PortfolioFiltersInput
   ): PDFGenerationResult! @auth
+
+  # Portfolio Cleanup
+  createPortfolioCleanup(input: CreatePortfolioCleanupInput!): PortfolioCleanup! @requireRole(roles: [ADMIN])
+  updatePortfolioCleanup(id: ID!, input: UpdatePortfolioCleanupInput!): PortfolioCleanup! @requireRole(roles: [ADMIN])
+  deletePortfolioCleanup(id: ID!): Boolean! @requireRole(roles: [ADMIN])
 
   # Documents
   uploadDocumentPhoto(input: UploadDocumentInput!): DocumentPhoto! @auth

@@ -11,6 +11,7 @@ import { accountResolvers } from './accounts'
 import { routeResolvers } from './routes'
 import { reportResolvers } from './reports'
 import { portfolioReportResolvers } from './portfolioReport'
+import { portfolioCleanupResolvers } from './portfolioCleanup'
 import { documentResolvers } from './documents'
 import { personalDataResolvers } from './personalData'
 import { clientResolvers } from './clients'
@@ -31,6 +32,7 @@ export const resolvers = {
     ...routeResolvers.Query,
     ...reportResolvers.Query,
     ...portfolioReportResolvers.Query,
+    ...portfolioCleanupResolvers.Query,
     ...documentResolvers.Query,
     ...personalDataResolvers.Query,
     ...clientResolvers.Query,
@@ -48,6 +50,7 @@ export const resolvers = {
     ...accountResolvers.Mutation,
     ...routeResolvers.Mutation,
     ...portfolioReportResolvers.Mutation,
+    ...portfolioCleanupResolvers.Mutation,
     ...documentResolvers.Mutation,
     ...personalDataResolvers.Mutation,
   },
@@ -69,4 +72,5 @@ export const resolvers = {
   PersonalData: personalDataResolvers.PersonalData,
   Address: personalDataResolvers.Address,
   Phone: personalDataResolvers.Phone,
+  PortfolioCleanup: portfolioCleanupResolvers.PortfolioCleanup,
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import { useQuery, useMutation, useLazyQuery } from '@apollo/client'
 import {
   GET_PORTFOLIO_REPORT_WEEKLY,
@@ -407,6 +407,8 @@ export interface LocalitySummary {
   totalReintegros: number
   totalFinalizados: number
   balance: number
+  /** Promedio de clientes al corriente en semanas completadas */
+  alCorrientePromedio: number
   cvPromedio: number
   porcentajePagando: number
 }
@@ -491,9 +493,109 @@ interface UseLocalityClientsParams {
   category?: ClientCategory
 }
 
+// ============================================
+// Annual Portfolio Data Hook
+// ============================================
+
+export interface AnnualPortfolioDataPoint {
+  month: number
+  year: number
+  label: string
+  clientesActivos: number
+  alCorrientePromedio: number
+  cvPromedio: number
+  renovaciones: number
+  nuevos: number
+  balance: number
+}
+
+const MONTH_LABELS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
+
+interface UseAnnualPortfolioDataParams {
+  year: number
+  currentMonth: number // Fetch from Jan to this month
+}
+
+export function useAnnualPortfolioData({ year, currentMonth }: UseAnnualPortfolioDataParams) {
+  const [annualData, setAnnualData] = useState<AnnualPortfolioDataPoint[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const [fetchMonthReport] = useLazyQuery(GET_PORTFOLIO_REPORT_MONTHLY, {
+    fetchPolicy: 'cache-first',
+  })
+
+  // Fetch annual data when year or currentMonth changes
+  useEffect(() => {
+    let isCancelled = false
+
+    const fetchAllMonths = async () => {
+      setLoading(true)
+      const results: AnnualPortfolioDataPoint[] = []
+
+      // Fetch all months up to current month
+      const fetchPromises = []
+      for (let m = 1; m <= currentMonth; m++) {
+        fetchPromises.push(
+          fetchMonthReport({
+            variables: { year, month: m, filters: {} },
+          }).then((result) => ({
+            month: m,
+            data: result.data?.portfolioReportMonthly as PortfolioReport | null,
+          }))
+        )
+      }
+
+      try {
+        const allResults = await Promise.all(fetchPromises)
+
+        if (isCancelled) return
+
+        for (const { month: m, data } of allResults) {
+          if (data) {
+            results.push({
+              month: m,
+              year,
+              label: MONTH_LABELS[m - 1],
+              clientesActivos: data.summary.totalClientesActivos,
+              alCorrientePromedio: data.summary.promedioCV !== undefined
+                ? data.summary.clientesAlCorriente
+                : data.summary.clientesAlCorriente,
+              cvPromedio: data.summary.promedioCV ?? data.summary.clientesEnCV,
+              renovaciones: data.renovationKPIs.totalRenovaciones,
+              nuevos: data.summary.clientBalance.nuevos,
+              balance: data.summary.clientBalance.balance,
+            })
+          }
+        }
+
+        // Sort by month
+        results.sort((a, b) => a.month - b.month)
+        setAnnualData(results)
+      } catch (error) {
+        console.error('Error fetching annual data:', error)
+      } finally {
+        if (!isCancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchAllMonths()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [year, currentMonth, fetchMonthReport])
+
+  return {
+    annualData,
+    loading,
+  }
+}
+
 export function useLocalityClients() {
   const [fetchClients, { data, loading, error }] = useLazyQuery(GET_LOCALITY_CLIENTS, {
-    fetchPolicy: 'cache-and-network',
+    fetchPolicy: 'network-only', // Always fetch fresh data to avoid stale cache
   })
 
   const clients: LocalityClientDetail[] = useMemo(() => {

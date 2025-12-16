@@ -28,7 +28,7 @@ import {
 } from 'recharts'
 import { BarChart3 } from 'lucide-react'
 import type { WeeklyPortfolioData } from '../hooks'
-import { formatWeekLabel, formatDateRange } from '../utils'
+import { formatWeekLabelWithMonth, formatDateRange } from '../utils'
 
 interface ClientBalanceChartProps {
   weeklyData: WeeklyPortfolioData[]
@@ -38,7 +38,7 @@ interface ClientBalanceChartProps {
 export function ClientBalanceChart({ weeklyData, periodType }: ClientBalanceChartProps) {
   const chartData = useMemo(() => {
     return weeklyData.map((week) => ({
-      label: formatWeekLabel(week.weekRange.weekNumber),
+      label: formatWeekLabelWithMonth(week.weekRange.start),
       fullLabel: formatDateRange(week.weekRange.start, week.weekRange.end),
       clientesActivos: week.clientesActivos,
       clientesEnCV: week.clientesEnCV,

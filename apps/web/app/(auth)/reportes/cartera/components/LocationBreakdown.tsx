@@ -9,16 +9,9 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { MapPin, Users, UserX, UserCheck, Route, Building2, Filter } from 'lucide-react'
+import { MapPin, Users, UserX, UserCheck, ChevronRight, ArrowLeft, Route } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type {
   LocationBreakdown as LocationBreakdownType,
@@ -36,9 +29,14 @@ interface LocationBreakdownProps {
   month: number
 }
 
-type ViewMode = 'route' | 'locality'
-
-function LocationCard({ location }: { location: LocationBreakdownType }) {
+// Clickable route card for drill-down navigation
+function RouteCard({
+  location,
+  onClick,
+}: {
+  location: LocationBreakdownType
+  onClick: () => void
+}) {
   const cvPercentage = location.clientesActivos > 0
     ? (location.clientesEnCV / location.clientesActivos) * 100
     : 0
@@ -48,46 +46,41 @@ function LocationCard({ location }: { location: LocationBreakdownType }) {
     : 0
 
   return (
-    <div className="rounded-lg border bg-card p-4 hover:bg-muted/50 transition-colors">
-      <div className="flex items-start justify-between mb-3">
+    <button
+      onClick={onClick}
+      className="w-full text-left rounded-lg border bg-card p-4 hover:bg-muted/50 hover:border-primary/50 transition-all group cursor-pointer"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-muted-foreground" />
+          <Route className="h-4 w-4 text-muted-foreground" />
           <h4 className="font-semibold">{location.routeName || location.locationName}</h4>
         </div>
-        <Badge variant="outline" className="text-xs">
-          <Users className="h-3 w-3 mr-1" />
-          {location.clientesActivos}
-        </Badge>
+        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
       </div>
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-2 gap-4 mb-3">
-        <div className="flex items-center gap-2">
-          <UserCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
-          <div>
-            <span className="text-lg font-bold text-green-600 dark:text-green-400">
-              {location.clientesAlCorriente}
-            </span>
-            <p className="text-xs text-muted-foreground">Al corriente</p>
-          </div>
+      {/* Stats - Equal visual weight for Activos, OK, and CV */}
+      <div className="grid grid-cols-3 gap-2 text-center mb-3">
+        <div className="bg-muted/50 rounded p-2">
+          <span className="text-lg font-bold">{location.clientesActivos}</span>
+          <p className="text-xs text-muted-foreground">Activos</p>
         </div>
-        <div className="flex items-center gap-2">
-          <UserX className="h-4 w-4 text-red-600 dark:text-red-400" />
-          <div>
-            <span className="text-lg font-bold text-red-600 dark:text-red-400">
-              {location.clientesEnCV}
-            </span>
-            <p className="text-xs text-muted-foreground">En CV</p>
-          </div>
+        <div className="bg-green-50 dark:bg-green-950/30 rounded p-2">
+          <span className="text-lg font-bold text-green-600 dark:text-green-400">
+            {location.clientesAlCorriente}
+          </span>
+          <p className="text-xs text-muted-foreground">OK</p>
+        </div>
+        <div className="bg-red-50 dark:bg-red-950/30 rounded p-2">
+          <span className="text-lg font-bold text-red-600 dark:text-red-400">
+            {location.clientesEnCV}
+          </span>
+          <p className="text-xs text-muted-foreground">CV</p>
         </div>
       </div>
 
       {/* Progress Bar */}
       <div className="space-y-1">
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>CV: {cvPercentage.toFixed(1)}%</span>
-          <span>OK: {alCorrientePercentage.toFixed(1)}%</span>
-        </div>
         <div className="h-2 rounded-full bg-muted overflow-hidden flex">
           <div
             className="h-full bg-green-500 dark:bg-green-600"
@@ -98,29 +91,37 @@ function LocationCard({ location }: { location: LocationBreakdownType }) {
             style={{ width: `${cvPercentage}%` }}
           />
         </div>
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>OK: {alCorrientePercentage.toFixed(0)}%</span>
+          <span>CV: {cvPercentage.toFixed(0)}%</span>
+        </div>
       </div>
 
       {/* Balance */}
-      <div className="mt-3 pt-3 border-t">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Balance:</span>
-          <span className={cn(
-            'font-semibold',
-            location.balance > 0
-              ? 'text-green-600 dark:text-green-400'
-              : location.balance < 0
-                ? 'text-red-600 dark:text-red-400'
-                : 'text-muted-foreground'
-          )}>
-            {location.balance > 0 ? '+' : ''}{location.balance}
-          </span>
-        </div>
+      <div className="mt-3 pt-3 border-t flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">Balance mensual</span>
+        <span className={cn(
+          'text-sm font-semibold',
+          location.balance > 0
+            ? 'text-green-600 dark:text-green-400'
+            : location.balance < 0
+              ? 'text-red-600 dark:text-red-400'
+              : 'text-muted-foreground'
+        )}>
+          {location.balance > 0 ? '+' : ''}{location.balance}
+        </span>
       </div>
-    </div>
+    </button>
   )
 }
 
-function RouteCardsView({ locations }: { locations: LocationBreakdownType[] }) {
+function RouteCardsView({
+  locations,
+  onRouteClick,
+}: {
+  locations: LocationBreakdownType[]
+  onRouteClick: (routeId: string) => void
+}) {
   // Calculate totals
   const totals = locations.reduce(
     (acc, loc) => ({
@@ -152,7 +153,11 @@ function RouteCardsView({ locations }: { locations: LocationBreakdownType[] }) {
   return (
     <div className="space-y-4">
       {/* Summary badges */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
+        <Badge variant="secondary">
+          <Users className="h-3 w-3 mr-1" />
+          {totals.activos} Activos
+        </Badge>
         <Badge variant="secondary" className="bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400">
           <UserCheck className="h-3 w-3 mr-1" />
           {totals.alCorriente} OK
@@ -163,10 +168,19 @@ function RouteCardsView({ locations }: { locations: LocationBreakdownType[] }) {
         </Badge>
       </div>
 
+      {/* Instruction */}
+      <p className="text-sm text-muted-foreground">
+        Haz clic en una ruta para ver el detalle por localidad
+      </p>
+
       {/* Cards grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {sortedLocations.map((location) => (
-          <LocationCard key={location.locationId} location={location} />
+          <RouteCard
+            key={location.locationId}
+            location={location}
+            onClick={() => onRouteClick(location.routeId || location.locationId)}
+          />
         ))}
       </div>
     </div>
@@ -180,31 +194,39 @@ export function LocationBreakdown({
   year,
   month,
 }: LocationBreakdownProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>('route')
+  // Drill-down state: null = show routes, string = show localities for that route
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null)
   const [selectedLocality, setSelectedLocality] = useState<LocalityBreakdownDetail | null>(null)
-  const [selectedRouteId, setSelectedRouteId] = useState<string>('all')
+  const [selectedWeekNumber, setSelectedWeekNumber] = useState<number | undefined>(undefined)
 
-  const handleLocalityClick = (locality: LocalityBreakdownDetail) => {
-    setSelectedLocality(locality)
+  // Find the selected route name
+  const selectedRouteName = useMemo(() => {
+    if (!selectedRouteId) return null
+    const route = locations.find((loc) => loc.routeId === selectedRouteId || loc.locationId === selectedRouteId)
+    return route?.routeName || route?.locationName || 'Ruta'
+  }, [selectedRouteId, locations])
+
+  const handleRouteClick = (routeId: string) => {
+    setSelectedRouteId(routeId)
   }
 
-  // Extract unique routes from locality report
-  const availableRoutes = useMemo(() => {
-    if (!localityReport?.localities) return []
-    const routeMap = new Map<string, string>()
-    localityReport.localities.forEach((loc) => {
-      if (loc.routeId && loc.routeName) {
-        routeMap.set(loc.routeId, loc.routeName)
-      }
-    })
-    return Array.from(routeMap.entries())
-      .map(([id, name]) => ({ id, name }))
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }, [localityReport])
+  const handleBackToRoutes = () => {
+    setSelectedRouteId(null)
+  }
 
-  // Filter localities by selected route
+  const handleLocalityClick = (locality: LocalityBreakdownDetail, weekNumber?: number) => {
+    setSelectedLocality(locality)
+    setSelectedWeekNumber(weekNumber)
+  }
+
+  const handleModalClose = () => {
+    setSelectedLocality(null)
+    setSelectedWeekNumber(undefined)
+  }
+
+  // Filter localities by selected route for drill-down view
   const filteredLocalityReport = useMemo(() => {
-    if (!localityReport || selectedRouteId === 'all') return localityReport
+    if (!localityReport || !selectedRouteId) return localityReport
 
     const filteredLocalities = localityReport.localities.filter(
       (loc) => loc.routeId === selectedRouteId
@@ -221,8 +243,9 @@ export function LocationBreakdown({
         totalReintegros: acc.totalReintegros + loc.summary.totalReintegros,
         totalFinalizados: acc.totalFinalizados + loc.summary.totalFinalizados,
         balance: acc.balance + loc.summary.balance,
-        cvPromedio: 0, // Will calculate below
-        porcentajePagando: 0, // Will calculate below
+        alCorrientePromedio: 0,
+        cvPromedio: 0,
+        porcentajePagando: 0,
       }),
       {
         totalClientesActivos: 0,
@@ -233,14 +256,22 @@ export function LocationBreakdown({
         totalReintegros: 0,
         totalFinalizados: 0,
         balance: 0,
+        alCorrientePromedio: 0,
         cvPromedio: 0,
         porcentajePagando: 0,
       }
     )
 
-    // Calculate averages
+    // Calculate averages (with fallback for cached data without new fields)
     if (filteredLocalities.length > 0) {
-      totals.cvPromedio = filteredLocalities.reduce((sum, loc) => sum + loc.summary.cvPromedio, 0) / filteredLocalities.length
+      totals.alCorrientePromedio = filteredLocalities.reduce(
+        (sum, loc) => sum + (loc.summary.alCorrientePromedio ?? loc.summary.totalClientesAlCorriente ?? 0),
+        0
+      ) / filteredLocalities.length
+      totals.cvPromedio = filteredLocalities.reduce(
+        (sum, loc) => sum + (loc.summary.cvPromedio ?? loc.summary.totalClientesEnCV ?? 0),
+        0
+      ) / filteredLocalities.length
       totals.porcentajePagando = totals.totalClientesActivos > 0
         ? (totals.totalClientesAlCorriente / totals.totalClientesActivos) * 100
         : 0
@@ -261,70 +292,62 @@ export function LocationBreakdown({
         <CardHeader>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="text-lg">Desglose</CardTitle>
-              <CardDescription>
-                {viewMode === 'route'
-                  ? `${locations.length} rutas con clientes activos`
-                  : `${localityCount} localidades con clientes activos`}
-              </CardDescription>
+              {selectedRouteId ? (
+                // Drill-down header with back button
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleBackToRoutes}
+                    className="flex items-center gap-1 -ml-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    <span>Rutas</span>
+                  </Button>
+                  <div className="h-6 w-px bg-border" />
+                  <div>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Route className="h-5 w-5" />
+                      {selectedRouteName}
+                    </CardTitle>
+                    <CardDescription>
+                      {localityCount} localidades con clientes activos
+                    </CardDescription>
+                  </div>
+                </div>
+              ) : (
+                // Routes view header
+                <>
+                  <CardTitle className="text-lg">Desglose por Ruta</CardTitle>
+                  <CardDescription>
+                    {locations.length} rutas con clientes activos
+                  </CardDescription>
+                </>
+              )}
             </div>
-
-            {/* View Mode Toggle */}
-            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="route" className="flex items-center gap-1.5">
-                  <Route className="h-4 w-4" />
-                  <span className="hidden sm:inline">Por Ruta</span>
-                </TabsTrigger>
-                <TabsTrigger value="locality" className="flex items-center gap-1.5">
-                  <Building2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Por Localidad</span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
           </div>
         </CardHeader>
         <CardContent>
-          {viewMode === 'route' ? (
-            <RouteCardsView locations={locations} />
-          ) : localityLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-20 w-full" />
-              <Skeleton className="h-20 w-full" />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Route Filter */}
-              {availableRoutes.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-muted-foreground" />
-                  <Select value={selectedRouteId} onValueChange={setSelectedRouteId}>
-                    <SelectTrigger className="w-[200px]">
-                      <SelectValue placeholder="Filtrar por ruta" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas las rutas</SelectItem>
-                      {availableRoutes.map((route) => (
-                        <SelectItem key={route.id} value={route.id}>
-                          {route.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedRouteId !== 'all' && (
-                    <Badge variant="secondary" className="text-xs">
-                      {localityCount} localidades
-                    </Badge>
-                  )}
-                </div>
-              )}
-
+          {selectedRouteId ? (
+            // Drill-down: Show localities for selected route
+            localityLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            ) : (
               <LocalityWeeklyTable
                 report={filteredLocalityReport ?? null}
                 onLocalityClick={handleLocalityClick}
               />
-            </div>
+            )
+          ) : (
+            // Default: Show route cards
+            <RouteCardsView
+              locations={locations}
+              onRouteClick={handleRouteClick}
+            />
           )}
         </CardContent>
       </Card>
@@ -334,7 +357,8 @@ export function LocationBreakdown({
         locality={selectedLocality}
         year={year}
         month={month}
-        onClose={() => setSelectedLocality(null)}
+        weekNumber={selectedWeekNumber}
+        onClose={handleModalClose}
       />
     </>
   )

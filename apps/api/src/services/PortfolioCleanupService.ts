@@ -1,6 +1,6 @@
 import { GraphQLError } from 'graphql'
 import { Decimal } from 'decimal.js'
-import type { PrismaClient } from '@solufacil/database'
+import type { PrismaClient, Prisma } from '@solufacil/database'
 import { PortfolioCleanupRepository } from '../repositories/PortfolioCleanupRepository'
 import { AuditLogService, AuditContext } from './AuditLogService'
 
@@ -8,10 +8,23 @@ export interface CreatePortfolioCleanupInput {
   name: string
   description?: string
   cleanupDate: Date
-  fromDate?: Date
-  toDate?: Date
-  routeId: string
-  loanIds: string[]
+  maxSignDate: Date
+  routeId?: string
+}
+
+export interface CleanupPreview {
+  totalLoans: number
+  totalPendingAmount: Decimal
+  sampleLoans: CleanupLoanPreview[]
+}
+
+export interface CleanupLoanPreview {
+  id: string
+  clientName: string
+  clientCode: string
+  signDate: Date
+  pendingAmount: Decimal
+  routeName: string
 }
 
 export class PortfolioCleanupService {
@@ -43,71 +56,137 @@ export class PortfolioCleanupService {
     return this.portfolioCleanupRepository.findMany(options)
   }
 
+  /**
+   * Build the WHERE clause for loans eligible for cleanup
+   */
+  private buildEligibleLoansWhere(maxSignDate: Date, routeId?: string): Prisma.LoanWhereInput {
+    const where: Prisma.LoanWhereInput = {
+      signDate: { lte: maxSignDate },
+      pendingAmountStored: { gt: 0 },
+      excludedByCleanup: null,
+      renewedDate: null,
+      finishedDate: null,
+    }
+
+    if (routeId) {
+      where.snapshotRouteId = routeId
+    }
+
+    return where
+  }
+
+  /**
+   * Preview loans that would be cleaned up
+   */
+  async previewCleanup(maxSignDate: Date, routeId?: string): Promise<CleanupPreview> {
+    const where = this.buildEligibleLoansWhere(maxSignDate, routeId)
+
+    // Get total count
+    const totalLoans = await this.prisma.loan.count({ where })
+
+    // Get total amount
+    const aggregation = await this.prisma.loan.aggregate({
+      where,
+      _sum: { pendingAmountStored: true },
+    })
+    const totalPendingAmount = new Decimal(aggregation._sum.pendingAmountStored?.toString() || '0')
+
+    // Get sample loans (10 examples)
+    const sampleLoansRaw = await this.prisma.loan.findMany({
+      where,
+      take: 10,
+      orderBy: { signDate: 'asc' },
+      include: {
+        borrowerRelation: {
+          include: {
+            personalDataRelation: {
+              select: { fullName: true, clientCode: true },
+            },
+          },
+        },
+        snapshotRoute: {
+          select: { name: true },
+        },
+      },
+    })
+
+    const sampleLoans: CleanupLoanPreview[] = sampleLoansRaw.map((loan) => ({
+      id: loan.id,
+      clientName: loan.borrowerRelation?.personalDataRelation?.fullName || 'N/A',
+      clientCode: loan.borrowerRelation?.personalDataRelation?.clientCode || 'N/A',
+      signDate: loan.signDate!,
+      pendingAmount: new Decimal(loan.pendingAmountStored.toString()),
+      routeName: loan.snapshotRoute?.name || 'N/A',
+    }))
+
+    return {
+      totalLoans,
+      totalPendingAmount,
+      sampleLoans,
+    }
+  }
+
   async create(
     input: CreatePortfolioCleanupInput,
     userId: string,
     auditContext?: AuditContext
   ) {
-    // Validate route exists
-    const route = await this.prisma.route.findUnique({
-      where: { id: input.routeId },
+    // Validate route exists if provided
+    if (input.routeId) {
+      const route = await this.prisma.route.findUnique({
+        where: { id: input.routeId },
+      })
+      if (!route) {
+        throw new GraphQLError('Route not found', {
+          extensions: { code: 'NOT_FOUND' },
+        })
+      }
+    }
+
+    // Get all eligible loans based on maxSignDate
+    const where = this.buildEligibleLoansWhere(input.maxSignDate, input.routeId)
+    const eligibleLoans = await this.prisma.loan.findMany({
+      where,
+      select: { id: true, pendingAmountStored: true },
     })
-    if (!route) {
-      throw new GraphQLError('Route not found', {
-        extensions: { code: 'NOT_FOUND' },
+
+    if (eligibleLoans.length === 0) {
+      throw new GraphQLError('No loans found matching the cleanup criteria', {
+        extensions: { code: 'BAD_USER_INPUT' },
       })
     }
 
-    // Validate all loans exist and are eligible for cleanup
-    const loans = await this.prisma.loan.findMany({
-      where: {
-        id: { in: input.loanIds },
-        badDebtDate: { not: null },
-        snapshotRouteId: input.routeId,
-      },
-      select: { id: true },
-    })
+    const loanIds = eligibleLoans.map((l) => l.id)
+    const excludedLoansCount = eligibleLoans.length
+    const excludedAmount = eligibleLoans.reduce(
+      (acc, loan) => acc.plus(new Decimal(loan.pendingAmountStored.toString())),
+      new Decimal(0)
+    )
 
-    const foundLoanIds = new Set(loans.map((l) => l.id))
-    const missingLoanIds = input.loanIds.filter((id) => !foundLoanIds.has(id))
+    // Create cleanup and update loans in a transaction
+    const cleanup = await this.prisma.$transaction(async (tx) => {
+      // Create the cleanup record
+      const newCleanup = await tx.portfolioCleanup.create({
+        data: {
+          name: input.name,
+          description: input.description,
+          cleanupDate: input.cleanupDate,
+          toDate: input.maxSignDate,
+          route: input.routeId || null,
+          executedBy: userId,
+          excludedLoansCount,
+          excludedAmount,
+          loansExcluded: {
+            connect: loanIds.map((id) => ({ id })),
+          },
+        },
+        include: {
+          routeRelation: true,
+          executedByRelation: true,
+        },
+      })
 
-    if (missingLoanIds.length > 0) {
-      throw new GraphQLError(
-        `Some loans are not eligible for cleanup (not bad debt or wrong route): ${missingLoanIds.join(', ')}`,
-        {
-          extensions: { code: 'BAD_USER_INPUT' },
-        }
-      )
-    }
-
-    // Check if any loans are already in another cleanup
-    const loansInOtherCleanups = await this.prisma.loan.findMany({
-      where: {
-        id: { in: input.loanIds },
-        excludedByCleanup: { not: null },
-      },
-      select: { id: true, excludedByCleanup: true },
-    })
-
-    if (loansInOtherCleanups.length > 0) {
-      throw new GraphQLError(
-        `Some loans are already in another cleanup: ${loansInOtherCleanups.map((l) => l.id).join(', ')}`,
-        {
-          extensions: { code: 'BAD_USER_INPUT' },
-        }
-      )
-    }
-
-    // Create the cleanup
-    const cleanup = await this.portfolioCleanupRepository.create({
-      name: input.name,
-      description: input.description,
-      cleanupDate: input.cleanupDate,
-      fromDate: input.fromDate,
-      toDate: input.toDate,
-      routeId: input.routeId,
-      executedById: userId,
-      loanIds: input.loanIds,
+      return newCleanup
     })
 
     // Log audit
@@ -117,13 +196,55 @@ export class PortfolioCleanupService {
       {
         name: input.name,
         routeId: input.routeId,
-        excludedLoansCount: input.loanIds.length,
+        maxSignDate: input.maxSignDate,
+        excludedLoansCount,
       },
       auditContext,
-      `Created portfolio cleanup "${input.name}" with ${input.loanIds.length} loans`
+      `Created portfolio cleanup "${input.name}" with ${excludedLoansCount} loans (signDate <= ${input.maxSignDate.toISOString().split('T')[0]})`
     )
 
     return cleanup
+  }
+
+  async update(
+    id: string,
+    input: {
+      name?: string
+      description?: string
+      cleanupDate?: Date
+    },
+    auditContext?: AuditContext
+  ) {
+    const existing = await this.portfolioCleanupRepository.findById(id)
+    if (!existing) {
+      throw new GraphQLError('Portfolio cleanup not found', {
+        extensions: { code: 'NOT_FOUND' },
+      })
+    }
+
+    const updated = await this.prisma.portfolioCleanup.update({
+      where: { id },
+      data: {
+        ...(input.name !== undefined && { name: input.name }),
+        ...(input.description !== undefined && { description: input.description }),
+        ...(input.cleanupDate !== undefined && { cleanupDate: input.cleanupDate }),
+      },
+      include: {
+        routeRelation: true,
+      },
+    })
+
+    // Log audit
+    await this.auditLogService.logUpdate(
+      'PortfolioCleanup',
+      id,
+      { name: existing.name, description: existing.description, cleanupDate: existing.cleanupDate },
+      input as Record<string, unknown>,
+      auditContext,
+      `Updated portfolio cleanup "${updated.name}"`
+    )
+
+    return updated
   }
 
   async delete(id: string, auditContext?: AuditContext): Promise<boolean> {

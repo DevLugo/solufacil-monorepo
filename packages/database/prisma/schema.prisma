@@ -656,8 +656,8 @@ model PortfolioCleanup {
   excludedLoansCount Int
   excludedAmount     Decimal   @db.Decimal(18, 4)
 
-  route String
-  routeRelation Route @relation(fields: [route], references: [id])
+  route String?
+  routeRelation Route? @relation(fields: [route], references: [id])
 
   executedBy String
   executedByRelation User @relation(fields: [executedBy], references: [id])

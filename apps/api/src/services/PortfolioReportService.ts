@@ -638,7 +638,12 @@ export class PortfolioReportService {
       const totalFinalizados = weeklyData.reduce((sum, w) => sum + w.finalizados, 0)
       const totalBalance = weeklyData.reduce((sum, w) => sum + w.balance, 0)
 
-      // CV promedio only from completed weeks
+      // Averages only from completed weeks
+      const alCorrientePromedio =
+        completedWeeksData.length > 0
+          ? completedWeeksData.reduce((sum, w) => sum + w.clientesAlCorriente, 0) / completedWeeksData.length
+          : 0
+
       const cvPromedio =
         completedWeeksData.length > 0
           ? completedWeeksData.reduce((sum, w) => sum + w.clientesEnCV, 0) / completedWeeksData.length
@@ -654,12 +659,13 @@ export class PortfolioReportService {
       const summary: LocalitySummary = {
         totalClientesActivos: summaryWeekData.clientesActivos,
         totalClientesAlCorriente: summaryWeekData.clientesAlCorriente,
-        totalClientesEnCV: Math.round(cvPromedio), // Use average CV from completed weeks
+        totalClientesEnCV: summaryWeekData.clientesEnCV, // Use last completed week's CV (consistent with detail modal)
         totalNuevos,
         totalRenovados,
         totalReintegros,
         totalFinalizados,
         balance: totalBalance,
+        alCorrientePromedio,
         cvPromedio,
         porcentajePagando,
       }
@@ -687,10 +693,9 @@ export class PortfolioReportService {
       totalReintegros: localities.reduce((sum, l) => sum + l.summary.totalReintegros, 0),
       totalFinalizados: localities.reduce((sum, l) => sum + l.summary.totalFinalizados, 0),
       balance: localities.reduce((sum, l) => sum + l.summary.balance, 0),
-      cvPromedio:
-        localities.length > 0
-          ? localities.reduce((sum, l) => sum + l.summary.cvPromedio, 0) / localities.length
-          : 0,
+      // Sum all locality averages (represents total across all localities)
+      alCorrientePromedio: localities.reduce((sum, l) => sum + l.summary.alCorrientePromedio, 0),
+      cvPromedio: localities.reduce((sum, l) => sum + l.summary.cvPromedio, 0),
       porcentajePagando:
         localities.length > 0
           ? localities.reduce((sum, l) => sum + l.summary.porcentajePagando, 0) / localities.length
@@ -709,6 +714,9 @@ export class PortfolioReportService {
 
   /**
    * Gets clients for a specific locality (for drill-down modal)
+   *
+   * IMPORTANT: Locality is determined by the LEAD's address, not the borrower's,
+   * to be consistent with getLoansWithBorrowerLocality and portfolioByLocality.
    */
   async getLocalityClients(
     localityId: string,
@@ -723,36 +731,45 @@ export class PortfolioReportService {
     }
 
     // Determine the week range to use
-    const targetWeek = weekNumber
-      ? weeks.find((w) => w.weekNumber === weekNumber) || weeks[weeks.length - 1]
-      : weeks[weeks.length - 1]
+    // IMPORTANT: Use last COMPLETED week (consistent with getLocalityReport summary)
+    // If a specific weekNumber is provided, use that week
+    // Otherwise, use the last completed week (or last week if none completed)
+    let targetWeek: WeekRange
+    if (weekNumber) {
+      targetWeek = weeks.find((w) => w.weekNumber === weekNumber) || weeks[weeks.length - 1]
+    } else {
+      const lastCompletedWeek = this.getLastCompletedWeek(weeks)
+      targetWeek = lastCompletedWeek || weeks[weeks.length - 1]
+    }
 
-    // Query loans for this locality
+    // Query loans filtering by LEAD's locality (not borrower's)
+    // This is consistent with portfolioByLocality grouping
     const whereClause: any = {
       pendingAmountStored: { gt: 0 },
       badDebtDate: null,
       excludedByCleanup: null,
-      // Exclude loans that have been renewed (the old loan is no longer active)
       renewedDate: null,
-      // Exclude loans that have been finished
       finishedDate: null,
-      borrowerRelation: {
-        personalDataRelation: {
-          addresses: {
-            some: {
-              location: localityId === 'sin-localidad' ? undefined : localityId,
-            },
-          },
-        },
-      },
     }
 
-    // Handle "sin-localidad" case
+    // Filter by lead's locality
     if (localityId === 'sin-localidad') {
-      whereClause.borrowerRelation = {
+      // Loans where lead has no address
+      whereClause.leadRelation = {
         personalDataRelation: {
           addresses: {
             none: {},
+          },
+        },
+      }
+    } else {
+      // Loans where lead's address is in the specified locality
+      whereClause.leadRelation = {
+        personalDataRelation: {
+          addresses: {
+            some: {
+              location: localityId,
+            },
           },
         },
       }
@@ -762,6 +779,11 @@ export class PortfolioReportService {
       where: whereClause,
       include: {
         borrowerRelation: {
+          include: {
+            personalDataRelation: true,
+          },
+        },
+        leadRelation: {
           include: {
             personalDataRelation: {
               include: {
@@ -969,10 +991,16 @@ export class PortfolioReportService {
 
     // Map active loans
     const result = activeLoans.map((loan) => {
-      // Use lead's (loanOfficer) locality, not borrower's
+      // Get locality from lead's address
       const address = loan.leadRelation?.personalDataRelation?.addresses?.[0]
       const location = address?.locationRelation
-      const route = location?.routeRelation
+      const locationRoute = location?.routeRelation
+
+      // Route priority (consistent with getRouteBreakdown):
+      // 1. snapshotRouteId (synced from lead assignment)
+      // 2. Lead's locality route (fallback)
+      const routeId = loan.snapshotRouteId || locationRoute?.id || undefined
+      const routeName = loan.snapshotRouteName || locationRoute?.name || undefined
 
       // "Nuevo" = signed this week without a previous loan
       const isNew =
@@ -1000,8 +1028,8 @@ export class PortfolioReportService {
         previousLoan: loan.previousLoan,
         localityId: location?.id,
         localityName: location?.name,
-        routeId: route?.id || loan.snapshotRouteId || undefined,
-        routeName: route?.name || loan.snapshotRouteName || undefined,
+        routeId,
+        routeName,
         payments: this.toPaymentsForCV(loan.payments),
         isNew,
         isRenewed,
@@ -1016,10 +1044,16 @@ export class PortfolioReportService {
       // Skip if already in active loans (shouldn't happen with our filters)
       if (result.find(r => r.id === loan.id)) continue
 
-      // Use lead's (loanOfficer) locality, not borrower's
+      // Get locality from lead's address
       const address = loan.leadRelation?.personalDataRelation?.addresses?.[0]
       const location = address?.locationRelation
-      const route = location?.routeRelation
+      const locationRoute = location?.routeRelation
+
+      // Route priority (consistent with getRouteBreakdown):
+      // 1. snapshotRouteId (synced from lead assignment)
+      // 2. Lead's locality route (fallback)
+      const routeId = loan.snapshotRouteId || locationRoute?.id || undefined
+      const routeName = loan.snapshotRouteName || locationRoute?.name || undefined
 
       result.push({
         id: loan.id,
@@ -1032,8 +1066,8 @@ export class PortfolioReportService {
         previousLoan: loan.previousLoan,
         localityId: location?.id,
         localityName: location?.name,
-        routeId: route?.id || loan.snapshotRouteId || undefined,
-        routeName: route?.name || loan.snapshotRouteName || undefined,
+        routeId,
+        routeName,
         payments: [],
         isNew: false,
         isRenewed: false,

@@ -23,7 +23,10 @@ function Calendar({
         months: 'flex flex-col sm:flex-row gap-2',
         month: 'flex flex-col gap-4',
         month_caption: 'flex justify-center pt-1 relative items-center w-full',
-        caption_label: 'text-sm font-medium',
+        caption_label: 'text-sm font-medium hidden',
+        dropdowns: 'flex gap-2 justify-center',
+        dropdown: 'text-sm font-medium bg-background border border-input rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ring',
+        dropdown_root: 'relative inline-block',
         nav: 'flex items-center gap-1',
         button_previous: cn(
           buttonVariants({ variant: 'outline' }),

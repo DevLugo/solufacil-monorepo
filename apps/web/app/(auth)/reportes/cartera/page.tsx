@@ -1,11 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery } from '@apollo/client'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -19,23 +18,27 @@ import {
   Download,
   RefreshCw,
   BarChart3,
+  LayoutDashboard,
+  Route,
 } from 'lucide-react'
 import {
   usePortfolioReport,
-  useActiveClientsWithCVStatus,
   usePeriodNavigation,
   useLocalityReport,
+  useAnnualPortfolioData,
 } from './hooks'
+import type { AnnualMonthData } from './components'
 import {
   WeekSelector,
   PortfolioSummaryCard,
-  CVStatusTable,
   LocationBreakdown,
   ClientBalanceChart,
+  MonthComparisonChart,
+  formatMonthLabel,
 } from './components'
 import { GET_ROUTES } from '@/graphql/queries/reports'
 
-interface Route {
+interface RouteType {
   id: string
   name: string
 }
@@ -72,7 +75,15 @@ export default function PortfolioReportPage() {
     goToCurrentPeriod,
   } = usePeriodNavigation('MONTHLY')
 
-  // Portfolio report data - always monthly
+  // Calculate previous month for comparison
+  const { prevYear, prevMonth } = useMemo(() => {
+    if (month === 1) {
+      return { prevYear: year - 1, prevMonth: 12 }
+    }
+    return { prevYear: year, prevMonth: month - 1 }
+  }, [year, month])
+
+  // Portfolio report data - current month
   const {
     report,
     currentActiveWeek,
@@ -87,11 +98,15 @@ export default function PortfolioReportPage() {
     month,
   })
 
-  // Active clients with CV status (for detailed table)
+  // Portfolio report data - previous month for comparison
   const {
-    clients,
-    loading: clientsLoading,
-  } = useActiveClientsWithCVStatus()
+    report: previousReport,
+    loading: previousLoading,
+  } = usePortfolioReport({
+    periodType: 'MONTHLY',
+    year: prevYear,
+    month: prevMonth,
+  })
 
   // Locality report for "Por Localidad" view
   const {
@@ -102,8 +117,79 @@ export default function PortfolioReportPage() {
     month,
   })
 
+  // Annual data for trends view
+  const {
+    annualData: rawAnnualData,
+    loading: annualLoading,
+  } = useAnnualPortfolioData({
+    year,
+    currentMonth: month,
+  })
+
   // Routes data for filters (future use)
-  const { data: routesData } = useQuery<{ routes: Route[] }>(GET_ROUTES)
+  const { data: routesData } = useQuery<{ routes: RouteType[] }>(GET_ROUTES)
+
+  // Transform annual data for chart
+  const annualData: AnnualMonthData[] = useMemo(() => {
+    return rawAnnualData.map((d) => ({
+      month: d.month,
+      year: d.year,
+      label: d.label,
+      clientesActivos: d.clientesActivos,
+      alCorrientePromedio: d.alCorrientePromedio,
+      cvPromedio: d.cvPromedio,
+      renovaciones: d.renovaciones,
+      nuevos: d.nuevos,
+      balance: d.balance,
+    }))
+  }, [rawAnnualData])
+
+  // Month comparison data
+  const monthComparisonData = useMemo(() => {
+    if (!report) return null
+
+    // Helper to safely get numeric value (handles undefined and NaN)
+    const safeNumber = (value: number | undefined | null): number => {
+      if (value === undefined || value === null || Number.isNaN(value)) return 0
+      return value
+    }
+
+    // Current month data
+    const currentMonth = {
+      label: formatMonthLabel(month, year),
+      clientesActivos: safeNumber(report.summary.totalClientesActivos),
+      alCorrientePromedio: safeNumber(report.summary.clientesAlCorriente),
+      cvPromedio: safeNumber(report.summary.promedioCV ?? report.summary.clientesEnCV),
+      renovaciones: safeNumber(report.renovationKPIs.totalRenovaciones),
+      nuevos: safeNumber(report.summary.clientBalance.nuevos),
+    }
+
+    // Override with locality report averages if available (with NaN protection)
+    if (localityReport?.totals) {
+      const alCorriente = localityReport.totals.alCorrientePromedio
+      const cv = localityReport.totals.cvPromedio
+      if (alCorriente !== undefined && !Number.isNaN(alCorriente)) {
+        currentMonth.alCorrientePromedio = alCorriente
+      }
+      if (cv !== undefined && !Number.isNaN(cv)) {
+        currentMonth.cvPromedio = cv
+      }
+    }
+
+    // Previous month data
+    const previousMonth = previousReport
+      ? {
+          label: formatMonthLabel(prevMonth, prevYear),
+          clientesActivos: safeNumber(previousReport.summary.totalClientesActivos),
+          alCorrientePromedio: safeNumber(previousReport.summary.clientesAlCorriente),
+          cvPromedio: safeNumber(previousReport.summary.promedioCV ?? previousReport.summary.clientesEnCV),
+          renovaciones: safeNumber(previousReport.renovationKPIs.totalRenovaciones),
+          nuevos: safeNumber(previousReport.summary.clientBalance.nuevos),
+        }
+      : null
+
+    return { currentMonth, previousMonth }
+  }, [report, previousReport, localityReport, month, year, prevMonth, prevYear])
 
   // Handle PDF download
   const handleDownloadPDF = async () => {
@@ -220,54 +306,41 @@ export default function PortfolioReportPage() {
       {/* Report Content */}
       {report && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="resumen">Resumen</TabsTrigger>
-            <TabsTrigger value="rutas">Por Ruta</TabsTrigger>
-            <TabsTrigger value="clientes">Clientes</TabsTrigger>
-            <TabsTrigger value="tendencias">Tendencias</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="resumen" className="flex items-center gap-2">
+              <LayoutDashboard className="h-4 w-4" />
+              <span>Resumen del Mes</span>
+            </TabsTrigger>
+            <TabsTrigger value="rutas" className="flex items-center gap-2">
+              <Route className="h-4 w-4" />
+              <span>Por Ruta</span>
+            </TabsTrigger>
           </TabsList>
 
-          {/* Resumen Tab */}
+          {/* Resumen del Mes Tab */}
           <TabsContent value="resumen" className="space-y-6">
+            {/* Month Comparison Chart */}
+            {monthComparisonData && (
+              <MonthComparisonChart
+                currentMonth={monthComparisonData.currentMonth}
+                previousMonth={monthComparisonData.previousMonth}
+                annualData={annualData.length > 1 ? annualData : undefined}
+                loading={previousLoading || annualLoading}
+              />
+            )}
+
+            {/* KPI Summary Cards */}
             <PortfolioSummaryCard
               summary={report.summary}
               renovationKPIs={report.renovationKPIs}
             />
 
-            {/* Quick Stats by Location */}
-            {report.byLocation.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Top Rutas por Clientes Activos</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {report.byLocation.slice(0, 6).map((loc) => (
-                      <div
-                        key={loc.locationId}
-                        className="flex items-center justify-between rounded-lg border p-3"
-                      >
-                        <div>
-                          <p className="font-medium">{loc.routeName || loc.locationName}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {loc.clientesActivos} activos
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-semibold text-red-600 dark:text-red-400">
-                            {loc.clientesEnCV} CV
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {loc.clientesActivos > 0
-                              ? ((loc.clientesEnCV / loc.clientesActivos) * 100).toFixed(0)
-                              : 0}%
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+            {/* Weekly Trends (integrated from Tendencias tab) */}
+            {report.weeklyData.length > 0 && (
+              <ClientBalanceChart
+                weeklyData={report.weeklyData}
+                periodType="MONTHLY"
+              />
             )}
           </TabsContent>
 
@@ -280,31 +353,6 @@ export default function PortfolioReportPage() {
               year={year}
               month={month}
             />
-          </TabsContent>
-
-          {/* Clientes Tab */}
-          <TabsContent value="clientes">
-            <CVStatusTable clients={clients} loading={clientsLoading} />
-          </TabsContent>
-
-          {/* Tendencias Tab */}
-          <TabsContent value="tendencias">
-            {report.weeklyData.length > 0 ? (
-              <ClientBalanceChart
-                weeklyData={report.weeklyData}
-                periodType="MONTHLY"
-              />
-            ) : (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center py-16">
-                  <BarChart3 className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                  <h3 className="text-lg font-semibold">Sin datos de tendencias</h3>
-                  <p className="text-sm text-muted-foreground text-center max-w-md">
-                    No hay información de semanas disponible para este período.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
           </TabsContent>
         </Tabs>
       )}
