@@ -342,6 +342,26 @@ export type CreateLoantypeInput = {
     rate: Scalars['Decimal']['input'];
     weekDuration: Scalars['Int']['input'];
 };
+export type CreateLocationInput = {
+    municipalityId: Scalars['ID']['input'];
+    name: Scalars['String']['input'];
+    routeId: Scalars['ID']['input'];
+};
+export type CreateNewLeaderInput = {
+    birthDate?: InputMaybe<Scalars['DateTime']['input']>;
+    fullName: Scalars['String']['input'];
+    locationId: Scalars['ID']['input'];
+    phone?: InputMaybe<Scalars['String']['input']>;
+    replaceExisting?: InputMaybe<Scalars['Boolean']['input']>;
+    routeId: Scalars['ID']['input'];
+};
+export type CreateNewLeaderResult = {
+    __typename?: 'CreateNewLeaderResult';
+    loansTransferred?: Maybe<Scalars['Int']['output']>;
+    message: Scalars['String']['output'];
+    newLeaderId?: Maybe<Scalars['ID']['output']>;
+    success: Scalars['Boolean']['output'];
+};
 export type CreatePersonalDataInput = {
     addresses?: InputMaybe<Array<CreateAddressInput>>;
     birthDate?: InputMaybe<Scalars['DateTime']['input']>;
@@ -436,6 +456,12 @@ export declare enum EmployeeType {
     RouteAssistent = "ROUTE_ASSISTENT",
     RouteLead = "ROUTE_LEAD"
 }
+export type ExistingLeaderInfo = {
+    __typename?: 'ExistingLeaderInfo';
+    fullName: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    locationName: Scalars['String']['output'];
+};
 export type FinancialReport = {
     __typename?: 'FinancialReport';
     comparisonData?: Maybe<ComparisonData>;
@@ -735,6 +761,8 @@ export type Mutation = {
     createLoanPayment: LoanPayment;
     createLoansInBatch: Array<Loan>;
     createLoantype: Loantype;
+    createLocation: Location;
+    createNewLeader: CreateNewLeaderResult;
     createPortfolioCleanup: PortfolioCleanup;
     createRoute: Route;
     createTransaction: Transaction;
@@ -804,6 +832,12 @@ export type MutationCreateLoansInBatchArgs = {
 };
 export type MutationCreateLoantypeArgs = {
     input: CreateLoantypeInput;
+};
+export type MutationCreateLocationArgs = {
+    input: CreateLocationInput;
+};
+export type MutationCreateNewLeaderArgs = {
+    input: CreateNewLeaderInput;
 };
 export type MutationCreatePortfolioCleanupArgs = {
     input: CreatePortfolioCleanupInput;
@@ -1049,6 +1083,7 @@ export type Query = {
     activeClientsWithCVStatus: Array<ActiveClientStatus>;
     badDebtByMonth: Array<BadDebtData>;
     badDebtSummary: BadDebtSummary;
+    checkExistingLeader?: Maybe<ExistingLeaderInfo>;
     currentActiveWeek: WeekRange;
     documentPhoto?: Maybe<DocumentPhoto>;
     documentPhotos: Array<DocumentPhoto>;
@@ -1069,6 +1104,7 @@ export type Query = {
     localityClients: Array<LocalityClientDetail>;
     locations: Array<Location>;
     me?: Maybe<User>;
+    municipalities: Array<Municipality>;
     portfolioByLocality: LocalityReport;
     portfolioCleanups: Array<PortfolioCleanup>;
     portfolioReportMonthly: PortfolioReport;
@@ -1096,6 +1132,9 @@ export type QueryActiveClientsWithCvStatusArgs = {
 export type QueryBadDebtByMonthArgs = {
     month: Scalars['Int']['input'];
     year: Scalars['Int']['input'];
+};
+export type QueryCheckExistingLeaderArgs = {
+    locationId: Scalars['ID']['input'];
 };
 export type QueryDocumentPhotoArgs = {
     id: Scalars['ID']['input'];
@@ -1532,6 +1571,9 @@ export type ResolversTypes = ResolversObject<{
     CreateLoanPaymentInput: CreateLoanPaymentInput;
     CreateLoansInBatchInput: CreateLoansInBatchInput;
     CreateLoantypeInput: CreateLoantypeInput;
+    CreateLocationInput: CreateLocationInput;
+    CreateNewLeaderInput: CreateNewLeaderInput;
+    CreateNewLeaderResult: ResolverTypeWrapper<CreateNewLeaderResult>;
     CreatePersonalDataInput: CreatePersonalDataInput;
     CreatePhoneInput: CreatePhoneInput;
     CreatePortfolioCleanupInput: CreatePortfolioCleanupInput;
@@ -1545,6 +1587,7 @@ export type ResolversTypes = ResolversObject<{
     DocumentType: DocumentType;
     Employee: ResolverTypeWrapper<Employee>;
     EmployeeType: EmployeeType;
+    ExistingLeaderInfo: ResolverTypeWrapper<ExistingLeaderInfo>;
     FinancialReport: ResolverTypeWrapper<FinancialReport>;
     FinancialSummary: ResolverTypeWrapper<FinancialSummary>;
     FirstPaymentInput: FirstPaymentInput;
@@ -1655,6 +1698,9 @@ export type ResolversParentTypes = ResolversObject<{
     CreateLoanPaymentInput: CreateLoanPaymentInput;
     CreateLoansInBatchInput: CreateLoansInBatchInput;
     CreateLoantypeInput: CreateLoantypeInput;
+    CreateLocationInput: CreateLocationInput;
+    CreateNewLeaderInput: CreateNewLeaderInput;
+    CreateNewLeaderResult: CreateNewLeaderResult;
     CreatePersonalDataInput: CreatePersonalDataInput;
     CreatePhoneInput: CreatePhoneInput;
     CreatePortfolioCleanupInput: CreatePortfolioCleanupInput;
@@ -1666,6 +1712,7 @@ export type ResolversParentTypes = ResolversObject<{
     Decimal: Scalars['Decimal']['output'];
     DocumentPhoto: DocumentPhoto;
     Employee: Employee;
+    ExistingLeaderInfo: ExistingLeaderInfo;
     FinancialReport: FinancialReport;
     FinancialSummary: FinancialSummary;
     FirstPaymentInput: FirstPaymentInput;
@@ -1926,6 +1973,13 @@ export type ComparisonDataResolvers<ContextType = GraphQLContext, ParentType ext
     trend?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
     __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
+export type CreateNewLeaderResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['CreateNewLeaderResult'] = ResolversParentTypes['CreateNewLeaderResult']> = ResolversObject<{
+    loansTransferred?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+    message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+    newLeaderId?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
+    success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+    __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
 export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['DateTime'], any> {
     name: 'DateTime';
 }
@@ -1961,6 +2015,12 @@ export type EmployeeResolvers<ContextType = GraphQLContext, ParentType extends R
     transactions?: Resolver<Array<ResolversTypes['Transaction']>, ParentType, ContextType>;
     type?: Resolver<ResolversTypes['EmployeeType'], ParentType, ContextType>;
     updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+    __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+export type ExistingLeaderInfoResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ExistingLeaderInfo'] = ResolversParentTypes['ExistingLeaderInfo']> = ResolversObject<{
+    fullName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+    id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+    locationName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
     __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 export type FinancialReportResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['FinancialReport'] = ResolversParentTypes['FinancialReport']> = ResolversObject<{
@@ -2252,6 +2312,8 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
     createLoanPayment?: Resolver<ResolversTypes['LoanPayment'], ParentType, ContextType, RequireFields<MutationCreateLoanPaymentArgs, 'input'>>;
     createLoansInBatch?: Resolver<Array<ResolversTypes['Loan']>, ParentType, ContextType, RequireFields<MutationCreateLoansInBatchArgs, 'input'>>;
     createLoantype?: Resolver<ResolversTypes['Loantype'], ParentType, ContextType, RequireFields<MutationCreateLoantypeArgs, 'input'>>;
+    createLocation?: Resolver<ResolversTypes['Location'], ParentType, ContextType, RequireFields<MutationCreateLocationArgs, 'input'>>;
+    createNewLeader?: Resolver<ResolversTypes['CreateNewLeaderResult'], ParentType, ContextType, RequireFields<MutationCreateNewLeaderArgs, 'input'>>;
     createPortfolioCleanup?: Resolver<ResolversTypes['PortfolioCleanup'], ParentType, ContextType, RequireFields<MutationCreatePortfolioCleanupArgs, 'input'>>;
     createRoute?: Resolver<ResolversTypes['Route'], ParentType, ContextType, RequireFields<MutationCreateRouteArgs, 'input'>>;
     createTransaction?: Resolver<ResolversTypes['Transaction'], ParentType, ContextType, RequireFields<MutationCreateTransactionArgs, 'input'>>;
@@ -2388,6 +2450,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
     activeClientsWithCVStatus?: Resolver<Array<ResolversTypes['ActiveClientStatus']>, ParentType, ContextType, Partial<QueryActiveClientsWithCvStatusArgs>>;
     badDebtByMonth?: Resolver<Array<ResolversTypes['BadDebtData']>, ParentType, ContextType, RequireFields<QueryBadDebtByMonthArgs, 'month' | 'year'>>;
     badDebtSummary?: Resolver<ResolversTypes['BadDebtSummary'], ParentType, ContextType>;
+    checkExistingLeader?: Resolver<Maybe<ResolversTypes['ExistingLeaderInfo']>, ParentType, ContextType, RequireFields<QueryCheckExistingLeaderArgs, 'locationId'>>;
     currentActiveWeek?: Resolver<ResolversTypes['WeekRange'], ParentType, ContextType>;
     documentPhoto?: Resolver<Maybe<ResolversTypes['DocumentPhoto']>, ParentType, ContextType, RequireFields<QueryDocumentPhotoArgs, 'id'>>;
     documentPhotos?: Resolver<Array<ResolversTypes['DocumentPhoto']>, ParentType, ContextType, Partial<QueryDocumentPhotosArgs>>;
@@ -2408,6 +2471,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
     localityClients?: Resolver<Array<ResolversTypes['LocalityClientDetail']>, ParentType, ContextType, RequireFields<QueryLocalityClientsArgs, 'localityId' | 'month' | 'year'>>;
     locations?: Resolver<Array<ResolversTypes['Location']>, ParentType, ContextType, Partial<QueryLocationsArgs>>;
     me?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType>;
+    municipalities?: Resolver<Array<ResolversTypes['Municipality']>, ParentType, ContextType>;
     portfolioByLocality?: Resolver<ResolversTypes['LocalityReport'], ParentType, ContextType, RequireFields<QueryPortfolioByLocalityArgs, 'month' | 'year'>>;
     portfolioCleanups?: Resolver<Array<ResolversTypes['PortfolioCleanup']>, ParentType, ContextType, Partial<QueryPortfolioCleanupsArgs>>;
     portfolioReportMonthly?: Resolver<ResolversTypes['PortfolioReport'], ParentType, ContextType, RequireFields<QueryPortfolioReportMonthlyArgs, 'month' | 'year'>>;
@@ -2538,10 +2602,12 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
     ClientSummary?: ClientSummaryResolvers<ContextType>;
     CommissionPayment?: CommissionPaymentResolvers<ContextType>;
     ComparisonData?: ComparisonDataResolvers<ContextType>;
+    CreateNewLeaderResult?: CreateNewLeaderResultResolvers<ContextType>;
     DateTime?: GraphQLScalarType;
     Decimal?: GraphQLScalarType;
     DocumentPhoto?: DocumentPhotoResolvers<ContextType>;
     Employee?: EmployeeResolvers<ContextType>;
+    ExistingLeaderInfo?: ExistingLeaderInfoResolvers<ContextType>;
     FinancialReport?: FinancialReportResolvers<ContextType>;
     FinancialSummary?: FinancialSummaryResolvers<ContextType>;
     JSON?: GraphQLScalarType;

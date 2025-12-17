@@ -32,6 +32,17 @@ export const routeResolvers = {
       const routeService = new RouteService(context.prisma)
       return routeService.findLocations(args.routeId ?? undefined)
     },
+
+    municipalities: async (_parent: unknown, _args: unknown, context: GraphQLContext) => {
+      authenticateUser(context)
+
+      return context.prisma.municipality.findMany({
+        orderBy: { name: 'asc' },
+        include: {
+          stateRelation: true
+        }
+      })
+    },
   },
 
   Mutation: {
@@ -60,6 +71,29 @@ export const routeResolvers = {
 
       const routeService = new RouteService(context.prisma)
       return routeService.update(args.id, args.input)
+    },
+
+    createLocation: async (
+      _parent: unknown,
+      args: { input: { name: string; municipalityId: string; routeId: string } },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      return context.prisma.location.create({
+        data: {
+          name: args.input.name,
+          municipality: args.input.municipalityId,
+          route: args.input.routeId
+        },
+        include: {
+          municipalityRelation: {
+            include: {
+              stateRelation: true
+            }
+          }
+        }
+      })
     },
   },
 

@@ -15,6 +15,7 @@ import { portfolioCleanupResolvers } from './portfolioCleanup'
 import { documentResolvers } from './documents'
 import { personalDataResolvers } from './personalData'
 import { clientResolvers } from './clients'
+import { leadersResolvers } from './leaders'
 
 export const resolvers = {
   ...scalars,
@@ -36,6 +37,7 @@ export const resolvers = {
     ...documentResolvers.Query,
     ...personalDataResolvers.Query,
     ...clientResolvers.Query,
+    ...leadersResolvers.Query,
   },
 
   Mutation: {
@@ -53,6 +55,7 @@ export const resolvers = {
     ...portfolioCleanupResolvers.Mutation,
     ...documentResolvers.Mutation,
     ...personalDataResolvers.Mutation,
+    ...leadersResolvers.Mutation,
   },
 
   // Type resolvers

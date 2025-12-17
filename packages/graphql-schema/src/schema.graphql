@@ -846,6 +846,7 @@ type Query {
   route(id: ID!): Route @auth
   routes: [Route!]! @auth
   locations(routeId: ID): [Location!]! @auth
+  municipalities: [Municipality!]! @auth
 
   # Loan types
   loantype(id: ID!): Loantype @auth
@@ -865,6 +866,9 @@ type Query {
     locationId: ID
     limit: Int
   ): [PersonalData!]! @auth
+
+  # Check existing leader in location
+  checkExistingLeader(locationId: ID!): ExistingLeaderInfo @auth
 
   # Client History (historial de clientes)
   searchClients(
@@ -1211,6 +1215,7 @@ type Mutation {
   createEmployee(input: CreateEmployeeInput!): Employee! @auth
   updateEmployee(id: ID!, input: UpdateEmployeeInput!): Employee! @auth
   promoteToLead(employeeId: ID!): Employee! @requireRole(roles: [ADMIN])
+  createNewLeader(input: CreateNewLeaderInput!): CreateNewLeaderResult! @auth
 
   # Borrowers
   createBorrower(input: CreateBorrowerInput!): Borrower! @auth
@@ -1256,6 +1261,9 @@ type Mutation {
   createRoute(input: CreateRouteInput!): Route! @requireRole(roles: [ADMIN])
   updateRoute(id: ID!, input: UpdateRouteInput!): Route! @requireRole(roles: [ADMIN])
 
+  # Locations
+  createLocation(input: CreateLocationInput!): Location! @auth
+
   # Loan types
   createLoantype(input: CreateLoantypeInput!): Loantype! @requireRole(roles: [ADMIN])
   updateLoantype(id: ID!, input: UpdateLoantypeInput!): Loantype! @requireRole(roles: [ADMIN])
@@ -1278,4 +1286,36 @@ type Mutation {
   uploadDocumentPhoto(input: UploadDocumentInput!): DocumentPhoto! @auth
   updateDocumentPhoto(id: ID!, input: UpdateDocumentInput!): DocumentPhoto! @auth
   deleteDocumentPhoto(id: ID!): Boolean! @auth
+}
+
+# Inputs for creating new leader
+input CreateNewLeaderInput {
+  fullName: String!
+  birthDate: DateTime
+  phone: String
+  locationId: ID!
+  routeId: ID!
+  replaceExisting: Boolean
+}
+
+# Result type for creating new leader
+type CreateNewLeaderResult {
+  success: Boolean!
+  message: String!
+  newLeaderId: ID
+  loansTransferred: Int
+}
+
+# Input for creating new location
+input CreateLocationInput {
+  name: String!
+  municipalityId: ID!
+  routeId: ID!
+}
+
+# Query to check existing leader
+type ExistingLeaderInfo {
+  id: ID!
+  fullName: String!
+  locationName: String!
 }
