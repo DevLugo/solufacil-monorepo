@@ -145,13 +145,28 @@ export class CloudinaryService {
     this.ensureConfigured()
 
     try {
+      console.log('Attempting to delete from Cloudinary:', publicId)
       const result = await cloudinary.uploader.destroy(publicId)
-      return result.result === 'ok'
+      console.log('Cloudinary delete result:', result)
+
+      // Cloudinary returns result.result with values: 'ok', 'not found', or error
+      // We consider 'not found' as success since the image doesn't exist anyway
+      if (result.result === 'ok' || result.result === 'not found') {
+        return true
+      }
+
+      console.warn('Unexpected Cloudinary result:', result)
+      return false
     } catch (error) {
+      console.error('Cloudinary delete error:', error)
       throw new GraphQLError(
-        `Failed to delete image: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `Failed to delete image: ${error instanceof Error ? error.message : JSON.stringify(error)}`,
         {
-          extensions: { code: 'DELETE_ERROR' },
+          extensions: {
+            code: 'DELETE_ERROR',
+            publicId,
+            originalError: error instanceof Error ? error.message : String(error)
+          },
         }
       )
     }

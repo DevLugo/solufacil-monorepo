@@ -2,6 +2,7 @@ import { GraphQLError } from 'graphql'
 import type { GraphQLContext } from '../context'
 import type { DocumentType } from '@solufacil/database'
 import { DocumentPhotoService } from '../services/DocumentPhotoService'
+import { authenticateUser } from '../middleware/auth'
 
 export const documentResolvers = {
   Query: {
@@ -69,11 +70,7 @@ export const documentResolvers = {
       },
       context: GraphQLContext
     ) => {
-      if (!context.user) {
-        throw new GraphQLError('Not authenticated', {
-          extensions: { code: 'UNAUTHENTICATED' },
-        })
-      }
+      authenticateUser(context)
 
       const file = await args.input.file
       const service = new DocumentPhotoService(context.prisma)
@@ -90,7 +87,7 @@ export const documentResolvers = {
           errorDescription: args.input.errorDescription,
           isMissing: args.input.isMissing,
         },
-        context.user.id
+        context.user!.id
       )
     },
 
@@ -108,11 +105,7 @@ export const documentResolvers = {
       },
       context: GraphQLContext
     ) => {
-      if (!context.user) {
-        throw new GraphQLError('Not authenticated', {
-          extensions: { code: 'UNAUTHENTICATED' },
-        })
-      }
+      authenticateUser(context)
 
       const service = new DocumentPhotoService(context.prisma)
       return service.update(args.id, args.input)
@@ -123,22 +116,46 @@ export const documentResolvers = {
       args: { id: string },
       context: GraphQLContext
     ) => {
-      if (!context.user) {
-        throw new GraphQLError('Not authenticated', {
-          extensions: { code: 'UNAUTHENTICATED' },
-        })
-      }
+      authenticateUser(context)
 
       const service = new DocumentPhotoService(context.prisma)
       return service.delete(args.id)
     },
+
+    markDocumentAsMissing: async (
+      _parent: unknown,
+      args: {
+        input: {
+          loanId: string
+          personalDataId: string
+          documentType: DocumentType
+        }
+      },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      const service = new DocumentPhotoService(context.prisma)
+      return service.markAsMissing(
+        args.input.loanId,
+        args.input.personalDataId,
+        args.input.documentType,
+        context.user!.id
+      )
+    },
   },
 
   DocumentPhoto: {
-    personalData: async (parent: { personalDataId?: string }, _args: unknown, context: GraphQLContext) => {
-      if (!parent.personalDataId) return null
+    personalData: async (parent: any, _args: unknown, context: GraphQLContext) => {
+      // In Prisma schema, the field is called 'personalData' (not 'personalDataId')
+      const personalDataId = parent.personalData || parent.personalDataId
+      if (!personalDataId) return null
+
+      // If already included from repository, return it
+      if (parent.personalDataRelation) return parent.personalDataRelation
+
       return context.prisma.personalData.findUnique({
-        where: { id: parent.personalDataId },
+        where: { id: personalDataId },
         include: {
           phones: true,
           addresses: {
@@ -150,10 +167,16 @@ export const documentResolvers = {
       })
     },
 
-    loan: async (parent: { loanId?: string }, _args: unknown, context: GraphQLContext) => {
-      if (!parent.loanId) return null
+    loan: async (parent: any, _args: unknown, context: GraphQLContext) => {
+      // In Prisma schema, the field is called 'loan' (not 'loanId')
+      const loanId = parent.loan || parent.loanId
+      if (!loanId) return null
+
+      // If already included from repository, return it
+      if (parent.loanRelation) return parent.loanRelation
+
       return context.prisma.loan.findUnique({
-        where: { id: parent.loanId },
+        where: { id: loanId },
         include: {
           borrowerRelation: {
             include: {
@@ -165,9 +188,15 @@ export const documentResolvers = {
       })
     },
 
-    uploadedBy: async (parent: { uploadedById: string }, _args: unknown, context: GraphQLContext) => {
+    uploadedBy: async (parent: any, _args: unknown, context: GraphQLContext) => {
+      const uploadedById = parent.uploadedBy || parent.uploadedById
+      if (!uploadedById) return null
+
+      // If already included from repository, return it
+      if (parent.uploadedByRelation) return parent.uploadedByRelation
+
       return context.prisma.user.findUnique({
-        where: { id: parent.uploadedById },
+        where: { id: uploadedById },
       })
     },
   },

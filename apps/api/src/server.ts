@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import { ApolloServer } from '@apollo/server'
 import { expressMiddleware } from '@apollo/server/express4'
+import { graphqlUploadExpress } from 'graphql-upload-minimal'
 import { typeDefs } from '@solufacil/graphql-schema'
 import { resolvers } from './resolvers'
 import { createContext } from './context'
@@ -24,13 +25,19 @@ async function startServer() {
     ].filter(Boolean) as string[],
     credentials: true,
     methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'apollo-require-preflight',
+      'x-apollo-operation-name',
+    ],
   }
 
   const server = new ApolloServer({
     typeDefs,
     resolvers,
     introspection: process.env.NODE_ENV !== 'production',
+    csrfPrevention: true, // Keep CSRF protection enabled
   })
 
   await server.start()
@@ -38,6 +45,8 @@ async function startServer() {
   app.use(
     '/graphql',
     cors(corsOptions),
+    // Process file uploads before JSON parsing
+    graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 10 }), // 10MB max, 10 files max
     express.json(),
     expressMiddleware(server, {
       context: createContext,

@@ -25,6 +25,7 @@ import {
   BookOpen,
   CalendarDays,
   History,
+  Upload,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -96,6 +97,7 @@ const navigation: NavItem[] = [
     title: 'Documentos',
     icon: FileImage,
     children: [
+      { title: 'Cargar Documentos', href: '/documentos/cargar', icon: Upload },
       { title: 'Documentos', href: '/documentos', icon: FileImage },
       { title: 'Notificaciones', href: '/documentos/notificaciones', icon: Bell },
     ],

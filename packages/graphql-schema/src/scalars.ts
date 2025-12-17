@@ -1,5 +1,6 @@
 import { GraphQLScalarType, Kind } from 'graphql'
 import { DateTimeResolver, JSONResolver } from 'graphql-scalars'
+import { GraphQLUpload } from 'graphql-upload-minimal'
 import { Decimal } from 'decimal.js'
 
 // Helper to check if value is a Decimal-like object (handles both decimal.js and Prisma.Decimal)
@@ -50,4 +51,5 @@ export const scalars = {
   DateTime: DateTimeResolver,
   Decimal: DecimalScalar,
   JSON: JSONResolver,
+  Upload: GraphQLUpload,
 }

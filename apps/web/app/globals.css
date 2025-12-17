@@ -271,4 +271,18 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Fix for Radix ScrollArea display: table issue */
+  .loans-scroll-area [data-radix-scroll-area-viewport] {
+    display: block !important;
+    min-width: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .loans-scroll-area [data-radix-scroll-area-viewport] > div {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
 }

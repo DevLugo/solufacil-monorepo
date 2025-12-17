@@ -273,15 +273,15 @@ type DocumentPhoto {
   id: ID!
   title: String
   description: String
-  photoUrl: String!
-  publicId: String!
+  photoUrl: String
+  publicId: String
   documentType: DocumentType!
   isError: Boolean!
   errorDescription: String
   isMissing: Boolean!
   personalData: PersonalData
   loan: Loan
-  uploadedBy: User!
+  uploadedBy: User
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -512,6 +512,14 @@ type BadDebtSummary {
   totalLoans: Int!
   totalAmount: Decimal!
   byRoute: [BadDebtData!]!
+}
+
+# Week Information Types
+type WeekInfo {
+  year: Int!
+  weekNumber: Int!
+  startDate: DateTime!
+  endDate: DateTime!
 }
 
 # Portfolio Report Types (Reporte de Cartera)
@@ -821,6 +829,14 @@ type Query {
     limit: Int
     offset: Int
   ): LoanConnection! @auth
+  loansByWeekAndLocation(
+    year: Int!
+    weekNumber: Int!
+    locationId: ID
+    limit: Int
+    offset: Int
+  ): [Loan!]! @auth
+  currentWeek: WeekInfo! @auth
 
   # Payments
   loanPayments(loanId: ID!, limit: Int, offset: Int): [LoanPayment!]! @auth
@@ -1151,6 +1167,12 @@ input UpdateDocumentInput {
   isMissing: Boolean
 }
 
+input MarkDocumentAsMissingInput {
+  loanId: ID!
+  personalDataId: ID!
+  documentType: DocumentType!
+}
+
 # Inputs para creación de préstamos en batch
 input CreateLoansInBatchInput {
   loans: [CreateSingleLoanInput!]!
@@ -1286,6 +1308,7 @@ type Mutation {
   uploadDocumentPhoto(input: UploadDocumentInput!): DocumentPhoto! @auth
   updateDocumentPhoto(id: ID!, input: UpdateDocumentInput!): DocumentPhoto! @auth
   deleteDocumentPhoto(id: ID!): Boolean! @auth
+  markDocumentAsMissing(input: MarkDocumentAsMissingInput!): DocumentPhoto! @auth
 }
 
 # Inputs for creating new leader

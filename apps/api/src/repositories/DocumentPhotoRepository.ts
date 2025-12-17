@@ -112,6 +112,8 @@ export class DocumentPhotoRepository {
   async update(
     id: string,
     data: {
+      photoUrl?: string
+      publicId?: string
       title?: string
       description?: string
       isError?: boolean

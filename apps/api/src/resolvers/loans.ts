@@ -2,6 +2,7 @@ import type { GraphQLContext } from '@solufacil/graphql-schema'
 import { LoanStatus } from '@solufacil/database'
 import { LoanService } from '../services/LoanService'
 import { authenticateUser } from '../middleware/auth'
+import { getCurrentWeek, getWeekStartDate, getWeekEndDate } from '../utils/weekUtils'
 
 export const loanResolvers = {
   Query: {
@@ -73,6 +74,42 @@ export const loanResolvers = {
 
       const loanService = new LoanService(context.prisma)
       return loanService.findForBadDebt(args.routeId ?? undefined)
+    },
+
+    loansByWeekAndLocation: async (
+      _parent: unknown,
+      args: {
+        year: number
+        weekNumber: number
+        locationId?: string
+        limit?: number
+        offset?: number
+      },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      const loanService = new LoanService(context.prisma)
+      return loanService.findByWeekAndLocation(args)
+    },
+
+    currentWeek: async (
+      _parent: unknown,
+      _args: unknown,
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      const current = getCurrentWeek()
+      const startDate = getWeekStartDate(current.year, current.weekNumber)
+      const endDate = getWeekEndDate(current.year, current.weekNumber)
+
+      return {
+        year: current.year,
+        weekNumber: current.weekNumber,
+        startDate,
+        endDate,
+      }
     },
   },
 

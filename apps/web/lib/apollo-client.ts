@@ -12,6 +12,7 @@ import {
 import { setContext } from '@apollo/client/link/context'
 import { onError } from '@apollo/client/link/error'
 import { saveRedirectUrl } from '@/hooks/use-redirect-url'
+import { toast } from '@/hooks/use-toast'
 
 const GRAPHQL_URL = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:4000/graphql'
 
@@ -118,11 +119,26 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
                 complete: observer.complete.bind(observer),
               })
             } else {
-              // Refresh failed, logout
+              // Refresh failed, show toast and logout
+              if (typeof window !== 'undefined') {
+                toast({
+                  title: 'Sesión expirada',
+                  description: 'Tu sesión ha expirado. Por favor inicia sesión de nuevo.',
+                  variant: 'destructive',
+                })
+              }
               handleLogout()
               observer.error(err)
             }
           }).catch(() => {
+            // Error during refresh, show toast and logout
+            if (typeof window !== 'undefined') {
+              toast({
+                title: 'Error de autenticación',
+                description: 'No se pudo renovar la sesión. Por favor inicia sesión de nuevo.',
+                variant: 'destructive',
+              })
+            }
             handleLogout()
             observer.error(err)
           })
@@ -136,6 +152,15 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
         })
       }
 
+      // Show toast for non-auth errors
+      if (typeof window !== 'undefined') {
+        toast({
+          title: 'Error',
+          description: err.message || 'Ha ocurrido un error. Por favor intenta de nuevo.',
+          variant: 'destructive',
+        })
+      }
+
       // Log non-auth errors
       console.error(
         `[GraphQL error]: Message: ${err.message}, Location: ${err.locations}, Path: ${err.path}`
@@ -144,6 +169,15 @@ const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) 
   }
 
   if (networkError) {
+    // Show toast for network errors
+    if (typeof window !== 'undefined') {
+      toast({
+        title: 'Error de conexión',
+        description: 'No se pudo conectar con el servidor. Por favor verifica tu conexión.',
+        variant: 'destructive',
+      })
+    }
+
     console.error(`[Network error]: ${networkError}`)
   }
 })
@@ -237,4 +271,74 @@ export function getApolloClient(): ApolloClient<NormalizedCacheObject> {
 
 export function resetApolloClient(): void {
   apolloClient = undefined
+}
+
+/**
+ * Upload a file using multipart/form-data with GraphQL
+ * This bypasses Apollo Client's normal flow to handle file uploads properly
+ */
+export async function uploadFileWithGraphQL(options: {
+  file: File
+  query: string
+  variables: Record<string, any>
+  operationName: string
+}) {
+  const { file, query, variables, operationName } = options
+
+  const formData = new FormData()
+
+  // GraphQL multipart request spec
+  const operations = {
+    query,
+    variables: {
+      ...variables,
+      input: {
+        ...variables.input,
+        file: null, // Will be mapped
+      },
+    },
+    operationName,
+  }
+
+  const map = {
+    '0': ['variables.input.file'],
+  }
+
+  formData.append('operations', JSON.stringify(operations))
+  formData.append('map', JSON.stringify(map))
+  formData.append('0', file)
+
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+
+  const headers: Record<string, string> = {
+    'apollo-require-preflight': 'true',
+  }
+
+  if (token) {
+    headers['authorization'] = `Bearer ${token}`
+  }
+
+  console.log('Uploading to GraphQL:', {
+    url: GRAPHQL_URL,
+    headers,
+    operationName,
+    fileName: file.name,
+    fileType: file.type,
+    fileSize: file.size,
+  })
+
+  const response = await fetch(GRAPHQL_URL, {
+    method: 'POST',
+    headers,
+    credentials: 'include',
+    body: formData,
+  })
+
+  const result = await response.json()
+
+  if (result.errors) {
+    throw new Error(result.errors[0]?.message || 'Upload failed')
+  }
+
+  return result.data
 }

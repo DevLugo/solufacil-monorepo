@@ -11,6 +11,7 @@ import { PaymentRepository } from '../repositories/PaymentRepository'
 import { PersonalDataRepository } from '../repositories/PersonalDataRepository'
 import { calculateLoanMetrics, createLoanSnapshot, calculatePaymentProfit, calculateProfitHeredado } from '@solufacil/business-logic'
 import { generateClientCode } from '@solufacil/shared'
+import { getWeekStartDate, getWeekEndDate } from '../utils/weekUtils'
 
 export interface CreateLoanInput {
   requestedAmount: string | number
@@ -159,6 +160,28 @@ export class LoanService {
     offset?: number
   }) {
     return this.loanRepository.findMany(options)
+  }
+
+  async findByWeekAndLocation(options: {
+    year: number
+    weekNumber: number
+    locationId?: string
+    limit?: number
+    offset?: number
+  }) {
+    const weekStart = getWeekStartDate(options.year, options.weekNumber)
+    const weekEnd = getWeekEndDate(options.year, options.weekNumber)
+
+    const { loans } = await this.loanRepository.findMany({
+      locationId: options.locationId,
+      fromDate: weekStart,
+      toDate: weekEnd,
+      status: 'ACTIVE',
+      limit: options.limit,
+      offset: options.offset
+    })
+
+    return loans
   }
 
   async create(input: CreateLoanInput) {
