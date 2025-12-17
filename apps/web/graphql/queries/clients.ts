@@ -194,6 +194,24 @@ export const GET_LOAN_DOCUMENT_PHOTOS_QUERY = gql`
       errorDescription
       isMissing
       createdAt
+      personalData {
+        id
+        fullName
+      }
+      loan {
+        id
+        borrower {
+          id
+          personalData {
+            id
+            fullName
+          }
+        }
+        collaterals {
+          id
+          fullName
+        }
+      }
     }
   }
 `

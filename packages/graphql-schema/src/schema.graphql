@@ -248,6 +248,30 @@ type Route {
   updatedAt: DateTime!
 }
 
+"""
+Route with calculated statistics for administration
+"""
+type RouteWithStats {
+  routeId: ID!
+  routeName: String!
+  totalActivos: Int!
+  enCV: Int!
+  alCorriente: Int!
+  employees: [EmployeeWithStats!]!
+}
+
+"""
+Employee with individual statistics
+"""
+type EmployeeWithStats {
+  id: ID!
+  type: EmployeeType!
+  personalData: PersonalData
+  activos: Int!
+  enCV: Int!
+  alCorriente: Int!
+}
+
 type Location {
   id: ID!
   name: String!
@@ -861,6 +885,7 @@ type Query {
   # Routes & Geography
   route(id: ID!): Route @auth
   routes: [Route!]! @auth
+  routesWithStats(year: Int!, month: Int!): [RouteWithStats!]! @requireRole(roles: [ADMIN])
   locations(routeId: ID): [Location!]! @auth
   municipalities: [Municipality!]! @auth
 

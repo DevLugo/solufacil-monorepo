@@ -61,6 +61,7 @@ export const resolvers = {
   // Type resolvers
   User: userResolvers.User,
   Employee: employeeResolvers.Employee,
+  EmployeeWithStats: routeResolvers.EmployeeWithStats,
   Borrower: borrowerResolvers.Borrower,
   Loan: loanResolvers.Loan,
   LoanPayment: paymentResolvers.LoanPayment,

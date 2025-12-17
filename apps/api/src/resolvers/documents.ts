@@ -18,6 +18,8 @@ export const documentResolvers = {
       },
       context: GraphQLContext
     ) => {
+      authenticateUser(context)
+
       const service = new DocumentPhotoService(context.prisma)
       return service.findMany({
         loanId: args.loanId,
@@ -183,6 +185,7 @@ export const documentResolvers = {
               personalDataRelation: true,
             },
           },
+          collaterals: true,
           loantypeRelation: true,
         },
       })

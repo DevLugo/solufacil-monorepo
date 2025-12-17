@@ -1116,7 +1116,7 @@ export class PortfolioReportService {
     }))
   }
 
-  private async getActiveLoansWithPayments(
+  async getActiveLoansWithPayments(
     weekRange: WeekRange,
     filters?: PortfolioFilters
   ): Promise<{

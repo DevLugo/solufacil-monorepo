@@ -3,6 +3,7 @@ import type { GraphQLContext } from '@solufacil/graphql-schema'
 import { EmployeeType } from '@solufacil/database'
 import { EmployeeService } from '../services/EmployeeService'
 import { authenticateUser, requireRole } from '../middleware/auth'
+import { resolvePersonalData } from './helpers/personalDataResolver'
 
 export const employeeResolvers = {
   Query: {
@@ -93,32 +94,8 @@ export const employeeResolvers = {
   },
 
   Employee: {
-    personalData: async (parent: { personalData: string; personalDataRelation?: unknown }, _args: unknown, context: GraphQLContext) => {
-      // If personalDataRelation is already included, return it
-      if (parent.personalDataRelation) {
-        return parent.personalDataRelation
-      }
-
-      // Otherwise fetch it
-      return context.prisma.personalData.findUnique({
-        where: { id: parent.personalData },
-        include: {
-          phones: true,
-          addresses: {
-            include: {
-              locationRelation: {
-                include: {
-                  municipalityRelation: {
-                    include: {
-                      stateRelation: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      })
+    personalData: async (parent: { personalData: string | null; personalDataRelation?: unknown }, _args: unknown, context: GraphQLContext) => {
+      return resolvePersonalData(parent, context)
     },
 
     routes: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {

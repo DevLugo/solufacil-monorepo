@@ -456,6 +456,16 @@ export declare enum EmployeeType {
     RouteAssistent = "ROUTE_ASSISTENT",
     RouteLead = "ROUTE_LEAD"
 }
+/** Employee with individual statistics */
+export type EmployeeWithStats = {
+    __typename?: 'EmployeeWithStats';
+    activos: Scalars['Int']['output'];
+    alCorriente: Scalars['Int']['output'];
+    enCV: Scalars['Int']['output'];
+    id: Scalars['ID']['output'];
+    personalData?: Maybe<PersonalData>;
+    type: EmployeeType;
+};
 export type ExistingLeaderInfo = {
     __typename?: 'ExistingLeaderInfo';
     fullName: Scalars['String']['output'];
@@ -1123,6 +1133,7 @@ export type Query = {
     previewPortfolioCleanup: CleanupPreview;
     route?: Maybe<Route>;
     routes: Array<Route>;
+    routesWithStats: Array<RouteWithStats>;
     searchBorrowers: Array<BorrowerSearchResult>;
     searchClients: Array<ClientSearchResult>;
     searchPersonalData: Array<PersonalData>;
@@ -1263,6 +1274,10 @@ export type QueryPreviewPortfolioCleanupArgs = {
 export type QueryRouteArgs = {
     id: Scalars['ID']['input'];
 };
+export type QueryRoutesWithStatsArgs = {
+    month: Scalars['Int']['input'];
+    year: Scalars['Int']['input'];
+};
 export type QuerySearchBorrowersArgs = {
     leadId?: InputMaybe<Scalars['ID']['input']>;
     limit?: InputMaybe<Scalars['Int']['input']>;
@@ -1326,6 +1341,16 @@ export type RouteInfo = {
     __typename?: 'RouteInfo';
     id: Scalars['ID']['output'];
     name: Scalars['String']['output'];
+};
+/** Route with calculated statistics for administration */
+export type RouteWithStats = {
+    __typename?: 'RouteWithStats';
+    alCorriente: Scalars['Int']['output'];
+    employees: Array<EmployeeWithStats>;
+    enCV: Scalars['Int']['output'];
+    routeId: Scalars['ID']['output'];
+    routeName: Scalars['String']['output'];
+    totalActivos: Scalars['Int']['output'];
 };
 export type State = {
     __typename?: 'State';
@@ -1612,6 +1637,7 @@ export type ResolversTypes = ResolversObject<{
     DocumentType: DocumentType;
     Employee: ResolverTypeWrapper<Employee>;
     EmployeeType: EmployeeType;
+    EmployeeWithStats: ResolverTypeWrapper<EmployeeWithStats>;
     ExistingLeaderInfo: ResolverTypeWrapper<ExistingLeaderInfo>;
     FinancialReport: ResolverTypeWrapper<FinancialReport>;
     FinancialSummary: ResolverTypeWrapper<FinancialSummary>;
@@ -1660,6 +1686,7 @@ export type ResolversTypes = ResolversObject<{
     RenovationKPIs: ResolverTypeWrapper<RenovationKpIs>;
     Route: ResolverTypeWrapper<Route>;
     RouteInfo: ResolverTypeWrapper<RouteInfo>;
+    RouteWithStats: ResolverTypeWrapper<RouteWithStats>;
     State: ResolverTypeWrapper<State>;
     String: ResolverTypeWrapper<Scalars['String']['output']>;
     Transaction: ResolverTypeWrapper<Transaction>;
@@ -1739,6 +1766,7 @@ export type ResolversParentTypes = ResolversObject<{
     Decimal: Scalars['Decimal']['output'];
     DocumentPhoto: DocumentPhoto;
     Employee: Employee;
+    EmployeeWithStats: EmployeeWithStats;
     ExistingLeaderInfo: ExistingLeaderInfo;
     FinancialReport: FinancialReport;
     FinancialSummary: FinancialSummary;
@@ -1784,6 +1812,7 @@ export type ResolversParentTypes = ResolversObject<{
     RenovationKPIs: RenovationKpIs;
     Route: Route;
     RouteInfo: RouteInfo;
+    RouteWithStats: RouteWithStats;
     State: State;
     String: Scalars['String']['output'];
     Transaction: Transaction;
@@ -2044,6 +2073,15 @@ export type EmployeeResolvers<ContextType = GraphQLContext, ParentType extends R
     transactions?: Resolver<Array<ResolversTypes['Transaction']>, ParentType, ContextType>;
     type?: Resolver<ResolversTypes['EmployeeType'], ParentType, ContextType>;
     updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+    __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+export type EmployeeWithStatsResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['EmployeeWithStats'] = ResolversParentTypes['EmployeeWithStats']> = ResolversObject<{
+    activos?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+    alCorriente?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+    enCV?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+    id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+    personalData?: Resolver<Maybe<ResolversTypes['PersonalData']>, ParentType, ContextType>;
+    type?: Resolver<ResolversTypes['EmployeeType'], ParentType, ContextType>;
     __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 export type ExistingLeaderInfoResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ExistingLeaderInfo'] = ResolversParentTypes['ExistingLeaderInfo']> = ResolversObject<{
@@ -2511,6 +2549,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
     previewPortfolioCleanup?: Resolver<ResolversTypes['CleanupPreview'], ParentType, ContextType, RequireFields<QueryPreviewPortfolioCleanupArgs, 'maxSignDate'>>;
     route?: Resolver<Maybe<ResolversTypes['Route']>, ParentType, ContextType, RequireFields<QueryRouteArgs, 'id'>>;
     routes?: Resolver<Array<ResolversTypes['Route']>, ParentType, ContextType>;
+    routesWithStats?: Resolver<Array<ResolversTypes['RouteWithStats']>, ParentType, ContextType, RequireFields<QueryRoutesWithStatsArgs, 'month' | 'year'>>;
     searchBorrowers?: Resolver<Array<ResolversTypes['BorrowerSearchResult']>, ParentType, ContextType, RequireFields<QuerySearchBorrowersArgs, 'searchTerm'>>;
     searchClients?: Resolver<Array<ResolversTypes['ClientSearchResult']>, ParentType, ContextType, RequireFields<QuerySearchClientsArgs, 'searchTerm'>>;
     searchPersonalData?: Resolver<Array<ResolversTypes['PersonalData']>, ParentType, ContextType, RequireFields<QuerySearchPersonalDataArgs, 'searchTerm'>>;
@@ -2539,6 +2578,15 @@ export type RouteResolvers<ContextType = GraphQLContext, ParentType extends Reso
 export type RouteInfoResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['RouteInfo'] = ResolversParentTypes['RouteInfo']> = ResolversObject<{
     id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
     name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+    __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+export type RouteWithStatsResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['RouteWithStats'] = ResolversParentTypes['RouteWithStats']> = ResolversObject<{
+    alCorriente?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+    employees?: Resolver<Array<ResolversTypes['EmployeeWithStats']>, ParentType, ContextType>;
+    enCV?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+    routeId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+    routeName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+    totalActivos?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
     __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 export type StateResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['State'] = ResolversParentTypes['State']> = ResolversObject<{
@@ -2646,6 +2694,7 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
     Decimal?: GraphQLScalarType;
     DocumentPhoto?: DocumentPhotoResolvers<ContextType>;
     Employee?: EmployeeResolvers<ContextType>;
+    EmployeeWithStats?: EmployeeWithStatsResolvers<ContextType>;
     ExistingLeaderInfo?: ExistingLeaderInfoResolvers<ContextType>;
     FinancialReport?: FinancialReportResolvers<ContextType>;
     FinancialSummary?: FinancialSummaryResolvers<ContextType>;
@@ -2683,6 +2732,7 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
     RenovationKPIs?: RenovationKpIsResolvers<ContextType>;
     Route?: RouteResolvers<ContextType>;
     RouteInfo?: RouteInfoResolvers<ContextType>;
+    RouteWithStats?: RouteWithStatsResolvers<ContextType>;
     State?: StateResolvers<ContextType>;
     Transaction?: TransactionResolvers<ContextType>;
     TransactionConnection?: TransactionConnectionResolvers<ContextType>;

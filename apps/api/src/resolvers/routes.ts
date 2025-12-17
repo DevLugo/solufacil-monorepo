@@ -1,6 +1,8 @@
 import type { GraphQLContext } from '@solufacil/graphql-schema'
 import { RouteService } from '../services/RouteService'
+import { RouteManagementService } from '../services/RouteManagementService'
 import { authenticateUser, requireRole } from '../middleware/auth'
+import { resolvePersonalData } from './helpers/personalDataResolver'
 
 export const routeResolvers = {
   Query: {
@@ -20,6 +22,18 @@ export const routeResolvers = {
 
       const routeService = new RouteService(context.prisma)
       return routeService.findMany()
+    },
+
+    routesWithStats: async (
+      _parent: unknown,
+      args: { year: number; month: number },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+      requireRole(context, ['ADMIN'])
+
+      const routeManagementService = new RouteManagementService(context.prisma)
+      return routeManagementService.getRoutesWithStats(args.year, args.month)
     },
 
     locations: async (
@@ -161,9 +175,9 @@ export const routeResolvers = {
     },
 
     municipality: async (parent: { municipality: string; municipalityRelation?: unknown }, _args: unknown, context: GraphQLContext) => {
-      // Si ya está incluida la relación, devolverla
+      // If relation is already included, return it
       if (parent.municipalityRelation) return parent.municipalityRelation
-      // Si no, buscarla
+      // Otherwise, fetch it
       return context.prisma.municipality.findUnique({
         where: { id: parent.municipality },
         include: {
@@ -181,9 +195,9 @@ export const routeResolvers = {
 
   Municipality: {
     state: async (parent: { state: string; stateRelation?: unknown }, _args: unknown, context: GraphQLContext) => {
-      // Si ya está incluida la relación, devolverla
+      // If relation is already included, return it
       if (parent.stateRelation) return parent.stateRelation
-      // Si no, buscarla
+      // Otherwise, fetch it
       return context.prisma.state.findUnique({
         where: { id: parent.state },
       })
@@ -201,6 +215,12 @@ export const routeResolvers = {
       return context.prisma.municipality.findMany({
         where: { state: parent.id },
       })
+    },
+  },
+
+  EmployeeWithStats: {
+    personalData: async (parent: { personalData: string | null; personalDataRelation?: { id: string | null } | null }, _args: unknown, context: GraphQLContext) => {
+      return resolvePersonalData(parent, context)
     },
   },
 }
