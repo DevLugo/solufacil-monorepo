@@ -19,6 +19,7 @@ import { leadersResolvers } from './leaders'
 import { telegramResolvers } from './telegram'
 import { bankIncomeResolvers } from './bankIncome'
 import { deadDebtResolvers } from './deadDebt'
+import { batchTransferResolvers } from './batchTransfer'
 
 export const resolvers = {
   ...scalars,
@@ -64,6 +65,7 @@ export const resolvers = {
     ...leadersResolvers.Mutation,
     ...telegramResolvers.Mutation,
     ...deadDebtResolvers.Mutation,
+    ...batchTransferResolvers.Mutation,
   },
 
   // Type resolvers

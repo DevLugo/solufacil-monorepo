@@ -51,9 +51,11 @@ export function useTransferQueries({
     fetchPolicy: 'cache-and-network',
   })
 
-  // Refetch all data after a mutation
+  // Refetch all data after a mutation (only if route is selected)
   const refetchAll = async () => {
-    await Promise.all([refetchTransfers(), refetchAccounts()])
+    if (selectedRouteId) {
+      await Promise.all([refetchTransfers(), refetchAccounts()])
+    }
   }
 
   // Combine transfers and capital investments (MONEY_INVESTMENT only)

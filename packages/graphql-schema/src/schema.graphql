@@ -68,6 +68,11 @@ enum CVStatus {
   EXCLUIDO
 }
 
+enum DistributionMode {
+  FIXED_EQUAL
+  VARIABLE
+}
+
 # Directives
 directive @auth on FIELD_DEFINITION | OBJECT
 directive @requireRole(roles: [UserRole!]!) on FIELD_DEFINITION | OBJECT
@@ -1240,6 +1245,27 @@ input TransferInput {
   description: String
 }
 
+# Batch Transfer Inputs
+input DrainRoutesInput {
+  routeIds: [ID!]!
+  destinationAccountId: ID!
+  description: String
+}
+
+input RouteAmountInput {
+  routeId: ID!
+  amount: Decimal!
+}
+
+input DistributeMoneyInput {
+  sourceAccountId: ID!
+  routeIds: [ID!]!
+  distributionMode: DistributionMode!
+  fixedAmount: Decimal
+  variableAmounts: [RouteAmountInput!]
+  description: String
+}
+
 input CreateRouteInput {
   name: String!
 }
@@ -1403,6 +1429,10 @@ type Mutation {
   updateTransaction(id: ID!, input: UpdateTransactionInput!): Transaction! @auth
   deleteTransaction(id: ID!): Boolean! @auth
   transferBetweenAccounts(input: TransferInput!): Transaction! @auth
+
+  # Batch Transfers (Operaciones Masivas)
+  drainRoutes(input: DrainRoutesInput!): BatchTransferResult! @requireRole(roles: [ADMIN])
+  distributeMoney(input: DistributeMoneyInput!): BatchTransferResult! @requireRole(roles: [ADMIN])
 
   # Routes
   createRoute(input: CreateRouteInput!): Route! @requireRole(roles: [ADMIN])
@@ -1749,6 +1779,15 @@ type MarkDeadDebtResult {
   success: Boolean!
   message: String!
   count: Int!
+}
+
+# Batch Transfer Result
+type BatchTransferResult {
+  success: Boolean!
+  message: String!
+  transactionsCreated: Int!
+  totalAmount: Decimal!
+  transactions: [Transaction!]!
 }
 
 # Recovered Dead Debt types - payments from loans marked as dead debt

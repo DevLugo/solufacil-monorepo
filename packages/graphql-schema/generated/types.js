@@ -27,6 +27,11 @@ export var DeadDebtStatus;
     DeadDebtStatus["Marked"] = "MARKED";
     DeadDebtStatus["Unmarked"] = "UNMARKED";
 })(DeadDebtStatus || (DeadDebtStatus = {}));
+export var DistributionMode;
+(function (DistributionMode) {
+    DistributionMode["FixedEqual"] = "FIXED_EQUAL";
+    DistributionMode["Variable"] = "VARIABLE";
+})(DistributionMode || (DistributionMode = {}));
 export var DocumentType;
 (function (DocumentType) {
     DocumentType["Domicilio"] = "DOMICILIO";

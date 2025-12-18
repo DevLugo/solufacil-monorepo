@@ -7,6 +7,7 @@ import {
   TransferForm,
   TransferHistoryTable,
   SuccessDialog,
+  BatchOperationsBar,
 } from './components'
 import { useTransferQueries, useTransferForm } from './hooks'
 
@@ -76,59 +77,62 @@ export function TransferenciasTab() {
     onSuccess: refetchAll,
   })
 
-  // Early returns for loading/empty states
-  if (!selectedRouteId) {
-    return <EmptyState />
-  }
-
-  if (accountsLoading) {
-    return <LoadingState />
-  }
-
   return (
     <div className="space-y-6">
-      {/* Account Balances */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {accounts.map((account) => (
-          <AccountBalanceCard key={account.id} account={account} />
-        ))}
-      </div>
+      {/* Batch Operations - Always visible */}
+      <BatchOperationsBar onSuccess={refetchAll} />
 
-      {/* Transfer Form */}
-      <TransferForm
-        isCapitalInvestment={formData.isCapitalInvestment}
-        sourceAccountId={formData.sourceAccountId}
-        destinationAccountId={formData.destinationAccountId}
-        amount={formData.amount}
-        description={formData.description}
-        onIsCapitalInvestmentChange={setIsCapitalInvestment}
-        onSourceAccountIdChange={setSourceAccountId}
-        onDestinationAccountIdChange={setDestinationAccountId}
-        onAmountChange={setAmount}
-        onDescriptionChange={setDescription}
-        isSubmitting={isSubmitting}
-        isAmountValid={isAmountValid}
-        isFormValid={isFormValid}
-        availableBalance={availableBalance}
-        accounts={accounts}
-        destinationOptions={destinationOptions}
-        sourceAccount={sourceAccount}
-        onSubmit={handleSubmit}
-      />
+      {/* Route-specific content */}
+      {!selectedRouteId ? (
+        <EmptyState />
+      ) : accountsLoading ? (
+        <LoadingState />
+      ) : (
+        <>
+          {/* Account Balances */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {accounts.map((account) => (
+              <AccountBalanceCard key={account.id} account={account} />
+            ))}
+          </div>
 
-      {/* Transfers List */}
-      <TransferHistoryTable
-        transfers={transfers}
-        loading={transfersLoading}
-        selectedDate={selectedDate}
-      />
+          {/* Transfer Form */}
+          <TransferForm
+            isCapitalInvestment={formData.isCapitalInvestment}
+            sourceAccountId={formData.sourceAccountId}
+            destinationAccountId={formData.destinationAccountId}
+            amount={formData.amount}
+            description={formData.description}
+            onIsCapitalInvestmentChange={setIsCapitalInvestment}
+            onSourceAccountIdChange={setSourceAccountId}
+            onDestinationAccountIdChange={setDestinationAccountId}
+            onAmountChange={setAmount}
+            onDescriptionChange={setDescription}
+            isSubmitting={isSubmitting}
+            isAmountValid={isAmountValid}
+            isFormValid={isFormValid}
+            availableBalance={availableBalance}
+            accounts={accounts}
+            destinationOptions={destinationOptions}
+            sourceAccount={sourceAccount}
+            onSubmit={handleSubmit}
+          />
 
-      {/* Success Dialog */}
-      <SuccessDialog
-        open={showSuccessDialog}
-        onOpenChange={setShowSuccessDialog}
-        isCapitalInvestment={formData.isCapitalInvestment}
-      />
+          {/* Transfers List */}
+          <TransferHistoryTable
+            transfers={transfers}
+            loading={transfersLoading}
+            selectedDate={selectedDate}
+          />
+
+          {/* Success Dialog */}
+          <SuccessDialog
+            open={showSuccessDialog}
+            onOpenChange={setShowSuccessDialog}
+            isCapitalInvestment={formData.isCapitalInvestment}
+          />
+        </>
+      )}
     </div>
   )
 }

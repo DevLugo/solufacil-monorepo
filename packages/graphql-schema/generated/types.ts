@@ -130,6 +130,15 @@ export type BankIncomeTransactionsResponse = {
   transactions: Array<BankIncomeTransaction>;
 };
 
+export type BatchTransferResult = {
+  __typename?: 'BatchTransferResult';
+  message: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+  totalAmount: Scalars['Decimal']['output'];
+  transactions: Array<Transaction>;
+  transactionsCreated: Scalars['Int']['output'];
+};
+
 export type Borrower = {
   __typename?: 'Borrower';
   createdAt: Scalars['DateTime']['output'];
@@ -528,6 +537,20 @@ export type DeadDebtTotals = {
   totalPendingAmount: Scalars['Decimal']['output'];
 };
 
+export type DistributeMoneyInput = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  distributionMode: DistributionMode;
+  fixedAmount?: InputMaybe<Scalars['Decimal']['input']>;
+  routeIds: Array<Scalars['ID']['input']>;
+  sourceAccountId: Scalars['ID']['input'];
+  variableAmounts?: InputMaybe<Array<RouteAmountInput>>;
+};
+
+export enum DistributionMode {
+  FixedEqual = 'FIXED_EQUAL',
+  Variable = 'VARIABLE'
+}
+
 export type DocumentNotificationLog = {
   __typename?: 'DocumentNotificationLog';
   createdAt: Scalars['DateTime']['output'];
@@ -589,6 +612,12 @@ export type DocumentWithNotificationStatus = {
   document: DocumentPhoto;
   lastNotification?: Maybe<DocumentNotificationLog>;
   notificationSent: Scalars['Boolean']['output'];
+};
+
+export type DrainRoutesInput = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  destinationAccountId: Scalars['ID']['input'];
+  routeIds: Array<Scalars['ID']['input']>;
 };
 
 export type Employee = {
@@ -1008,6 +1037,8 @@ export type Mutation = {
   deleteTelegramUser: Scalars['Boolean']['output'];
   deleteTransaction: Scalars['Boolean']['output'];
   deleteUser: Scalars['Boolean']['output'];
+  distributeMoney: BatchTransferResult;
+  drainRoutes: BatchTransferResult;
   executeReportManually: ReportExecutionResult;
   finishLoan: Loan;
   generatePortfolioReportPDF: PdfGenerationResult;
@@ -1181,6 +1212,16 @@ export type MutationDeleteTransactionArgs = {
 
 export type MutationDeleteUserArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationDistributeMoneyArgs = {
+  input: DistributeMoneyInput;
+};
+
+
+export type MutationDrainRoutesArgs = {
+  input: DrainRoutesInput;
 };
 
 
@@ -2057,6 +2098,11 @@ export type Route = {
   updatedAt: Scalars['DateTime']['output'];
 };
 
+export type RouteAmountInput = {
+  amount: Scalars['Decimal']['input'];
+  routeId: Scalars['ID']['input'];
+};
+
 export type RouteInfo = {
   __typename?: 'RouteInfo';
   id: Scalars['ID']['output'];
@@ -2462,6 +2508,7 @@ export type ResolversTypes = ResolversObject<{
   BadDebtSummary: ResolverTypeWrapper<BadDebtSummary>;
   BankIncomeTransaction: ResolverTypeWrapper<BankIncomeTransaction>;
   BankIncomeTransactionsResponse: ResolverTypeWrapper<BankIncomeTransactionsResponse>;
+  BatchTransferResult: ResolverTypeWrapper<BatchTransferResult>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   Borrower: ResolverTypeWrapper<Borrower>;
   BorrowerSearchResult: ResolverTypeWrapper<BorrowerSearchResult>;
@@ -2510,10 +2557,13 @@ export type ResolversTypes = ResolversObject<{
   DeadDebtSummaryByLocality: ResolverTypeWrapper<DeadDebtSummaryByLocality>;
   DeadDebtTotals: ResolverTypeWrapper<DeadDebtTotals>;
   Decimal: ResolverTypeWrapper<Scalars['Decimal']['output']>;
+  DistributeMoneyInput: DistributeMoneyInput;
+  DistributionMode: DistributionMode;
   DocumentNotificationLog: ResolverTypeWrapper<DocumentNotificationLog>;
   DocumentPhoto: ResolverTypeWrapper<DocumentPhoto>;
   DocumentType: DocumentType;
   DocumentWithNotificationStatus: ResolverTypeWrapper<DocumentWithNotificationStatus>;
+  DrainRoutesInput: DrainRoutesInput;
   Employee: ResolverTypeWrapper<Employee>;
   EmployeeType: EmployeeType;
   EmployeeWithStats: ResolverTypeWrapper<EmployeeWithStats>;
@@ -2579,6 +2629,7 @@ export type ResolversTypes = ResolversObject<{
   ReportScheduleInput: ReportScheduleInput;
   ReportType: ReportType;
   Route: ResolverTypeWrapper<Route>;
+  RouteAmountInput: RouteAmountInput;
   RouteInfo: ResolverTypeWrapper<RouteInfo>;
   RouteWithStats: ResolverTypeWrapper<RouteWithStats>;
   SendDocumentNotificationInput: SendDocumentNotificationInput;
@@ -2634,6 +2685,7 @@ export type ResolversParentTypes = ResolversObject<{
   BadDebtSummary: BadDebtSummary;
   BankIncomeTransaction: BankIncomeTransaction;
   BankIncomeTransactionsResponse: BankIncomeTransactionsResponse;
+  BatchTransferResult: BatchTransferResult;
   Boolean: Scalars['Boolean']['output'];
   Borrower: Borrower;
   BorrowerSearchResult: BorrowerSearchResult;
@@ -2679,9 +2731,11 @@ export type ResolversParentTypes = ResolversObject<{
   DeadDebtSummaryByLocality: DeadDebtSummaryByLocality;
   DeadDebtTotals: DeadDebtTotals;
   Decimal: Scalars['Decimal']['output'];
+  DistributeMoneyInput: DistributeMoneyInput;
   DocumentNotificationLog: DocumentNotificationLog;
   DocumentPhoto: DocumentPhoto;
   DocumentWithNotificationStatus: DocumentWithNotificationStatus;
+  DrainRoutesInput: DrainRoutesInput;
   Employee: Employee;
   EmployeeWithStats: EmployeeWithStats;
   EvaluationPeriod: EvaluationPeriod;
@@ -2740,6 +2794,7 @@ export type ResolversParentTypes = ResolversObject<{
   ReportSchedule: ReportSchedule;
   ReportScheduleInput: ReportScheduleInput;
   Route: Route;
+  RouteAmountInput: RouteAmountInput;
   RouteInfo: RouteInfo;
   RouteWithStats: RouteWithStats;
   SendDocumentNotificationInput: SendDocumentNotificationInput;
@@ -2888,6 +2943,15 @@ export type BankIncomeTransactionsResponseResolvers<ContextType = GraphQLContext
   message?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
   success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   transactions?: Resolver<Array<ResolversTypes['BankIncomeTransaction']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type BatchTransferResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['BatchTransferResult'] = ResolversParentTypes['BatchTransferResult']> = ResolversObject<{
+  message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  totalAmount?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+  transactions?: Resolver<Array<ResolversTypes['Transaction']>, ParentType, ContextType>;
+  transactionsCreated?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -3551,6 +3615,8 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   deleteTelegramUser?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteTelegramUserArgs, 'id'>>;
   deleteTransaction?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteTransactionArgs, 'id'>>;
   deleteUser?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteUserArgs, 'id'>>;
+  distributeMoney?: Resolver<ResolversTypes['BatchTransferResult'], ParentType, ContextType, RequireFields<MutationDistributeMoneyArgs, 'input'>>;
+  drainRoutes?: Resolver<ResolversTypes['BatchTransferResult'], ParentType, ContextType, RequireFields<MutationDrainRoutesArgs, 'input'>>;
   executeReportManually?: Resolver<ResolversTypes['ReportExecutionResult'], ParentType, ContextType, RequireFields<MutationExecuteReportManuallyArgs, 'reportConfigId'>>;
   finishLoan?: Resolver<ResolversTypes['Loan'], ParentType, ContextType, RequireFields<MutationFinishLoanArgs, 'loanId'>>;
   generatePortfolioReportPDF?: Resolver<ResolversTypes['PDFGenerationResult'], ParentType, ContextType, RequireFields<MutationGeneratePortfolioReportPdfArgs, 'periodType' | 'year'>>;
@@ -4006,6 +4072,7 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   BadDebtSummary?: BadDebtSummaryResolvers<ContextType>;
   BankIncomeTransaction?: BankIncomeTransactionResolvers<ContextType>;
   BankIncomeTransactionsResponse?: BankIncomeTransactionsResponseResolvers<ContextType>;
+  BatchTransferResult?: BatchTransferResultResolvers<ContextType>;
   Borrower?: BorrowerResolvers<ContextType>;
   BorrowerSearchResult?: BorrowerSearchResultResolvers<ContextType>;
   CleanupLoanPreview?: CleanupLoanPreviewResolvers<ContextType>;
