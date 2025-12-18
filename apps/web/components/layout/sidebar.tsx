@@ -7,19 +7,12 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   Wallet,
-  Users,
   FileText,
   Settings,
   Route,
   DollarSign,
-  FileImage,
-  Bell,
-  Send,
   ListChecks,
   UserPlus,
-  Cake,
-  Activity,
-  ScrollText,
   ChevronDown,
   ChevronRight,
   BookOpen,
@@ -30,97 +23,69 @@ import {
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/hooks/use-auth'
+import { obtenerRolesRuta } from '@/lib/permissions'
+import { USER_ROLES, UserRoleType } from '@solufacil/shared'
 
 interface NavItem {
-  title: string
+  titulo: string
   href?: string
-  icon: React.ComponentType<{ className?: string }>
-  children?: NavItem[]
+  icono: React.ComponentType<{ className?: string }>
+  hijos?: NavItem[]
 }
 
-const navigation: NavItem[] = [
+// Navegacion obtiene roles automaticamente de permissions.ts via href
+const navegacion: NavItem[] = [
+  { titulo: 'Dashboard', href: '/dashboard', icono: LayoutDashboard },
+  { titulo: 'Historial Clientes', href: '/historial-clientes', icono: History },
+  { titulo: 'Operaciones del Día', href: '/transacciones', icono: CalendarDays },
+  { titulo: 'Movimientos', href: '/movimientos', icono: BookOpen },
+  { titulo: 'Listados', href: '/listados/generar', icono: ListChecks },
+  { titulo: 'Documentos', href: '/documentos/cargar', icono: Upload },
   {
-    title: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-  },
-  {
-    title: 'Cartera',
-    icon: Wallet,
-    children: [
-      { title: 'Cartera Activa', href: '/cartera', icon: Wallet },
-      { title: 'Cartera Muerta', href: '/cartera/muerta', icon: Wallet },
-      { title: 'Limpieza', href: '/cartera/limpieza', icon: Wallet },
+    titulo: 'Reportes',
+    icono: FileText,
+    hijos: [
+      { titulo: 'Financiero', href: '/reportes/financiero', icono: DollarSign },
+      { titulo: 'Cartera', href: '/reportes/cartera', icono: Wallet },
     ],
   },
   {
-    title: 'Operaciones del Día',
-    href: '/transacciones',
-    icon: CalendarDays,
-  },
-  {
-    title: 'Movimientos',
-    href: '/movimientos',
-    icon: BookOpen,
-  },
-  {
-    title: 'Clientes',
-    href: '/clientes',
-    icon: Users,
-  },
-  {
-    title: 'Historial Clientes',
-    href: '/historial-clientes',
-    icon: History,
-  },
-  {
-    title: 'Reportes',
-    icon: FileText,
-    children: [
-      { title: 'Financiero', href: '/reportes/financiero', icon: DollarSign },
-      { title: 'Cobranza', href: '/reportes/cobranza', icon: FileText },
-    ],
-  },
-  {
-    title: 'Administrar',
-    icon: Settings,
-    children: [
-      { title: 'Rutas', href: '/administrar/rutas', icon: Route },
-      { title: 'Gastos', href: '/administrar/gastos', icon: DollarSign },
-      { title: 'Cuentas', href: '/administrar/cuentas', icon: Wallet },
-      { title: 'Líderes', href: '/administrar/lideres', icon: Users },
-      { title: 'Nuevo Líder', href: '/administrar/lideres/nuevo', icon: UserPlus },
-      { title: 'Cumpleaños', href: '/administrar/lideres/cumpleanos', icon: Cake },
-    ],
-  },
-  {
-    title: 'Documentos',
-    icon: FileImage,
-    children: [
-      { title: 'Cargar Documentos', href: '/documentos/cargar', icon: Upload },
-      { title: 'Documentos', href: '/documentos', icon: FileImage },
-      { title: 'Notificaciones', href: '/documentos/notificaciones', icon: Bell },
-    ],
-  },
-  {
-    title: 'Configuración',
-    icon: Settings,
-    children: [
-      { title: 'Reportes', href: '/configuracion/reportes', icon: FileText },
-      { title: 'Telegram Usuarios', href: '/configuracion/telegram/usuarios', icon: Send },
-      { title: 'Telegram Diagnóstico', href: '/configuracion/telegram/diagnostico', icon: Activity },
-      { title: 'Telegram Logs', href: '/configuracion/telegram/logs', icon: ScrollText },
-    ],
-  },
-  {
-    title: 'Listados',
-    icon: ListChecks,
-    children: [
-      { title: 'Ver Listados', href: '/listados', icon: ListChecks },
-      { title: 'Generar', href: '/listados/generar', icon: FileText },
+    titulo: 'Administrar',
+    icono: Settings,
+    hijos: [
+      { titulo: 'Rutas', href: '/administrar/rutas', icono: Route },
+      { titulo: 'Nuevo Líder', href: '/administrar/lideres/nuevo', icono: UserPlus },
     ],
   },
 ]
+
+// Verifica si un rol tiene acceso a un item de navegacion
+function tieneAccesoItem(item: NavItem, rol: UserRoleType): boolean {
+  if (item.href) {
+    const rolesPermitidos = obtenerRolesRuta(item.href)
+    // Si no hay roles definidos, solo ADMIN tiene acceso
+    return rolesPermitidos ? rolesPermitidos.includes(rol) : rol === USER_ROLES.ADMIN
+  }
+  // Items sin href (padres) se muestran si tienen al menos un hijo visible
+  return true
+}
+
+// Filtra la navegacion segun el rol del usuario
+function filtrarNavegacion(items: NavItem[], rol: UserRoleType): NavItem[] {
+  return items
+    .filter((item) => tieneAccesoItem(item, rol))
+    .map((item) => {
+      if (item.hijos) {
+        return {
+          ...item,
+          hijos: item.hijos.filter((hijo) => tieneAccesoItem(hijo, rol)),
+        }
+      }
+      return item
+    })
+    .filter((item) => !item.hijos || item.hijos.length > 0)
+}
 
 interface SidebarProps {
   isCollapsed?: boolean
@@ -129,34 +94,43 @@ interface SidebarProps {
   onClose?: () => void
 }
 
-export function Sidebar({ isCollapsed = false, isMobile = false, isOpen = false, onClose }: SidebarProps) {
+export function Sidebar({
+  isCollapsed = false,
+  isMobile = false,
+  isOpen = false,
+  onClose,
+}: SidebarProps) {
   const pathname = usePathname()
-  const [expandedItems, setExpandedItems] = React.useState<string[]>([])
+  const [itemsExpandidos, setItemsExpandidos] = React.useState<string[]>([])
+  const { user } = useAuth()
+  const rolUsuario = (user?.role as UserRoleType) || USER_ROLES.NORMAL
 
-  const toggleExpanded = (title: string) => {
-    setExpandedItems((prev) =>
-      prev.includes(title)
-        ? prev.filter((item) => item !== title)
-        : [...prev, title]
+  const navegacionFiltrada = React.useMemo(
+    () => filtrarNavegacion(navegacion, rolUsuario),
+    [rolUsuario]
+  )
+
+  const alternarExpandido = (titulo: string) => {
+    setItemsExpandidos((prev) =>
+      prev.includes(titulo) ? prev.filter((item) => item !== titulo) : [...prev, titulo]
     )
   }
 
-  const isActive = (href?: string) => {
+  const estaActivo = (href?: string) => {
     if (!href) return false
     return pathname === href || pathname.startsWith(href + '/')
   }
 
-  const isParentActive = (item: NavItem) => {
-    if (item.href) return isActive(item.href)
-    return item.children?.some((child) => isActive(child.href))
+  const estaPadreActivo = (item: NavItem) => {
+    if (item.href) return estaActivo(item.href)
+    return item.hijos?.some((hijo) => estaActivo(hijo.href))
   }
 
-  // On mobile: sidebar is always expanded (not collapsed), slides in/out
-  // On desktop: toggle between collapsed (w-16) and expanded (w-64)
-  const effectiveCollapsed = isMobile ? false : isCollapsed
+  // En movil: sidebar siempre expandido, desliza dentro/fuera
+  // En desktop: alterna entre colapsado (w-16) y expandido (w-64)
+  const efectivamenteColapsado = isMobile ? false : isCollapsed
 
-  // Close sidebar when clicking a link on mobile
-  const handleLinkClick = () => {
+  const manejarClickEnlace = () => {
     if (isMobile && onClose) {
       onClose()
     }
@@ -164,7 +138,7 @@ export function Sidebar({ isCollapsed = false, isMobile = false, isOpen = false,
 
   return (
     <>
-      {/* Mobile backdrop */}
+      {/* Fondo oscuro en movil */}
       {isMobile && isOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/50 transition-opacity"
@@ -176,35 +150,33 @@ export function Sidebar({ isCollapsed = false, isMobile = false, isOpen = false,
       <aside
         className={cn(
           'fixed left-0 top-0 z-40 h-screen border-r bg-sidebar transition-all duration-300',
-          effectiveCollapsed ? 'w-16' : 'w-64',
+          efectivamenteColapsado ? 'w-16' : 'w-64',
           isMobile && !isOpen && '-translate-x-full',
           isMobile && isOpen && 'translate-x-0'
         )}
       >
         {/* Logo */}
         <div className="flex h-16 items-center justify-center border-b px-4">
-          <Link href="/dashboard" className="flex items-center" onClick={handleLinkClick}>
-            {effectiveCollapsed ? (
-            /* Ícono pequeño cuando está colapsado */
-            <div className="relative flex h-9 w-9 items-center justify-center">
-              <div className="absolute inset-0 rotate-45 rounded-lg bg-primary" />
-              <svg
-                viewBox="0 0 24 24"
-                className="relative z-10 h-5 w-5 text-white"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              >
-                <path d="M6 18L18 6" />
-                <path d="M6 12L12 6" />
-              </svg>
-            </div>
-          ) : (
-              /* Logo completo cuando está expandido */
+          <Link href="/dashboard" className="flex items-center" onClick={manejarClickEnlace}>
+            {efectivamenteColapsado ? (
+              <div className="relative flex h-9 w-9 items-center justify-center">
+                <div className="absolute inset-0 rotate-45 rounded-lg bg-primary" />
+                <svg
+                  viewBox="0 0 24 24"
+                  className="relative z-10 h-5 w-5 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <path d="M6 18L18 6" />
+                  <path d="M6 12L12 6" />
+                </svg>
+              </div>
+            ) : (
               <Image
                 src="/solufacil.png"
-                alt="Solufácil"
+                alt="Solufacil"
                 width={150}
                 height={45}
                 priority
@@ -214,26 +186,26 @@ export function Sidebar({ isCollapsed = false, isMobile = false, isOpen = false,
           </Link>
         </div>
 
-        {/* Navigation */}
+        {/* Navegacion */}
         <ScrollArea className="h-[calc(100vh-4rem)] py-4">
           <nav className="space-y-1 px-2">
-            {navigation.map((item) => (
-              <div key={item.title}>
-                {item.children ? (
+            {navegacionFiltrada.map((item) => (
+              <div key={item.titulo}>
+                {item.hijos ? (
                   <div>
                     <Button
                       variant="ghost"
                       className={cn(
                         'w-full justify-start gap-3',
-                        isParentActive(item) && 'bg-sidebar-accent text-sidebar-accent-foreground'
+                        estaPadreActivo(item) && 'bg-sidebar-accent text-sidebar-accent-foreground'
                       )}
-                      onClick={() => toggleExpanded(item.title)}
+                      onClick={() => alternarExpandido(item.titulo)}
                     >
-                      <item.icon className="h-4 w-4" />
-                      {!effectiveCollapsed && (
+                      <item.icono className="h-4 w-4" />
+                      {!efectivamenteColapsado && (
                         <>
-                          <span className="flex-1 text-left">{item.title}</span>
-                          {expandedItems.includes(item.title) ? (
+                          <span className="flex-1 text-left">{item.titulo}</span>
+                          {itemsExpandidos.includes(item.titulo) ? (
                             <ChevronDown className="h-4 w-4" />
                           ) : (
                             <ChevronRight className="h-4 w-4" />
@@ -241,21 +213,21 @@ export function Sidebar({ isCollapsed = false, isMobile = false, isOpen = false,
                         </>
                       )}
                     </Button>
-                    {!effectiveCollapsed && expandedItems.includes(item.title) && (
+                    {!efectivamenteColapsado && itemsExpandidos.includes(item.titulo) && (
                       <div className="ml-4 mt-1 space-y-1 border-l pl-4">
-                        {item.children.map((child) => (
+                        {item.hijos.map((hijo) => (
                           <Link
-                            key={child.href}
-                            href={child.href!}
-                            onClick={handleLinkClick}
+                            key={hijo.href}
+                            href={hijo.href!}
+                            onClick={manejarClickEnlace}
                             className={cn(
                               'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                              isActive(child.href) &&
+                              estaActivo(hijo.href) &&
                                 'bg-sidebar-primary text-sidebar-primary-foreground'
                             )}
                           >
-                            <child.icon className="h-4 w-4" />
-                            <span>{child.title}</span>
+                            <hijo.icono className="h-4 w-4" />
+                            <span>{hijo.titulo}</span>
                           </Link>
                         ))}
                       </div>
@@ -264,15 +236,14 @@ export function Sidebar({ isCollapsed = false, isMobile = false, isOpen = false,
                 ) : (
                   <Link
                     href={item.href!}
-                    onClick={handleLinkClick}
+                    onClick={manejarClickEnlace}
                     className={cn(
                       'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-                      isActive(item.href) &&
-                        'bg-sidebar-primary text-sidebar-primary-foreground'
+                      estaActivo(item.href) && 'bg-sidebar-primary text-sidebar-primary-foreground'
                     )}
                   >
-                    <item.icon className="h-4 w-4" />
-                    {!effectiveCollapsed && <span>{item.title}</span>}
+                    <item.icono className="h-4 w-4" />
+                    {!efectivamenteColapsado && <span>{item.titulo}</span>}
                   </Link>
                 )}
               </div>

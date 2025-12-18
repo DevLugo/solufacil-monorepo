@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/use-auth'
+import { ETIQUETAS_ROL } from '@/lib/permissions'
+import { UserRoleType } from '@solufacil/shared'
 
 interface HeaderProps {
   onToggleSidebar?: () => void
@@ -23,8 +25,8 @@ interface HeaderProps {
 export function Header({ onToggleSidebar, sidebarCollapsed = false, isMobile = false }: HeaderProps) {
   const { user, logout } = useAuth()
 
-  const userName = user?.employee?.personalData?.fullName || user?.email || 'Usuario'
-  const userRole = user?.role === 'ADMIN' ? 'Administrador' : user?.role === 'NORMAL' ? 'Usuario' : 'Captura'
+  const nombreUsuario = user?.employee?.personalData?.fullName || user?.email || 'Usuario'
+  const etiquetaRol = user?.role ? ETIQUETAS_ROL[user.role as UserRoleType] : 'Usuario'
 
   return (
     <header
@@ -33,7 +35,7 @@ export function Header({ onToggleSidebar, sidebarCollapsed = false, isMobile = f
         isMobile ? 'left-0' : (sidebarCollapsed ? 'left-16' : 'left-64')
       )}
     >
-      {/* Left side */}
+      {/* Lado izquierdo */}
       <div className="flex items-center gap-4">
         <TooltipProvider>
           <Tooltip>
@@ -45,7 +47,7 @@ export function Header({ onToggleSidebar, sidebarCollapsed = false, isMobile = f
                 className="h-9 w-9"
               >
                 <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle sidebar</span>
+                <span className="sr-only">Alternar sidebar</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -53,13 +55,11 @@ export function Header({ onToggleSidebar, sidebarCollapsed = false, isMobile = f
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-
-        {/* Breadcrumb or page title can go here */}
       </div>
 
-      {/* Right side */}
+      {/* Lado derecho */}
       <div className="flex items-center gap-2">
-        {/* Notifications */}
+        {/* Notificaciones */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -77,17 +77,17 @@ export function Header({ onToggleSidebar, sidebarCollapsed = false, isMobile = f
           </Tooltip>
         </TooltipProvider>
 
-        {/* Theme Toggle */}
+        {/* Cambio de tema */}
         <ThemeToggle />
 
-        {/* User menu */}
+        {/* Menu de usuario */}
         <div className="flex items-center gap-3 border-l pl-3 ml-1">
           <div className="hidden md:block text-right">
-            <p className="text-sm font-medium">{userName}</p>
-            <p className="text-xs text-muted-foreground">{userRole}</p>
+            <p className="text-sm font-medium">{nombreUsuario}</p>
+            <p className="text-xs text-muted-foreground">{etiquetaRol}</p>
           </div>
           <Avatar className="h-9 w-9">
-            <AvatarImage src="" alt={userName} />
+            <AvatarImage src="" alt={nombreUsuario} />
             <AvatarFallback className="bg-primary text-primary-foreground">
               <User className="h-4 w-4" />
             </AvatarFallback>

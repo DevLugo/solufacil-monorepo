@@ -78,6 +78,14 @@ export function requireRole(context: GraphQLContext, roles: UserRole[]): void {
 }
 
 /**
+ * Autentica y verifica rol en una sola llamada
+ */
+export function requireAnyRole(context: GraphQLContext, roles: UserRole[]): void {
+  authenticateUser(context)
+  requireRole(context, roles)
+}
+
+/**
  * Generar un JWT access token
  */
 export function generateAccessToken(user: {

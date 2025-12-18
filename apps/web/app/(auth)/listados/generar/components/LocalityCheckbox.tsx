@@ -19,7 +19,7 @@ export function LocalityCheckbox({ locality, checked, onToggle }: LocalityCheckb
   return (
     <label
       className={cn(
-        'flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-all hover:bg-accent/50',
+        'flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-all hover:bg-muted',
         checked && 'border-primary bg-primary/5'
       )}
       onClick={onToggle}

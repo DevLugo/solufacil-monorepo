@@ -1,6 +1,7 @@
 import type { GraphQLContext } from '@solufacil/graphql-schema'
+import { UserRole } from '@solufacil/database'
 import { LeaderService } from '../services/LeaderService'
-import { authenticateUser } from '../middleware/auth'
+import { authenticateUser, requireAnyRole } from '../middleware/auth'
 
 export const leadersResolvers = {
   Query: {
@@ -9,7 +10,7 @@ export const leadersResolvers = {
       args: { locationId: string },
       context: GraphQLContext
     ) => {
-      authenticateUser(context)
+      requireAnyRole(context, [UserRole.ADMIN, UserRole.CAPTURA])
 
       const leaderService = new LeaderService(context.prisma)
       return leaderService.checkExistingLeader(args.locationId)
@@ -31,7 +32,7 @@ export const leadersResolvers = {
       },
       context: GraphQLContext
     ) => {
-      authenticateUser(context)
+      requireAnyRole(context, [UserRole.ADMIN, UserRole.CAPTURA])
 
       const leaderService = new LeaderService(context.prisma)
 

@@ -178,7 +178,7 @@ export function SearchBar({
                             key={client.id}
                             value={client.id}
                             onSelect={() => handleSelect(client)}
-                            className="flex items-center justify-between gap-2 py-2 px-3 cursor-pointer text-sm hover:bg-accent data-[selected=true]:bg-accent"
+                            className="flex items-center justify-between gap-2 py-2 px-3 cursor-pointer"
                           >
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                               <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />

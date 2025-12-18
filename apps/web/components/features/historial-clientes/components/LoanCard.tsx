@@ -27,7 +27,7 @@ export function LoanCard({ loan, onToggleExpand }: LoanCardProps) {
   return (
     <Card
       className={cn(
-        'cursor-pointer hover:bg-accent/50 transition-colors border-l-2',
+        'cursor-pointer hover:bg-muted transition-colors border-l-2',
         isActive ? 'border-l-success' : 'border-l-transparent'
       )}
       onClick={onToggleExpand}

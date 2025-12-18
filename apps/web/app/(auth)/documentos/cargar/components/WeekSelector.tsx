@@ -155,8 +155,8 @@ export function WeekSelector({
                 },
               }}
               modifiersClassNames={{
-                selectedWeek: 'bg-accent/50',
-                hoveredWeek: 'bg-accent/30',
+                selectedWeek: 'bg-primary/20',
+                hoveredWeek: 'bg-muted',
               }}
               onDayMouseEnter={setHoveredDate}
               onDayMouseLeave={() => setHoveredDate(undefined)}

@@ -1,8 +1,8 @@
 import { GraphQLError } from 'graphql'
 import type { GraphQLContext } from '../context'
-import type { DocumentType } from '@solufacil/database'
+import { DocumentType, UserRole } from '@solufacil/database'
 import { DocumentPhotoService } from '../services/DocumentPhotoService'
-import { authenticateUser } from '../middleware/auth'
+import { authenticateUser, requireAnyRole } from '../middleware/auth'
 
 export const documentResolvers = {
   Query: {
@@ -72,7 +72,7 @@ export const documentResolvers = {
       },
       context: GraphQLContext
     ) => {
-      authenticateUser(context)
+      requireAnyRole(context, [UserRole.ADMIN, UserRole.DOCUMENT_REVIEWER])
 
       const file = await args.input.file
       const service = new DocumentPhotoService(context.prisma)
