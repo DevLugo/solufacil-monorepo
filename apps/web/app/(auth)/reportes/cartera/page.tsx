@@ -25,7 +25,13 @@ import {
   Receipt,
   Wallet,
   Users,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import {
   usePortfolioReport,
   usePeriodNavigation,
@@ -36,12 +42,12 @@ import {
 import type { AnnualMonthData } from './components'
 import {
   WeekSelector,
-  PortfolioSummaryCard,
   LocationBreakdown,
   ClientBalanceChart,
   MonthComparisonChart,
   formatMonthLabel,
 } from './components'
+import type { Trend } from './hooks'
 import { GET_ROUTES } from '@/graphql/queries/reports'
 import { RecoveredDeadDebtModal } from '@/components/features/recovered-dead-debt'
 
@@ -171,6 +177,7 @@ export default function PortfolioReportPage() {
       renovaciones: d.renovaciones,
       nuevos: d.nuevos,
       balance: d.balance,
+      tasaRenovacion: d.tasaRenovacion,
     }))
   }, [rawAnnualData])
 
@@ -192,6 +199,7 @@ export default function PortfolioReportPage() {
       cvPromedio: safeNumber(report.summary.promedioCV ?? report.summary.clientesEnCV),
       renovaciones: safeNumber(report.renovationKPIs.totalRenovaciones),
       nuevos: safeNumber(report.summary.clientBalance.nuevos),
+      tasaRenovacion: safeNumber(report.renovationKPIs.tasaRenovacion),
     }
 
     // Override with locality report averages if available (with NaN protection)
@@ -215,6 +223,7 @@ export default function PortfolioReportPage() {
           cvPromedio: safeNumber(previousReport.summary.promedioCV ?? previousReport.summary.clientesEnCV),
           renovaciones: safeNumber(previousReport.renovationKPIs.totalRenovaciones),
           nuevos: safeNumber(previousReport.summary.clientBalance.nuevos),
+          tasaRenovacion: safeNumber(previousReport.renovationKPIs.tasaRenovacion),
         }
       : null
 
@@ -333,72 +342,6 @@ export default function PortfolioReportPage() {
         </Card>
       )}
 
-      {/* Recovered Dead Debt Section */}
-      {recoveredDeadDebt && (recoveredDeadDebt.paymentsCount > 0 || recoveredDeadDebt.loansCount > 0) && (
-        <Card className="border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Skull className="h-5 w-5 text-green-600 dark:text-green-400" />
-              Cartera Muerta Recuperada
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Pagos recibidos de créditos previamente marcados como cartera muerta.{' '}
-              <button
-                onClick={() => setShowRecoveredDeadDebtModal(true)}
-                className="text-primary hover:underline font-medium"
-              >
-                Ver detalle
-              </button>
-            </p>
-            <div
-              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 cursor-pointer"
-              onClick={() => setShowRecoveredDeadDebtModal(true)}
-            >
-              <div className="rounded-lg border bg-white dark:bg-background p-4 transition-colors hover:bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  <span className="text-sm font-medium text-muted-foreground">Monto Recuperado</span>
-                </div>
-                <p className="text-2xl font-bold mt-1 text-green-600 dark:text-green-400">
-                  {formatCurrency(recoveredDeadDebt.totalRecovered)}
-                </p>
-              </div>
-              <div className="rounded-lg border bg-white dark:bg-background p-4 transition-colors hover:bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <Receipt className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  <span className="text-sm font-medium text-muted-foreground">Pagos Recibidos</span>
-                </div>
-                <p className="text-2xl font-bold mt-1">
-                  {recoveredDeadDebt.paymentsCount}
-                </p>
-              </div>
-              <div className="rounded-lg border bg-white dark:bg-background p-4 transition-colors hover:bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <Wallet className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  <span className="text-sm font-medium text-muted-foreground">Créditos</span>
-                </div>
-                <p className="text-2xl font-bold mt-1">
-                  {recoveredDeadDebt.loansCount}
-                </p>
-                <p className="text-xs text-muted-foreground">Con pagos este mes</p>
-              </div>
-              <div className="rounded-lg border bg-white dark:bg-background p-4 transition-colors hover:bg-muted/50">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  <span className="text-sm font-medium text-muted-foreground">Clientes</span>
-                </div>
-                <p className="text-2xl font-bold mt-1">
-                  {recoveredDeadDebt.clientsCount}
-                </p>
-                <p className="text-xs text-muted-foreground">Que pagaron cartera muerta</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Recovered Dead Debt Modal */}
       <RecoveredDeadDebtModal
         open={showRecoveredDeadDebtModal}
@@ -433,11 +376,85 @@ export default function PortfolioReportPage() {
               />
             )}
 
-            {/* KPI Summary Cards */}
-            <PortfolioSummaryCard
-              summary={report.summary}
-              renovationKPIs={report.renovationKPIs}
-            />
+            {/* Balance de Clientes y Cartera Muerta Recuperada */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Movimiento de Clientes
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Balance de Clientes */}
+                <div className="grid gap-3 sm:grid-cols-4">
+                  <div className="flex items-center gap-3 rounded-lg border bg-green-50/50 dark:bg-green-950/20 border-green-200 dark:border-green-900 p-3">
+                    <ArrowUpRight className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-2xl font-bold text-green-600 dark:text-green-400">+{report.summary.clientBalance.nuevos}</p>
+                      <p className="text-xs text-muted-foreground">Nuevos</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg border bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-900 p-3">
+                    <ArrowDownRight className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-2xl font-bold text-red-600 dark:text-red-400">-{report.summary.clientBalance.terminadosSinRenovar}</p>
+                      <p className="text-xs text-muted-foreground">Sin Renovar</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900 p-3">
+                    <RefreshCw className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{report.summary.clientBalance.renovados}</p>
+                      <p className="text-xs text-muted-foreground">Renovados</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                    {report.summary.clientBalance.trend === 'UP' ? (
+                      <TrendingUp className={cn('h-5 w-5 flex-shrink-0', report.summary.clientBalance.balance >= 0 ? 'text-green-600' : 'text-red-600')} />
+                    ) : report.summary.clientBalance.trend === 'DOWN' ? (
+                      <TrendingDown className={cn('h-5 w-5 flex-shrink-0', report.summary.clientBalance.balance >= 0 ? 'text-green-600' : 'text-red-600')} />
+                    ) : (
+                      <Minus className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    )}
+                    <div>
+                      <p className={cn(
+                        'text-2xl font-bold',
+                        report.summary.clientBalance.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                      )}>
+                        {report.summary.clientBalance.balance >= 0 ? '+' : ''}{report.summary.clientBalance.balance}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Balance Neto</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cartera Muerta Recuperada - Inline compact */}
+                {recoveredDeadDebt && (recoveredDeadDebt.paymentsCount > 0 || recoveredDeadDebt.loansCount > 0) && (
+                  <button
+                    onClick={() => setShowRecoveredDeadDebtModal(true)}
+                    className="w-full flex items-center justify-between gap-4 rounded-lg border-2 border-dashed border-green-300 dark:border-green-800 bg-green-50/30 dark:bg-green-950/10 hover:bg-green-50/50 dark:hover:bg-green-950/20 transition-colors p-3"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-center h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/50">
+                        <Skull className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-medium">Cartera Muerta Recuperada</p>
+                        <p className="text-xs text-muted-foreground">
+                          {recoveredDeadDebt.paymentsCount} pagos de {recoveredDeadDebt.clientsCount} clientes
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                        {formatCurrency(recoveredDeadDebt.totalRecovered)}
+                      </p>
+                      <span className="text-xs text-primary">Ver detalle →</span>
+                    </div>
+                  </button>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Weekly Trends (integrated from Tendencias tab) */}
             {report.weeklyData.length > 0 && (

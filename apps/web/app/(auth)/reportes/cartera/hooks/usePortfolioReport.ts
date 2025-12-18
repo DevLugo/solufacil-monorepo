@@ -507,6 +507,7 @@ export interface AnnualPortfolioDataPoint {
   renovaciones: number
   nuevos: number
   balance: number
+  tasaRenovacion?: number
 }
 
 const MONTH_LABELS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
@@ -564,6 +565,7 @@ export function useAnnualPortfolioData({ year, currentMonth }: UseAnnualPortfoli
               renovaciones: data.renovationKPIs.totalRenovaciones,
               nuevos: data.summary.clientBalance.nuevos,
               balance: data.summary.clientBalance.balance,
+              tasaRenovacion: data.renovationKPIs.tasaRenovacion,
             })
           }
         }
