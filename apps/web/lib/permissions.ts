@@ -19,7 +19,6 @@ export const PERMISOS_RUTAS: Record<string, UserRoleType[]> = {
   '/dashboard': ROLES.TODOS,
   '/historial-clientes': ROLES.TODOS,
   '/transacciones': ROLES.SOLO_ADMIN,
-  '/movimientos': ROLES.SOLO_ADMIN,
   '/listados/generar': ROLES.OPERATIVOS,
   '/documentos/cargar': ROLES.ADMIN_Y_REVISOR,
   '/reportes/financiero': ROLES.SOLO_ADMIN,
@@ -27,6 +26,7 @@ export const PERMISOS_RUTAS: Record<string, UserRoleType[]> = {
   '/reportes/limpieza-cartera': ROLES.SOLO_ADMIN,
   '/administrar/rutas': ROLES.SOLO_ADMIN,
   '/administrar/lideres/nuevo': ROLES.ADMIN_Y_CAPTURA,
+  '/administrar/gastos': ROLES.SOLO_ADMIN,
 }
 
 // Etiquetas de rol para UI

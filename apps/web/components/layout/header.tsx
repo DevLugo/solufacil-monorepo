@@ -60,22 +60,7 @@ export function Header({ onToggleSidebar, sidebarCollapsed = false, isMobile = f
       {/* Lado derecho */}
       <div className="flex items-center gap-2">
         {/* Notificaciones */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative h-9 w-9">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
-                  3
-                </span>
-                <span className="sr-only">Notificaciones</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Notificaciones</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        
 
         {/* Cambio de tema */}
         <ThemeToggle />

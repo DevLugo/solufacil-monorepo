@@ -15,10 +15,10 @@ import {
   UserPlus,
   ChevronDown,
   ChevronRight,
-  BookOpen,
   CalendarDays,
   History,
   Upload,
+  BarChart3,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -39,7 +39,6 @@ const navegacion: NavItem[] = [
   { titulo: 'Dashboard', href: '/dashboard', icono: LayoutDashboard },
   { titulo: 'Historial Clientes', href: '/historial-clientes', icono: History },
   { titulo: 'Operaciones del Día', href: '/transacciones', icono: CalendarDays },
-  { titulo: 'Movimientos', href: '/movimientos', icono: BookOpen },
   { titulo: 'Listados', href: '/listados/generar', icono: ListChecks },
   { titulo: 'Documentos', href: '/documentos/cargar', icono: Upload },
   {
@@ -56,6 +55,7 @@ const navegacion: NavItem[] = [
     hijos: [
       { titulo: 'Rutas', href: '/administrar/rutas', icono: Route },
       { titulo: 'Nuevo Líder', href: '/administrar/lideres/nuevo', icono: UserPlus },
+      { titulo: 'Gastos', href: '/administrar/gastos', icono: BarChart3 },
     ],
   },
 ]

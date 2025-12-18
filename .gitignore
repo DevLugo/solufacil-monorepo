@@ -28,6 +28,10 @@ lerna-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.test-user
+
+# Images (screenshots, etc.)
+images/
 
 # Vercel
 .vercel
