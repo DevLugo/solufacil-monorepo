@@ -4,20 +4,20 @@ import { UserRole } from '@solufacil/database'
 import { TelegramService } from '../services/TelegramService'
 import { requireAnyRole } from '../middleware/auth'
 
-interface TelegramUserFiltersInput {
+export interface TelegramUserFiltersInput {
   isActive?: boolean
   isLinkedToUser?: boolean
   isInRecipientsList?: boolean
   searchTerm?: string
 }
 
-interface ReportScheduleInput {
+export interface ReportScheduleInput {
   days: number[]
   hour: string
   timezone?: string
 }
 
-interface CreateReportConfigInput {
+export interface CreateReportConfigInput {
   name: string
   reportType: 'NOTIFICACION_TIEMPO_REAL' | 'CREDITOS_CON_ERRORES'
   schedule: ReportScheduleInput
@@ -26,7 +26,7 @@ interface CreateReportConfigInput {
   isActive?: boolean
 }
 
-interface UpdateReportConfigInput {
+export interface UpdateReportConfigInput {
   name?: string
   schedule?: ReportScheduleInput
   routeIds?: string[]
@@ -34,19 +34,19 @@ interface UpdateReportConfigInput {
   isActive?: boolean
 }
 
-interface SendDocumentNotificationInput {
+export interface SendDocumentNotificationInput {
   documentId: string
   recipientChatIds: string[]
   customMessage?: string
   includePhoto?: boolean
 }
 
-interface LinkTelegramToUserInput {
+export interface LinkTelegramToUserInput {
   telegramUserId: string
   platformUserId: string
 }
 
-interface UpdateTelegramUserInput {
+export interface UpdateTelegramUserInput {
   isActive?: boolean
   isInRecipientsList?: boolean
   notes?: string

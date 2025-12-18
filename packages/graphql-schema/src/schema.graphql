@@ -1046,6 +1046,13 @@ type Query {
     localities: [String!]
     badDebtStatus: DeadDebtStatus
   ): [DeadDebtSummaryByLocality!]! @requireRole(roles: [ADMIN])
+
+  # Recovered Dead Debt - payments from loans already marked as dead debt
+  recoveredDeadDebt(
+    year: Int!
+    month: Int!
+    routeId: ID
+  ): RecoveredDeadDebtResult! @requireRole(roles: [ADMIN])
 }
 
 # Input Types
@@ -1742,6 +1749,34 @@ type MarkDeadDebtResult {
   success: Boolean!
   message: String!
   count: Int!
+}
+
+# Recovered Dead Debt types - payments from loans marked as dead debt
+type RecoveredDeadDebtResult {
+  year: Int!
+  month: Int!
+  summary: RecoveredDeadDebtSummary!
+  payments: [RecoveredDeadDebtPayment!]!
+}
+
+type RecoveredDeadDebtSummary {
+  totalRecovered: Decimal!
+  paymentsCount: Int!
+  loansCount: Int!
+  clientsCount: Int!
+}
+
+type RecoveredDeadDebtPayment {
+  id: ID!
+  amount: Decimal!
+  receivedAt: DateTime!
+  loanId: ID!
+  clientName: String!
+  clientCode: String!
+  badDebtDate: DateTime!
+  routeName: String!
+  locality: String!
+  pendingAmount: Decimal!
 }
 
 # Telegram Input Types

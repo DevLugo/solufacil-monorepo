@@ -55,11 +55,13 @@ import {
   Minus,
   LayoutDashboard,
   PlusCircle,
+  Skull,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTransactionContext } from '@/components/features/transactions/transaction-context'
 import { ROUTES_QUERY } from '@/graphql/queries/transactions'
 import { useCEODashboard, type Trend } from './hooks'
+import { RecoveredDeadDebtModal } from '@/components/features/recovered-dead-debt'
 
 // Utility function to format currency
 function formatCurrency(value: string | number | null | undefined): string {
@@ -194,6 +196,7 @@ interface Route {
 
 export default function DashboardPage() {
   const { selectedRouteId, setSelectedRouteId } = useTransactionContext()
+  const [showRecoveredDeadDebtModal, setShowRecoveredDeadDebtModal] = useState(false)
   const now = new Date()
   const currentYear = now.getFullYear()
   const currentMonth = now.getMonth() + 1
@@ -213,6 +216,7 @@ export default function DashboardPage() {
     transactions,
     newLocations,
     topLocations,
+    recoveredDeadDebt,
     loading,
     error,
     refetch,
@@ -420,84 +424,161 @@ export default function DashboardPage() {
       </Card>
 
       {/* Financial Stats Row */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="stats-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60">
-                <Wallet className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Cartera Total</p>
-                <p className="text-2xl font-bold">{formatCurrency(stats?.totalPortfolio)}</p>
-                {stats?.trend && (
-                  <div className="flex items-center gap-1 text-xs">
-                    <TrendIcon trend={stats.trend} />
-                    <span className={cn(
-                      stats.trend === 'UP' ? 'text-green-600' : stats.trend === 'DOWN' ? 'text-red-600' : ''
-                    )}>
-                      {stats.growthPercent}% vs mes anterior
-                    </span>
-                  </div>
-                )}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Indicadores Financieros
+          </CardTitle>
+          <CardDescription>Resumen financiero del mes actual</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-lg border bg-muted/50 p-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60">
+                  <Wallet className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Cartera Total</p>
+                  <p className="text-2xl font-bold">{formatCurrency(stats?.totalPortfolio)}</p>
+                  {stats?.trend && (
+                    <div className="flex items-center gap-1 text-xs">
+                      <TrendIcon trend={stats.trend} />
+                      <span className={cn(
+                        stats.trend === 'UP' ? 'text-green-600' : stats.trend === 'DOWN' ? 'text-red-600' : ''
+                      )}>
+                        {stats.growthPercent}% vs mes anterior
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        <Card className="stats-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-green-600">
-                <TrendingUp className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Cobranza Mensual</p>
-                <p className="text-2xl font-bold">{formatCurrency(stats?.totalPaid)}</p>
-                <p className="text-xs text-muted-foreground">
-                  {stats?.activeWeeks || 0} semanas activas
-                </p>
+            <div className="rounded-lg border bg-muted/50 p-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-green-600">
+                  <TrendingUp className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Cobranza Mensual</p>
+                  <p className="text-2xl font-bold">{formatCurrency(stats?.totalPaid)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {stats?.activeWeeks || 0} semanas activas
+                  </p>
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        <Card className="stats-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600">
-                <DollarSign className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Tasa Recuperacion</p>
-                <p className="text-2xl font-bold">
-                  {parseFloat(stats?.recoveryRate || '0').toFixed(1)}%
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {formatCurrency(stats?.weeklyAveragePayments)}/semana
-                </p>
+            <div className="rounded-lg border bg-muted/50 p-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Tasa Recuperacion</p>
+                  <p className="text-2xl font-bold">
+                    {parseFloat(stats?.recoveryRate || '0').toFixed(1)}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCurrency(stats?.weeklyAveragePayments)}/semana
+                  </p>
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        <Card className="stats-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-purple-600">
-                <PlusCircle className="h-6 w-6 text-white" />
+            <div className="rounded-lg border bg-muted/50 p-4">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-purple-600">
+                  <PlusCircle className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Localidades Nuevas</p>
+                  <p className="text-2xl font-bold">{newLocations.length}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Este mes
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Localidades Nuevas</p>
-                <p className="text-2xl font-bold">{newLocations.length}</p>
-                <p className="text-xs text-muted-foreground">
-                  Este mes
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recovered Dead Debt Section */}
+      {recoveredDeadDebt && (recoveredDeadDebt.summary.paymentsCount > 0 || recoveredDeadDebt.summary.loansCount > 0) && (
+        <Card className="border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Skull className="h-5 w-5 text-green-600 dark:text-green-400" />
+              Cartera Muerta Recuperada
+            </CardTitle>
+            <CardDescription>
+              Pagos recibidos de créditos previamente marcados como cartera muerta.{' '}
+              <button
+                onClick={() => setShowRecoveredDeadDebtModal(true)}
+                className="text-primary hover:underline font-medium"
+              >
+                Ver detalle
+              </button>
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div
+              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 cursor-pointer"
+              onClick={() => setShowRecoveredDeadDebtModal(true)}
+            >
+              <div className="rounded-lg border bg-white dark:bg-background p-4 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium text-muted-foreground">Monto Recuperado</span>
+                </div>
+                <p className="text-2xl font-bold mt-1 text-green-600 dark:text-green-400">
+                  {formatCurrency(recoveredDeadDebt.summary.totalRecovered)}
                 </p>
+              </div>
+              <div className="rounded-lg border bg-white dark:bg-background p-4 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium text-muted-foreground">Pagos Recibidos</span>
+                </div>
+                <p className="text-2xl font-bold mt-1">
+                  {recoveredDeadDebt.summary.paymentsCount}
+                </p>
+              </div>
+              <div className="rounded-lg border bg-white dark:bg-background p-4 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium text-muted-foreground">Créditos</span>
+                </div>
+                <p className="text-2xl font-bold mt-1">
+                  {recoveredDeadDebt.summary.loansCount}
+                </p>
+                <p className="text-xs text-muted-foreground">Con pagos este mes</p>
+              </div>
+              <div className="rounded-lg border bg-white dark:bg-background p-4 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium text-muted-foreground">Clientes</span>
+                </div>
+                <p className="text-2xl font-bold mt-1">
+                  {recoveredDeadDebt.summary.clientsCount}
+                </p>
+                <p className="text-xs text-muted-foreground">Que pagaron cartera muerta</p>
               </div>
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
+
+      {/* Recovered Dead Debt Modal */}
+      <RecoveredDeadDebtModal
+        open={showRecoveredDeadDebtModal}
+        onOpenChange={setShowRecoveredDeadDebtModal}
+        payments={recoveredDeadDebt?.payments || []}
+        title="Cartera Muerta Recuperada - Detalle"
+      />
 
       {/* Main content grid */}
       <div className="grid gap-6 lg:grid-cols-2">

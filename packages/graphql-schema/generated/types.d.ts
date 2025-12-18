@@ -1385,6 +1385,7 @@ export type Query = {
     portfolioReportMonthly: PortfolioReport;
     portfolioReportWeekly: PortfolioReport;
     previewPortfolioCleanup: CleanupPreview;
+    recoveredDeadDebt: RecoveredDeadDebtResult;
     reportConfig?: Maybe<ReportConfig>;
     reportConfigs: Array<ReportConfig>;
     reportExecutionLogs: Array<ReportExecutionLog>;
@@ -1585,6 +1586,11 @@ export type QueryPreviewPortfolioCleanupArgs = {
     maxSignDate: Scalars['DateTime']['input'];
     routeId?: InputMaybe<Scalars['ID']['input']>;
 };
+export type QueryRecoveredDeadDebtArgs = {
+    month: Scalars['Int']['input'];
+    routeId?: InputMaybe<Scalars['ID']['input']>;
+    year: Scalars['Int']['input'];
+};
 export type QueryReportConfigArgs = {
     id: Scalars['ID']['input'];
 };
@@ -1651,6 +1657,33 @@ export type QueryUsersArgs = {
     limit?: InputMaybe<Scalars['Int']['input']>;
     offset?: InputMaybe<Scalars['Int']['input']>;
     role?: InputMaybe<UserRole>;
+};
+export type RecoveredDeadDebtPayment = {
+    __typename?: 'RecoveredDeadDebtPayment';
+    amount: Scalars['Decimal']['output'];
+    badDebtDate: Scalars['DateTime']['output'];
+    clientCode: Scalars['String']['output'];
+    clientName: Scalars['String']['output'];
+    id: Scalars['ID']['output'];
+    loanId: Scalars['ID']['output'];
+    locality: Scalars['String']['output'];
+    pendingAmount: Scalars['Decimal']['output'];
+    receivedAt: Scalars['DateTime']['output'];
+    routeName: Scalars['String']['output'];
+};
+export type RecoveredDeadDebtResult = {
+    __typename?: 'RecoveredDeadDebtResult';
+    month: Scalars['Int']['output'];
+    payments: Array<RecoveredDeadDebtPayment>;
+    summary: RecoveredDeadDebtSummary;
+    year: Scalars['Int']['output'];
+};
+export type RecoveredDeadDebtSummary = {
+    __typename?: 'RecoveredDeadDebtSummary';
+    clientsCount: Scalars['Int']['output'];
+    loansCount: Scalars['Int']['output'];
+    paymentsCount: Scalars['Int']['output'];
+    totalRecovered: Scalars['Decimal']['output'];
 };
 export type RenewLoanInput = {
     amountGived: Scalars['Decimal']['input'];
@@ -2158,6 +2191,9 @@ export type ResolversTypes = ResolversObject<{
     PortfolioReport: ResolverTypeWrapper<PortfolioReport>;
     PortfolioSummary: ResolverTypeWrapper<PortfolioSummary>;
     Query: ResolverTypeWrapper<{}>;
+    RecoveredDeadDebtPayment: ResolverTypeWrapper<RecoveredDeadDebtPayment>;
+    RecoveredDeadDebtResult: ResolverTypeWrapper<RecoveredDeadDebtResult>;
+    RecoveredDeadDebtSummary: ResolverTypeWrapper<RecoveredDeadDebtSummary>;
     RenewLoanInput: RenewLoanInput;
     RenovationKPIs: ResolverTypeWrapper<RenovationKpIs>;
     ReportConfig: ResolverTypeWrapper<ReportConfig>;
@@ -2316,6 +2352,9 @@ export type ResolversParentTypes = ResolversObject<{
     PortfolioReport: PortfolioReport;
     PortfolioSummary: PortfolioSummary;
     Query: {};
+    RecoveredDeadDebtPayment: RecoveredDeadDebtPayment;
+    RecoveredDeadDebtResult: RecoveredDeadDebtResult;
+    RecoveredDeadDebtSummary: RecoveredDeadDebtSummary;
     RenewLoanInput: RenewLoanInput;
     RenovationKPIs: RenovationKpIs;
     ReportConfig: ReportConfig;
@@ -3239,6 +3278,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
     portfolioReportMonthly?: Resolver<ResolversTypes['PortfolioReport'], ParentType, ContextType, RequireFields<QueryPortfolioReportMonthlyArgs, 'month' | 'year'>>;
     portfolioReportWeekly?: Resolver<ResolversTypes['PortfolioReport'], ParentType, ContextType, RequireFields<QueryPortfolioReportWeeklyArgs, 'weekNumber' | 'year'>>;
     previewPortfolioCleanup?: Resolver<ResolversTypes['CleanupPreview'], ParentType, ContextType, RequireFields<QueryPreviewPortfolioCleanupArgs, 'maxSignDate'>>;
+    recoveredDeadDebt?: Resolver<ResolversTypes['RecoveredDeadDebtResult'], ParentType, ContextType, RequireFields<QueryRecoveredDeadDebtArgs, 'month' | 'year'>>;
     reportConfig?: Resolver<Maybe<ResolversTypes['ReportConfig']>, ParentType, ContextType, RequireFields<QueryReportConfigArgs, 'id'>>;
     reportConfigs?: Resolver<Array<ResolversTypes['ReportConfig']>, ParentType, ContextType, Partial<QueryReportConfigsArgs>>;
     reportExecutionLogs?: Resolver<Array<ResolversTypes['ReportExecutionLog']>, ParentType, ContextType, Partial<QueryReportExecutionLogsArgs>>;
@@ -3255,6 +3295,33 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
     transactions?: Resolver<ResolversTypes['TransactionConnection'], ParentType, ContextType, Partial<QueryTransactionsArgs>>;
     user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType, RequireFields<QueryUserArgs, 'id'>>;
     users?: Resolver<Array<ResolversTypes['User']>, ParentType, ContextType, Partial<QueryUsersArgs>>;
+}>;
+export type RecoveredDeadDebtPaymentResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['RecoveredDeadDebtPayment'] = ResolversParentTypes['RecoveredDeadDebtPayment']> = ResolversObject<{
+    amount?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+    badDebtDate?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+    clientCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+    clientName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+    id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+    loanId?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+    locality?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+    pendingAmount?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+    receivedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+    routeName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+    __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+export type RecoveredDeadDebtResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['RecoveredDeadDebtResult'] = ResolversParentTypes['RecoveredDeadDebtResult']> = ResolversObject<{
+    month?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+    payments?: Resolver<Array<ResolversTypes['RecoveredDeadDebtPayment']>, ParentType, ContextType>;
+    summary?: Resolver<ResolversTypes['RecoveredDeadDebtSummary'], ParentType, ContextType>;
+    year?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+    __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+export type RecoveredDeadDebtSummaryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['RecoveredDeadDebtSummary'] = ResolversParentTypes['RecoveredDeadDebtSummary']> = ResolversObject<{
+    clientsCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+    loansCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+    paymentsCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+    totalRecovered?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+    __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 export type RenovationKpIsResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['RenovationKPIs'] = ResolversParentTypes['RenovationKPIs']> = ResolversObject<{
     tasaRenovacion?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
@@ -3523,6 +3590,9 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
     PortfolioReport?: PortfolioReportResolvers<ContextType>;
     PortfolioSummary?: PortfolioSummaryResolvers<ContextType>;
     Query?: QueryResolvers<ContextType>;
+    RecoveredDeadDebtPayment?: RecoveredDeadDebtPaymentResolvers<ContextType>;
+    RecoveredDeadDebtResult?: RecoveredDeadDebtResultResolvers<ContextType>;
+    RecoveredDeadDebtSummary?: RecoveredDeadDebtSummaryResolvers<ContextType>;
     RenovationKPIs?: RenovationKpIsResolvers<ContextType>;
     ReportConfig?: ReportConfigResolvers<ContextType>;
     ReportExecutionLog?: ReportExecutionLogResolvers<ContextType>;

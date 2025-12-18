@@ -9,7 +9,7 @@ interface CreateNewLeaderInput {
   replaceExisting?: boolean
 }
 
-interface CreateNewLeaderResult {
+export interface CreateNewLeaderResult {
   success: boolean
   message: string
   newLeaderId: string | null

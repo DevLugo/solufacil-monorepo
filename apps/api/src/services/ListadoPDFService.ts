@@ -141,7 +141,7 @@ export class ListadoPDFService {
         { signDate: 'asc' },
         { id: 'asc' }
       ]
-    }) as any[]
+    })
   }
 
   /**

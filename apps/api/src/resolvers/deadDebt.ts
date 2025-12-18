@@ -414,6 +414,116 @@ export const deadDebtResolvers = {
         totalPending: data.totalPending.toString(),
         totalBadDebtCandidate: data.totalBadDebtCandidate.toString()
       }))
+    },
+
+    recoveredDeadDebt: async (
+      _parent: unknown,
+      args: {
+        year: number
+        month: number
+        routeId?: string | null
+      },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+      requireRole(context, [UserRole.ADMIN])
+
+      const { year, month, routeId } = args
+
+      // Calculate date range for the month
+      const monthStart = new Date(year, month - 1, 1)
+      const monthEnd = new Date(year, month, 0, 23, 59, 59, 999)
+
+      // Build where clause for loans
+      const loanWhere: any = {
+        badDebtDate: {
+          not: null,
+          lt: monthStart
+        }
+      }
+
+      if (routeId) {
+        loanWhere.leadRelation = { routesId: routeId }
+      }
+
+      // Find all payments in the period from loans that were marked as dead debt BEFORE the payment date
+      const payments = await context.prisma.loanPayment.findMany({
+        where: {
+          receivedAt: {
+            gte: monthStart,
+            lte: monthEnd
+          },
+          loanRelation: loanWhere
+        },
+        include: {
+          loanRelation: {
+            include: {
+              borrowerRelation: {
+                include: {
+                  personalDataRelation: true
+                }
+              },
+              leadRelation: {
+                include: {
+                  personalDataRelation: {
+                    include: {
+                      addresses: {
+                        include: {
+                          locationRelation: true
+                        }
+                      }
+                    }
+                  },
+                  routes: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: { receivedAt: 'desc' }
+      })
+
+      // Calculate summary
+      const totalRecovered = payments.reduce((sum, p) => sum + toDecimal(p.amount), 0)
+      const uniqueLoanIds = new Set(payments.map(p => p.loan))
+      const uniqueClientIds = new Set(
+        payments
+          .map(p => (p as any).loanRelation?.borrower)
+          .filter(Boolean)
+      )
+
+      // Map payments to result format
+      const processedPayments = payments.map(payment => {
+        const loan = (payment as any).loanRelation
+        const borrower = loan?.borrowerRelation?.personalDataRelation
+        const lead = loan?.leadRelation
+        const leadPersonalData = lead?.personalDataRelation
+
+        return {
+          id: payment.id,
+          amount: toDecimal(payment.amount).toString(),
+          receivedAt: payment.receivedAt?.toISOString() || new Date().toISOString(),
+          loanId: payment.loan || '',
+          clientName: borrower?.fullName || 'Unknown',
+          clientCode: borrower?.clientCode || 'N/A',
+          badDebtDate: loan?.badDebtDate?.toISOString() || '',
+          routeName: lead?.routes?.[0]?.name || 'No route',
+          locality: leadPersonalData?.addresses?.[0]?.locationRelation?.name || 'No locality',
+          pendingAmount: toDecimal(loan?.pendingAmountStored).toString()
+        }
+      })
+
+      return {
+        year,
+        month,
+        summary: {
+          totalRecovered: totalRecovered.toString(),
+          paymentsCount: payments.length,
+          loansCount: uniqueLoanIds.size,
+          clientsCount: uniqueClientIds.size
+        },
+        payments: processedPayments
+      }
     }
   },
 

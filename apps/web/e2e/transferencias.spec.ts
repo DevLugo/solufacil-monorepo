@@ -842,7 +842,7 @@ test.describe('Transferencias - Actualizacion de Balance', () => {
 
     for (let i = 0; i < sourceCount; i++) {
       const optionText = await sourceOptions.nth(i).textContent()
-      if (optionText && optionText.includes(sourceAccountWithBalance)) {
+      if (optionText && sourceAccountWithBalance && optionText.includes(sourceAccountWithBalance)) {
         await sourceOptions.nth(i).click()
         sourceAccountName = optionText.split('(')[0].trim()
         foundSource = true

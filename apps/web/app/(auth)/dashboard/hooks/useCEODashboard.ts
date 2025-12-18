@@ -162,8 +162,55 @@ const GET_CEO_DASHBOARD_DATA = gql`
       id
       name
     }
+    recoveredDeadDebt(year: $year, month: $month, routeId: $routeId) {
+      year
+      month
+      summary {
+        totalRecovered
+        paymentsCount
+        loansCount
+        clientsCount
+      }
+      payments {
+        id
+        amount
+        receivedAt
+        loanId
+        clientName
+        clientCode
+        badDebtDate
+        routeName
+        locality
+        pendingAmount
+      }
+    }
   }
 `
+
+export interface RecoveredDeadDebtPayment {
+  id: string
+  amount: string
+  receivedAt: string
+  loanId: string
+  clientName: string
+  clientCode: string
+  badDebtDate: string
+  routeName: string
+  locality: string
+  pendingAmount: string
+}
+
+export interface RecoveredDeadDebtSummary {
+  totalRecovered: string
+  paymentsCount: number
+  loansCount: number
+  clientsCount: number
+}
+
+export interface RecoveredDeadDebtData {
+  summary: RecoveredDeadDebtSummary
+  payments: RecoveredDeadDebtPayment[]
+}
 
 export interface WeeklyData {
   week: number
@@ -315,6 +362,14 @@ export function useCEODashboard({
 
   // Routes
   const routes: Route[] = data?.routes || []
+
+  // Recovered dead debt
+  const recoveredDeadDebt: RecoveredDeadDebtData | null = data?.recoveredDeadDebt
+    ? {
+        summary: data.recoveredDeadDebt.summary,
+        payments: data.recoveredDeadDebt.payments || [],
+      }
+    : null
 
   // Computed stats
   const stats = useMemo(() => {
@@ -477,6 +532,7 @@ export function useCEODashboard({
     newLocations,
     topLocations,
     routes,
+    recoveredDeadDebt,
     // State
     loading,
     error,

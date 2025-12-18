@@ -5,6 +5,7 @@ export {
   useLocalityReport,
   useLocalityClients,
   useAnnualPortfolioData,
+  useRecoveredDeadDebt,
 } from './usePortfolioReport'
 
 export type {
@@ -31,4 +32,7 @@ export type {
   LocalityClientDetail,
   // Annual data types
   AnnualPortfolioDataPoint,
+  // Recovered dead debt types
+  RecoveredDeadDebtSummary,
+  RecoveredDeadDebtPayment,
 } from './usePortfolioReport'

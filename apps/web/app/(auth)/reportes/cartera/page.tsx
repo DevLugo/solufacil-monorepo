@@ -20,12 +20,18 @@ import {
   BarChart3,
   LayoutDashboard,
   Route,
+  Skull,
+  DollarSign,
+  Receipt,
+  Wallet,
+  Users,
 } from 'lucide-react'
 import {
   usePortfolioReport,
   usePeriodNavigation,
   useLocalityReport,
   useAnnualPortfolioData,
+  useRecoveredDeadDebt,
 } from './hooks'
 import type { AnnualMonthData } from './components'
 import {
@@ -37,10 +43,23 @@ import {
   formatMonthLabel,
 } from './components'
 import { GET_ROUTES } from '@/graphql/queries/reports'
+import { RecoveredDeadDebtModal } from '@/components/features/recovered-dead-debt'
 
 interface RouteType {
   id: string
   name: string
+}
+
+// Utility function to format currency
+function formatCurrency(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return '$0'
+  const numValue = typeof value === 'string' ? parseFloat(value) : value
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(numValue)
 }
 
 function ReportSkeleton() {
@@ -65,6 +84,7 @@ function ReportSkeleton() {
 
 export default function PortfolioReportPage() {
   const [activeTab, setActiveTab] = useState('resumen')
+  const [showRecoveredDeadDebtModal, setShowRecoveredDeadDebtModal] = useState(false)
 
   // Period navigation - always use MONTHLY view
   const {
@@ -113,6 +133,16 @@ export default function PortfolioReportPage() {
     localityReport,
     loading: localityLoading,
   } = useLocalityReport({
+    year,
+    month,
+  })
+
+  // Recovered dead debt
+  const {
+    summary: recoveredDeadDebt,
+    payments: recoveredDeadDebtPayments,
+    loading: recoveredLoading,
+  } = useRecoveredDeadDebt({
     year,
     month,
   })
@@ -302,6 +332,80 @@ export default function PortfolioReportPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Recovered Dead Debt Section */}
+      {recoveredDeadDebt && (recoveredDeadDebt.paymentsCount > 0 || recoveredDeadDebt.loansCount > 0) && (
+        <Card className="border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Skull className="h-5 w-5 text-green-600 dark:text-green-400" />
+              Cartera Muerta Recuperada
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              Pagos recibidos de créditos previamente marcados como cartera muerta.{' '}
+              <button
+                onClick={() => setShowRecoveredDeadDebtModal(true)}
+                className="text-primary hover:underline font-medium"
+              >
+                Ver detalle
+              </button>
+            </p>
+            <div
+              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 cursor-pointer"
+              onClick={() => setShowRecoveredDeadDebtModal(true)}
+            >
+              <div className="rounded-lg border bg-white dark:bg-background p-4 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium text-muted-foreground">Monto Recuperado</span>
+                </div>
+                <p className="text-2xl font-bold mt-1 text-green-600 dark:text-green-400">
+                  {formatCurrency(recoveredDeadDebt.totalRecovered)}
+                </p>
+              </div>
+              <div className="rounded-lg border bg-white dark:bg-background p-4 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <Receipt className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium text-muted-foreground">Pagos Recibidos</span>
+                </div>
+                <p className="text-2xl font-bold mt-1">
+                  {recoveredDeadDebt.paymentsCount}
+                </p>
+              </div>
+              <div className="rounded-lg border bg-white dark:bg-background p-4 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium text-muted-foreground">Créditos</span>
+                </div>
+                <p className="text-2xl font-bold mt-1">
+                  {recoveredDeadDebt.loansCount}
+                </p>
+                <p className="text-xs text-muted-foreground">Con pagos este mes</p>
+              </div>
+              <div className="rounded-lg border bg-white dark:bg-background p-4 transition-colors hover:bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium text-muted-foreground">Clientes</span>
+                </div>
+                <p className="text-2xl font-bold mt-1">
+                  {recoveredDeadDebt.clientsCount}
+                </p>
+                <p className="text-xs text-muted-foreground">Que pagaron cartera muerta</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recovered Dead Debt Modal */}
+      <RecoveredDeadDebtModal
+        open={showRecoveredDeadDebtModal}
+        onOpenChange={setShowRecoveredDeadDebtModal}
+        payments={recoveredDeadDebtPayments}
+        title="Cartera Muerta Recuperada - Detalle"
+      />
 
       {/* Report Content */}
       {report && (

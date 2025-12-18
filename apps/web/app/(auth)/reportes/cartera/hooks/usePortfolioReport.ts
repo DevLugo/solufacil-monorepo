@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useCallback, useEffect } from 'react'
-import { useQuery, useMutation, useLazyQuery } from '@apollo/client'
+import { useQuery, useMutation, useLazyQuery, gql } from '@apollo/client'
 import {
   GET_PORTFOLIO_REPORT_WEEKLY,
   GET_PORTFOLIO_REPORT_MONTHLY,
@@ -637,5 +637,85 @@ export function useLocalityClients() {
     loading,
     error,
     getClients,
+  }
+}
+
+// =============================================================================
+// RECOVERED DEAD DEBT HOOK
+// =============================================================================
+
+const GET_RECOVERED_DEAD_DEBT = gql`
+  query RecoveredDeadDebt($year: Int!, $month: Int!, $routeId: ID) {
+    recoveredDeadDebt(year: $year, month: $month, routeId: $routeId) {
+      year
+      month
+      summary {
+        totalRecovered
+        paymentsCount
+        loansCount
+        clientsCount
+      }
+      payments {
+        id
+        amount
+        receivedAt
+        loanId
+        clientName
+        clientCode
+        badDebtDate
+        routeName
+        locality
+        pendingAmount
+      }
+    }
+  }
+`
+
+export interface RecoveredDeadDebtPayment {
+  id: string
+  amount: string
+  receivedAt: string
+  loanId: string
+  clientName: string
+  clientCode: string
+  badDebtDate: string
+  routeName: string
+  locality: string
+  pendingAmount: string
+}
+
+export interface RecoveredDeadDebtSummary {
+  totalRecovered: string
+  paymentsCount: number
+  loansCount: number
+  clientsCount: number
+}
+
+interface UseRecoveredDeadDebtParams {
+  year: number
+  month: number
+  routeId?: string | null
+}
+
+export function useRecoveredDeadDebt({ year, month, routeId }: UseRecoveredDeadDebtParams) {
+  const { data, loading, error, refetch } = useQuery(GET_RECOVERED_DEAD_DEBT, {
+    variables: { year, month, routeId: routeId || null },
+    fetchPolicy: 'cache-and-network',
+  })
+
+  const summary: RecoveredDeadDebtSummary | null = useMemo(() => {
+    return data?.recoveredDeadDebt?.summary || null
+  }, [data])
+
+  const payments: RecoveredDeadDebtPayment[] = useMemo(() => {
+    return data?.recoveredDeadDebt?.payments || []
+  }, [data])
+
+  return {
+    summary,
+    payments,
+    loading,
+    error,
+    refetch,
   }
 }
