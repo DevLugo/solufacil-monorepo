@@ -47,6 +47,33 @@ export const routeResolvers = {
       return routeService.findLocations(args.routeId ?? undefined)
     },
 
+    locationsCreatedInPeriod: async (
+      _parent: unknown,
+      args: { fromDate: Date; toDate: Date; routeId?: string },
+      context: GraphQLContext
+    ) => {
+      authenticateUser(context)
+
+      return context.prisma.location.findMany({
+        where: {
+          createdAt: {
+            gte: args.fromDate,
+            lte: args.toDate,
+          },
+          ...(args.routeId ? { route: args.routeId } : {}),
+        },
+        include: {
+          routeRelation: true,
+          municipalityRelation: {
+            include: {
+              stateRelation: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    },
+
     municipalities: async (_parent: unknown, _args: unknown, context: GraphQLContext) => {
       authenticateUser(context)
 

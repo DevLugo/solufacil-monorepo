@@ -75,11 +75,12 @@ directive @requireRole(roles: [UserRole!]!) on FIELD_DEFINITION | OBJECT
 # Core Types
 type User {
   id: ID!
+  name: String!
   email: String!
   role: UserRole!
   employee: Employee
+  telegramUser: TelegramUser
   createdAt: DateTime!
-  updatedAt: DateTime!
 }
 
 type PersonalData {
@@ -117,6 +118,7 @@ type Employee {
   personalData: PersonalData!
   location: Location
   routes: [Route!]!
+  user: User
   loansGranted: [Loan!]!
   loansManagedAsLead: [Loan!]!
   transactions: [Transaction!]!
@@ -278,6 +280,7 @@ type Location {
   route: Route
   municipality: Municipality!
   addresses: [Address!]!
+  createdAt: DateTime!
 }
 
 type Municipality {
@@ -508,6 +511,7 @@ type WeeklyData {
   date: DateTime!
   loansGranted: Int!
   paymentsReceived: Decimal!
+  paymentsCount: Int!
   expectedPayments: Decimal!
   recoveryRate: Decimal!
 }
@@ -887,6 +891,7 @@ type Query {
   routes: [Route!]! @auth
   routesWithStats(year: Int!, month: Int!): [RouteWithStats!]! @requireRole(roles: [ADMIN])
   locations(routeId: ID): [Location!]! @auth
+  locationsCreatedInPeriod(fromDate: DateTime!, toDate: DateTime!, routeId: ID): [Location!]! @auth
   municipalities: [Municipality!]! @auth
 
   # Loan types
@@ -963,18 +968,106 @@ type Query {
     offset: Int
   ): [DocumentPhoto!]! @auth
   documentsWithErrors(routeId: ID): [DocumentPhoto!]! @auth
+
+  # Telegram Users
+  telegramUsers(
+    filters: TelegramUserFiltersInput
+    limit: Int
+    offset: Int
+  ): [TelegramUser!]! @requireRole(roles: [ADMIN])
+  telegramUser(id: ID!): TelegramUser @requireRole(roles: [ADMIN])
+  telegramUserStats: TelegramUserStats! @requireRole(roles: [ADMIN])
+  telegramUserByChatId(chatId: String!): TelegramUser @requireRole(roles: [ADMIN])
+
+  # Report Configs
+  reportConfigs(isActive: Boolean): [ReportConfig!]! @requireRole(roles: [ADMIN])
+  reportConfig(id: ID!): ReportConfig @requireRole(roles: [ADMIN])
+  reportExecutionLogs(
+    reportConfigId: ID
+    status: String
+    fromDate: DateTime
+    toDate: DateTime
+    limit: Int
+    offset: Int
+  ): [ReportExecutionLog!]! @requireRole(roles: [ADMIN])
+
+  # Document Notifications
+  documentNotificationLogs(
+    routeId: ID
+    status: NotificationStatus
+    issueType: IssueType
+    fromDate: DateTime
+    toDate: DateTime
+    limit: Int
+    offset: Int
+  ): [DocumentNotificationLog!]! @requireRole(roles: [ADMIN])
+  documentsWithNotificationStatus(
+    routeId: ID
+    hasErrors: Boolean
+    hasMissing: Boolean
+    limit: Int
+    offset: Int
+  ): [DocumentWithNotificationStatus!]! @requireRole(roles: [ADMIN])
+
+  # Bank Income Transactions
+  getBankIncomeTransactions(
+    startDate: String!
+    endDate: String!
+    routeIds: [ID!]!
+    onlyAbonos: Boolean
+  ): BankIncomeTransactionsResponse! @requireRole(roles: [ADMIN])
+
+  # Dead Debt (Cartera Muerta)
+  deadDebtLoans(
+    weeksSinceLoanMin: Int
+    weeksWithoutPaymentMin: Int
+    routeId: ID
+    localities: [String!]
+    badDebtStatus: DeadDebtStatus
+    fromDate: DateTime
+    toDate: DateTime
+  ): DeadDebtQueryResult! @requireRole(roles: [ADMIN])
+
+  deadDebtMonthlySummary(
+    year: Int!
+    routeId: ID
+    localities: [String!]
+    weeksSinceLoanMin: Int
+    weeksWithoutPaymentMin: Int
+    badDebtStatus: DeadDebtStatus
+    fromDate: DateTime
+    toDate: DateTime
+  ): DeadDebtMonthlySummaryResult! @requireRole(roles: [ADMIN])
+
+  deadDebtSummaryByLocality(
+    weeksSinceLoanMin: Int
+    weeksWithoutPaymentMin: Int
+    routeId: ID
+    localities: [String!]
+    badDebtStatus: DeadDebtStatus
+  ): [DeadDebtSummaryByLocality!]! @requireRole(roles: [ADMIN])
 }
 
 # Input Types
 input CreateUserInput {
+  name: String!
   email: String!
   password: String!
   role: UserRole!
+  telegramChatId: String
+  employeeId: ID
+  # Para crear empleado junto con el usuario
+  createEmployee: Boolean
+  employeeType: EmployeeType
 }
 
 input UpdateUserInput {
+  name: String
   email: String
+  password: String
   role: UserRole
+  telegramChatId: String
+  employeeId: ID
 }
 
 input CreateEmployeeInput {
@@ -1334,6 +1427,33 @@ type Mutation {
   updateDocumentPhoto(id: ID!, input: UpdateDocumentInput!): DocumentPhoto! @auth
   deleteDocumentPhoto(id: ID!): Boolean! @auth
   markDocumentAsMissing(input: MarkDocumentAsMissingInput!): DocumentPhoto! @auth
+
+  # Telegram Users
+  activateTelegramUser(id: ID!): TelegramUser! @requireRole(roles: [ADMIN])
+  deactivateTelegramUser(id: ID!): TelegramUser! @requireRole(roles: [ADMIN])
+  updateTelegramUser(id: ID!, input: UpdateTelegramUserInput!): TelegramUser! @requireRole(roles: [ADMIN])
+  linkTelegramToUser(input: LinkTelegramToUserInput!): TelegramUser! @requireRole(roles: [ADMIN])
+  unlinkTelegramFromUser(telegramUserId: ID!): TelegramUser! @requireRole(roles: [ADMIN])
+  deleteTelegramUser(id: ID!): Boolean! @requireRole(roles: [ADMIN])
+
+  # Report Configs
+  createReportConfig(input: CreateReportConfigInput!): ReportConfig! @requireRole(roles: [ADMIN])
+  updateReportConfig(id: ID!, input: UpdateReportConfigInput!): ReportConfig! @requireRole(roles: [ADMIN])
+  deleteReportConfig(id: ID!): Boolean! @requireRole(roles: [ADMIN])
+  toggleReportConfig(id: ID!): ReportConfig! @requireRole(roles: [ADMIN])
+  executeReportManually(reportConfigId: ID!): ReportExecutionResult! @requireRole(roles: [ADMIN])
+
+  # Document Notifications
+  sendDocumentNotification(input: SendDocumentNotificationInput!): SendNotificationResult! @requireRole(roles: [ADMIN])
+  retryFailedNotification(notificationId: ID!): SendNotificationResult! @requireRole(roles: [ADMIN])
+  sendBulkDocumentNotifications(
+    documentIds: [ID!]!
+    recipientChatIds: [String!]!
+    includePhoto: Boolean
+  ): [SendNotificationResult!]! @requireRole(roles: [ADMIN])
+
+  # Dead Debt (Cartera Muerta)
+  markLoansAsDeadDebt(loanIds: [ID!]!, deadDebtDate: DateTime!): MarkDeadDebtResult! @requireRole(roles: [ADMIN])
 }
 
 # Inputs for creating new leader
@@ -1366,4 +1486,309 @@ type ExistingLeaderInfo {
   id: ID!
   fullName: String!
   locationName: String!
+}
+
+# ========================================
+# TELEGRAM & NOTIFICATIONS
+# ========================================
+
+enum ReportType {
+  NOTIFICACION_TIEMPO_REAL
+  CREDITOS_CON_ERRORES
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  RETRY
+}
+
+enum IssueType {
+  ERROR
+  MISSING
+}
+
+type TelegramUser {
+  id: ID!
+  chatId: String!
+  name: String!
+  username: String
+  isActive: Boolean!
+  registeredAt: DateTime!
+  lastActivity: DateTime!
+  reportsReceived: Int!
+  isInRecipientsList: Boolean!
+  notes: String
+  platformUser: User
+  reportConfigs: [ReportConfig!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type TelegramUserStats {
+  totalUsers: Int!
+  activeUsers: Int!
+  inactiveUsers: Int!
+  linkedToPlataform: Int!
+  inRecipientsList: Int!
+}
+
+type ReportSchedule {
+  days: [String!]!
+  hour: String!
+  timezone: String!
+}
+
+type ReportConfig {
+  id: ID!
+  name: String!
+  reportType: String!
+  schedule: ReportSchedule
+  isActive: Boolean!
+  routes: [Route!]!
+  telegramRecipients: [TelegramUser!]!
+  executionLogs: [ReportExecutionLog!]!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type ReportExecutionLog {
+  id: ID!
+  status: String!
+  executionType: String!
+  message: String
+  errorDetails: String
+  recipientsCount: Int
+  successfulDeliveries: Int
+  failedDeliveries: Int
+  startTime: DateTime!
+  endTime: DateTime
+  duration: Int
+  cronExpression: String
+  timezone: String
+  reportConfig: ReportConfig!
+  createdAt: DateTime!
+}
+
+type DocumentNotificationLog {
+  id: ID!
+  documentId: String!
+  documentType: String!
+  personalDataId: String!
+  personName: String!
+  loanId: String
+  routeId: String!
+  routeName: String!
+  localityName: String
+  routeLeadId: String
+  routeLeadName: String
+  telegramUserId: String!
+  telegramChatId: String!
+  telegramUsername: String
+  issueType: IssueType!
+  description: String
+  messageContent: String!
+  status: NotificationStatus!
+  telegramResponse: String
+  telegramErrorCode: Int
+  telegramErrorMessage: String
+  sentAt: DateTime
+  responseTimeMs: Int
+  retryCount: Int!
+  lastRetryAt: DateTime
+  notes: String
+  createdAt: DateTime!
+}
+
+type DocumentWithNotificationStatus {
+  document: DocumentPhoto!
+  notificationSent: Boolean!
+  lastNotification: DocumentNotificationLog
+}
+
+type SendNotificationResult {
+  success: Boolean!
+  message: String!
+  notificationId: ID
+  telegramResponse: String
+}
+
+type ReportExecutionResult {
+  success: Boolean!
+  message: String!
+  recipientsNotified: Int!
+  errors: [String!]
+}
+
+# Bank Income Types
+type BankIncomeTransaction {
+  id: ID!
+  amount: Float!
+  type: String!
+  incomeSource: String
+  date: DateTime!
+  description: String
+  locality: String
+  employeeName: String
+  leaderLocality: String
+  isClientPayment: Boolean!
+  isLeaderPayment: Boolean!
+  name: String!
+}
+
+type BankIncomeTransactionsResponse {
+  success: Boolean!
+  message: String
+  transactions: [BankIncomeTransaction!]!
+}
+
+# ========================================
+# DEAD DEBT (CARTERA MUERTA) TYPES
+# ========================================
+
+enum DeadDebtStatus {
+  ALL
+  MARKED
+  UNMARKED
+}
+
+type DeadDebtLoan {
+  id: ID!
+  amountGived: Decimal!
+  signDate: DateTime!
+  pendingAmountStored: Decimal!
+  badDebtDate: DateTime
+  badDebtCandidate: Decimal!
+  weeksSinceLoan: Int!
+  weeksWithoutPayment: Int!
+  borrower: DeadDebtBorrower!
+  lead: DeadDebtLead!
+  payments: [DeadDebtPayment!]!
+}
+
+type DeadDebtBorrower {
+  fullName: String!
+  clientCode: String!
+}
+
+type DeadDebtLead {
+  fullName: String!
+  locality: String!
+  route: String!
+}
+
+type DeadDebtPayment {
+  receivedAt: DateTime
+  amount: Decimal!
+}
+
+type DeadDebtSummaryByLocality {
+  locality: String!
+  loanCount: Int!
+  totalPending: Decimal!
+  totalBadDebtCandidate: Decimal!
+}
+
+type DeadDebtQueryResult {
+  loans: [DeadDebtLoan!]!
+  summary: DeadDebtTotals!
+  localities: [String!]!
+}
+
+type DeadDebtTotals {
+  totalLoans: Int!
+  totalPendingAmount: Decimal!
+  totalBadDebtCandidate: Decimal!
+}
+
+type MonthInfo {
+  year: Int!
+  month: Int!
+  name: String!
+  startDate: DateTime!
+  endDate: DateTime!
+}
+
+type EvaluationPeriod {
+  from: DateTime!
+  to: DateTime!
+  description: String!
+}
+
+type DeadDebtCriteria {
+  weeksSinceLoanMin: Int
+  weeksWithoutPaymentMin: Int
+  badDebtStatus: String
+  localities: [String!]!
+}
+
+type DeadDebtMonthSummary {
+  month: MonthInfo!
+  evaluationPeriod: EvaluationPeriod!
+  criteria: DeadDebtCriteria!
+  summary: DeadDebtTotals!
+  loans: [DeadDebtLoan!]!
+}
+
+type DeadDebtMonthlySummaryResult {
+  year: Int!
+  monthlySummary: [DeadDebtMonthSummary!]!
+  yearTotals: DeadDebtTotals!
+  routesInfo: [RouteInfo!]!
+}
+
+type MarkDeadDebtResult {
+  success: Boolean!
+  message: String!
+  count: Int!
+}
+
+# Telegram Input Types
+input TelegramUserFiltersInput {
+  isActive: Boolean
+  isLinkedToUser: Boolean
+  isInRecipientsList: Boolean
+  searchTerm: String
+}
+
+input ReportScheduleInput {
+  days: [String!]!
+  hour: String!
+  timezone: String
+}
+
+input CreateReportConfigInput {
+  name: String!
+  reportType: ReportType!
+  schedule: ReportScheduleInput!
+  routeIds: [ID!]!
+  recipientIds: [ID!]!
+  isActive: Boolean
+}
+
+input UpdateReportConfigInput {
+  name: String
+  schedule: ReportScheduleInput
+  routeIds: [ID!]
+  recipientIds: [ID!]
+  isActive: Boolean
+}
+
+input SendDocumentNotificationInput {
+  documentId: ID!
+  recipientChatIds: [String!]!
+  customMessage: String
+  includePhoto: Boolean
+}
+
+input LinkTelegramToUserInput {
+  telegramUserId: ID!
+  platformUserId: ID!
+}
+
+input UpdateTelegramUserInput {
+  isActive: Boolean
+  isInRecipientsList: Boolean
+  notes: String
 }

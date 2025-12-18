@@ -19,6 +19,10 @@ import {
   History,
   Upload,
   BarChart3,
+  Bell,
+  Users,
+  Send,
+  Skull,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -53,9 +57,13 @@ const navegacion: NavItem[] = [
     titulo: 'Administrar',
     icono: Settings,
     hijos: [
+      { titulo: 'Usuarios', href: '/administrar/usuarios', icono: Users },
+      { titulo: 'Usuarios Telegram', href: '/administrar/usuarios-telegram', icono: Send },
       { titulo: 'Rutas', href: '/administrar/rutas', icono: Route },
       { titulo: 'Nuevo Líder', href: '/administrar/lideres/nuevo', icono: UserPlus },
       { titulo: 'Gastos', href: '/administrar/gastos', icono: BarChart3 },
+      { titulo: 'Cartera Muerta', href: '/administrar/cartera-muerta', icono: Skull },
+      { titulo: 'Notificaciones', href: '/administrar/notificaciones-telegram', icono: Bell },
     ],
   },
 ]
@@ -157,7 +165,7 @@ export function Sidebar({
       >
         {/* Logo */}
         <div className="flex h-16 items-center justify-center border-b px-4">
-          <Link href="/dashboard" className="flex items-center" onClick={manejarClickEnlace}>
+          <Link href="/" className="flex items-center" onClick={manejarClickEnlace}>
             {efectivamenteColapsado ? (
               <div className="relative flex h-9 w-9 items-center justify-center">
                 <div className="absolute inset-0 rotate-45 rounded-lg bg-primary" />
@@ -174,14 +182,26 @@ export function Sidebar({
                 </svg>
               </div>
             ) : (
-              <Image
-                src="/solufacil.png"
-                alt="Solufacil"
-                width={150}
-                height={45}
-                priority
-                className="h-9 w-auto"
-              />
+              <>
+                {/* Logo para modo claro */}
+                <Image
+                  src="/solufacil.png"
+                  alt="Solufacil"
+                  width={150}
+                  height={45}
+                  priority
+                  className="h-9 w-auto dark:hidden"
+                />
+                {/* Logo para modo oscuro */}
+                <Image
+                  src="/solufacil_dark.png"
+                  alt="Solufacil"
+                  width={150}
+                  height={45}
+                  priority
+                  className="h-9 w-auto hidden dark:block"
+                />
+              </>
             )}
           </Link>
         </div>

@@ -16,6 +16,9 @@ import { documentResolvers } from './documents'
 import { personalDataResolvers } from './personalData'
 import { clientResolvers } from './clients'
 import { leadersResolvers } from './leaders'
+import { telegramResolvers } from './telegram'
+import { bankIncomeResolvers } from './bankIncome'
+import { deadDebtResolvers } from './deadDebt'
 
 export const resolvers = {
   ...scalars,
@@ -38,6 +41,9 @@ export const resolvers = {
     ...personalDataResolvers.Query,
     ...clientResolvers.Query,
     ...leadersResolvers.Query,
+    ...telegramResolvers.Query,
+    ...bankIncomeResolvers.Query,
+    ...deadDebtResolvers.Query,
   },
 
   Mutation: {
@@ -56,6 +62,8 @@ export const resolvers = {
     ...documentResolvers.Mutation,
     ...personalDataResolvers.Mutation,
     ...leadersResolvers.Mutation,
+    ...telegramResolvers.Mutation,
+    ...deadDebtResolvers.Mutation,
   },
 
   // Type resolvers
@@ -77,4 +85,8 @@ export const resolvers = {
   Address: personalDataResolvers.Address,
   Phone: personalDataResolvers.Phone,
   PortfolioCleanup: portfolioCleanupResolvers.PortfolioCleanup,
+  TelegramUser: telegramResolvers.TelegramUser,
+  ReportConfig: telegramResolvers.ReportConfig,
+  ReportExecutionLog: telegramResolvers.ReportExecutionLog,
+  DocumentWithNotificationStatus: telegramResolvers.DocumentWithNotificationStatus,
 }

@@ -21,6 +21,12 @@ export var ClientCategory;
     ClientCategory["Reintegro"] = "REINTEGRO";
     ClientCategory["Renovado"] = "RENOVADO";
 })(ClientCategory || (ClientCategory = {}));
+export var DeadDebtStatus;
+(function (DeadDebtStatus) {
+    DeadDebtStatus["All"] = "ALL";
+    DeadDebtStatus["Marked"] = "MARKED";
+    DeadDebtStatus["Unmarked"] = "UNMARKED";
+})(DeadDebtStatus || (DeadDebtStatus = {}));
 export var DocumentType;
 (function (DocumentType) {
     DocumentType["Domicilio"] = "DOMICILIO";
@@ -34,6 +40,11 @@ export var EmployeeType;
     EmployeeType["RouteAssistent"] = "ROUTE_ASSISTENT";
     EmployeeType["RouteLead"] = "ROUTE_LEAD";
 })(EmployeeType || (EmployeeType = {}));
+export var IssueType;
+(function (IssueType) {
+    IssueType["Error"] = "ERROR";
+    IssueType["Missing"] = "MISSING";
+})(IssueType || (IssueType = {}));
 export var LoanStatus;
 (function (LoanStatus) {
     LoanStatus["Active"] = "ACTIVE";
@@ -41,6 +52,13 @@ export var LoanStatus;
     LoanStatus["Finished"] = "FINISHED";
     LoanStatus["Renovated"] = "RENOVATED";
 })(LoanStatus || (LoanStatus = {}));
+export var NotificationStatus;
+(function (NotificationStatus) {
+    NotificationStatus["Failed"] = "FAILED";
+    NotificationStatus["Pending"] = "PENDING";
+    NotificationStatus["Retry"] = "RETRY";
+    NotificationStatus["Sent"] = "SENT";
+})(NotificationStatus || (NotificationStatus = {}));
 export var PaymentMethod;
 (function (PaymentMethod) {
     PaymentMethod["Cash"] = "CASH";
@@ -51,6 +69,11 @@ export var PeriodType;
     PeriodType["Monthly"] = "MONTHLY";
     PeriodType["Weekly"] = "WEEKLY";
 })(PeriodType || (PeriodType = {}));
+export var ReportType;
+(function (ReportType) {
+    ReportType["CreditosConErrores"] = "CREDITOS_CON_ERRORES";
+    ReportType["NotificacionTiempoReal"] = "NOTIFICACION_TIEMPO_REAL";
+})(ReportType || (ReportType = {}));
 export var TransactionType;
 (function (TransactionType) {
     TransactionType["Expense"] = "EXPENSE";

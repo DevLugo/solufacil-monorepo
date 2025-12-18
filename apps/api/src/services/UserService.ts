@@ -1,17 +1,27 @@
 import bcrypt from 'bcryptjs'
 import { GraphQLError } from 'graphql'
-import type { User, UserRole, PrismaClient } from '@solufacil/database'
+import type { User, UserRole, EmployeeType, PrismaClient } from '@solufacil/database'
 import { UserRepository } from '../repositories/UserRepository'
 
 export interface CreateUserInput {
+  name: string
   email: string
   password: string
   role: UserRole
+  telegramChatId?: string
+  employeeId?: string
+  // Para crear empleado junto con el usuario
+  createEmployee?: boolean
+  employeeType?: EmployeeType
 }
 
 export interface UpdateUserInput {
+  name?: string
   email?: string
+  password?: string
   role?: UserRole
+  telegramChatId?: string
+  employeeId?: string
 }
 
 export class UserService {
@@ -53,10 +63,25 @@ export class UserService {
     // Hash del password
     const hashedPassword = await bcrypt.hash(input.password, 10)
 
-    return this.userRepository.create({
+    let employeeId = input.employeeId
+
+    // Si se quiere crear un empleado junto con el usuario
+    if (input.createEmployee && input.employeeType) {
+      const newEmployee = await this.userRepository.createEmployee({
+        type: input.employeeType,
+        fullName: input.name,
+      })
+      employeeId = newEmployee.id
+    }
+
+    // Create user with optional relations
+    return this.userRepository.createWithRelations({
+      name: input.name,
       email: input.email,
       password: hashedPassword,
       role: input.role,
+      telegramChatId: input.telegramChatId,
+      employeeId,
     })
   }
 
@@ -79,7 +104,20 @@ export class UserService {
       }
     }
 
-    return this.userRepository.update(id, input)
+    // Hash password if provided
+    let hashedPassword: string | undefined
+    if (input.password) {
+      hashedPassword = await bcrypt.hash(input.password, 10)
+    }
+
+    return this.userRepository.updateWithRelations(id, {
+      name: input.name,
+      email: input.email,
+      password: hashedPassword,
+      role: input.role,
+      telegramChatId: input.telegramChatId,
+      employeeId: input.employeeId,
+    })
   }
 
   async delete(id: string): Promise<boolean> {

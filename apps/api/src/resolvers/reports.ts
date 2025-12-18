@@ -29,6 +29,7 @@ export const reportResolvers = {
           date: week.date,
           loansGranted: week.loansGranted,
           paymentsReceived: week.paymentsReceived.toString(),
+          paymentsCount: week.paymentsCount,
           expectedPayments: week.expectedPayments.toString(),
           recoveryRate: week.recoveryRate.toString(),
         })),

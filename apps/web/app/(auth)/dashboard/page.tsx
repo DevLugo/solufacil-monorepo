@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useMemo } from 'react'
 import { useQuery } from '@apollo/client'
 import {
   Card,
@@ -10,6 +11,7 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -17,6 +19,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from '@/components/ui/chart'
+import {
+  Bar,
+  BarChart,
+  Line,
+  ComposedChart,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+} from 'recharts'
 import {
   Wallet,
   TrendingUp,
@@ -28,10 +48,18 @@ import {
   ArrowDownRight,
   Calendar,
   MapPin,
+  RefreshCw,
+  Building2,
+  UserCheck,
+  UserX,
+  Minus,
+  LayoutDashboard,
+  PlusCircle,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useTransactionContext } from '@/components/features/transactions/transaction-context'
-import { DASHBOARD_FULL_QUERY } from '@/graphql/queries/dashboard'
 import { ROUTES_QUERY } from '@/graphql/queries/transactions'
+import { useCEODashboard, type Trend } from './hooks'
 
 // Utility function to format currency
 function formatCurrency(value: string | number | null | undefined): string {
@@ -56,19 +84,81 @@ function formatRelativeTime(dateStr: string): string {
 
   if (diffMins < 60) return `Hace ${diffMins} min`
   if (diffHours < 24) return `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`
-  return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`
+  return `Hace ${diffDays} dia${diffDays > 1 ? 's' : ''}`
 }
 
-// Get account type label
-function getAccountTypeLabel(type: string): string {
-  const labels: Record<string, string> = {
-    BANK: 'Banco',
-    OFFICE_CASH_FUND: 'Caja Oficina',
-    EMPLOYEE_CASH_FUND: 'Fondo Empleado',
-    PREPAID_GAS: 'Gasolina',
-    TRAVEL_EXPENSES: 'Viáticos',
+// Trend icon component
+function TrendIcon({ trend, className }: { trend: Trend; className?: string }) {
+  if (trend === 'UP') {
+    return <TrendingUp className={cn('h-4 w-4 text-green-600 dark:text-green-400', className)} />
   }
-  return labels[type] || type
+  if (trend === 'DOWN') {
+    return <TrendingDown className={cn('h-4 w-4 text-red-600 dark:text-red-400', className)} />
+  }
+  return <Minus className={cn('h-4 w-4 text-muted-foreground', className)} />
+}
+
+// Stat card component similar to cartera reports
+function StatCard({
+  title,
+  value,
+  icon: Icon,
+  description,
+  change,
+  variant = 'default',
+}: {
+  title: string
+  value: number | string
+  icon: React.ElementType
+  description?: string
+  change?: number
+  variant?: 'default' | 'success' | 'danger' | 'warning' | 'info'
+}) {
+  const variantClasses = {
+    default: 'bg-muted/50',
+    success: 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900',
+    danger: 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900',
+    warning: 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900',
+    info: 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900',
+  }
+
+  const iconClasses = {
+    default: 'text-muted-foreground',
+    success: 'text-green-600 dark:text-green-400',
+    danger: 'text-red-600 dark:text-red-400',
+    warning: 'text-amber-600 dark:text-amber-400',
+    info: 'text-blue-600 dark:text-blue-400',
+  }
+
+  return (
+    <div className={cn('rounded-lg border p-4', variantClasses[variant])}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Icon className={cn('h-5 w-5', iconClasses[variant])} />
+          <span className="text-sm font-medium text-muted-foreground">{title}</span>
+        </div>
+      </div>
+      <div className="mt-2 flex items-baseline gap-2">
+        <span className="text-2xl font-bold">{value}</span>
+        {change !== undefined && change !== 0 && (
+          <Badge
+            variant="outline"
+            className={cn(
+              'text-xs',
+              change > 0
+                ? 'bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400 border-green-300'
+                : 'bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400 border-red-300'
+            )}
+          >
+            {change > 0 ? '+' : ''}{change}
+          </Badge>
+        )}
+      </div>
+      {description && (
+        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+      )}
+    </div>
+  )
 }
 
 // Dashboard Skeleton component
@@ -81,126 +171,25 @@ function DashboardSkeleton() {
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="fintech-card">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-8 w-8 rounded-full" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-32 mb-2" />
-              <Skeleton className="h-4 w-20" />
-            </CardContent>
-          </Card>
+          <Skeleton key={i} className="h-28" />
         ))}
       </div>
-      <div className="grid gap-6 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
-          <CardHeader>
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-4 w-48" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-16 w-full" />
-            ))}
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-4 w-56" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-24" />
+        ))}
+      </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Skeleton className="h-80" />
+        <Skeleton className="h-80" />
       </div>
     </div>
   )
 }
 
-interface TransactionNode {
-  id: string
-  amount: string
-  date: string
-  type: string
-  incomeSource: string | null
-  expenseSource: string | null
-  loan: {
-    borrower: {
-      personalData: {
-        fullName: string
-      }
-    }
-  } | null
-  lead: {
-    personalData: {
-      fullName: string
-    }
-  } | null
-}
-
-interface Account {
-  id: string
-  name: string
-  type: string
-  accountBalance: string
-}
-
-interface WeeklyData {
-  week: number
-  date: string
-  loansGranted: number
-  paymentsReceived: string
-  expectedPayments: string
-  recoveryRate: string
-}
-
 interface Route {
   id: string
   name: string
-}
-
-interface ActiveLoansBreakdown {
-  total: number
-  alCorriente: number
-  carteraVencida: number
-}
-
-interface DashboardData {
-  financialReport: {
-    summary: {
-      activeLoans: number
-      activeLoansBreakdown: ActiveLoansBreakdown
-      totalPortfolio: string
-      totalPaid: string
-      pendingAmount: string
-      averagePayment: string
-    }
-    weeklyData: WeeklyData[]
-    comparisonData: {
-      previousMonth: {
-        activeLoans: number
-        totalPortfolio: string
-        totalPaid: string
-        pendingAmount: string
-      }
-      growth: string
-      trend: string
-    } | null
-    performanceMetrics: {
-      recoveryRate: string
-      averageTicket: string
-      activeLoansCount: number
-      finishedLoansCount: number
-    }
-  }
-  accounts: Account[]
-  transactions: {
-    edges: { node: TransactionNode }[]
-  }
 }
 
 export default function DashboardPage() {
@@ -211,7 +200,28 @@ export default function DashboardPage() {
 
   // First, fetch all routes
   const { data: routesData, loading: routesLoading } = useQuery<{ routes: Route[] }>(ROUTES_QUERY)
-  const routes = routesData?.routes || []
+  const allRouteIds = routesData?.routes?.map((r) => r.id) || []
+
+  // CEO Dashboard hook
+  const {
+    stats,
+    portfolioStats,
+    renovationKPIs,
+    weeklyData,
+    weeklyComparison,
+    accounts,
+    transactions,
+    newLocations,
+    topLocations,
+    loading,
+    error,
+    refetch,
+  } = useCEODashboard({
+    year: currentYear,
+    month: currentMonth,
+    selectedRouteId,
+    allRouteIds,
+  })
 
   // Handle route selection change
   const handleRouteChange = (value: string) => {
@@ -222,43 +232,38 @@ export default function DashboardPage() {
     }
   }
 
-  // Determine which route IDs to use
-  const allRouteIds = routesData?.routes?.map((r) => r.id) || []
-  const routeIdsToUse = selectedRouteId ? [selectedRouteId] : allRouteIds
-  const routeIdForAccounts = selectedRouteId || null // null = all accounts
+  // Weekly chart data
+  const weeklyChartData = useMemo(() => {
+    return weeklyData.map((w) => ({
+      week: `S${w.week}`,
+      cobranza: parseFloat(w.paymentsReceived || '0'),
+      clientesPagaron: w.paymentsCount || 0,
+    }))
+  }, [weeklyData])
 
-  // Fetch dashboard data
-  const { data, loading, error } = useQuery<DashboardData>(DASHBOARD_FULL_QUERY, {
-    variables: {
-      routeIds: routeIdsToUse,
-      routeId: routeIdForAccounts,
-      year: currentYear,
-      month: currentMonth,
-      limit: 10,
+  const weeklyChartConfig: ChartConfig = {
+    cobranza: {
+      label: 'Cobranza',
+      color: 'hsl(var(--chart-1))',
     },
-    skip: routeIdsToUse.length === 0,
-    fetchPolicy: 'cache-and-network',
-  })
-
-  // Calculate weekly averages from weeklyData
-  const weeklyData = data?.financialReport?.weeklyData || []
-  const completedWeeks = weeklyData.filter((w) => new Date(w.date) <= now)
-  const activeWeeks = completedWeeks.length
-
-  const weeklyAveragePayments =
-    activeWeeks > 0
-      ? completedWeeks.reduce((sum, w) => sum + parseFloat(w.paymentsReceived || '0'), 0) /
-        activeWeeks
-      : 0
+    clientesPagaron: {
+      label: 'Clientes que pagaron',
+      color: 'hsl(var(--chart-3))',
+    },
+  }
 
   // Show loading while fetching routes
-  if (routesLoading || (loading && !data)) {
-    return <DashboardSkeleton />
+  if (routesLoading || (loading && !stats)) {
+    return (
+      <div className="space-y-6 p-6">
+        <DashboardSkeleton />
+      </div>
+    )
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center p-6">
         <div className="rounded-full bg-destructive/10 p-6 mb-4">
           <TrendingDown className="h-12 w-12 text-destructive" />
         </div>
@@ -268,277 +273,510 @@ export default function DashboardPage() {
     )
   }
 
-  const summary = data?.financialReport?.summary
-  const comparison = data?.financialReport?.comparisonData
-  const metrics = data?.financialReport?.performanceMetrics
-  const accounts = data?.accounts || []
-  const transactions = data?.transactions?.edges || []
-
-  // Calculate growth percentage
-  const growthPercent = comparison?.growth ? parseFloat(comparison.growth).toFixed(1) : '0'
-  const trend = comparison?.trend || 'STABLE'
-
-  // Stats cards data
-  const stats = [
-    {
-      title: 'Cartera Total',
-      value: formatCurrency(summary?.totalPortfolio),
-      change: `${trend === 'UP' ? '+' : trend === 'DOWN' ? '' : ''}${growthPercent}%`,
-      trend: trend === 'UP' ? 'up' : trend === 'DOWN' ? 'down' : 'stable',
-      icon: Wallet,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
-    },
-    {
-      title: 'Cobranza Mensual',
-      value: formatCurrency(summary?.totalPaid),
-      change: `${activeWeeks} semanas`,
-      trend: 'up',
-      icon: TrendingUp,
-      color: 'text-success',
-      bgColor: 'bg-success/10',
-    },
-    {
-      title: 'Préstamos Activos',
-      value: summary?.activeLoans?.toLocaleString() || '0',
-      change: summary?.activeLoansBreakdown
-        ? `${summary.activeLoansBreakdown.alCorriente} al corriente • ${summary.activeLoansBreakdown.carteraVencida} CV`
-        : `+${(metrics?.activeLoansCount || 0) - (comparison?.previousMonth?.activeLoans || 0)}`,
-      trend: 'up',
-      icon: Receipt,
-      color: 'text-info',
-      bgColor: 'bg-info/10',
-    },
-    {
-      title: 'Deuda Pendiente',
-      value: formatCurrency(summary?.pendingAmount),
-      change: `${parseFloat(metrics?.recoveryRate || '0').toFixed(1)}% recuperado`,
-      trend: 'down',
-      icon: TrendingDown,
-      color: 'text-destructive',
-      bgColor: 'bg-destructive/10',
-    },
-  ]
-
-  // Map transaction type to activity type
-  function getActivityType(tx: TransactionNode): string {
-    if (tx.type === 'INCOME') return 'payment'
-    if (tx.type === 'EXPENSE' && tx.expenseSource === 'LOAN_GRANTED') return 'loan'
-    if (tx.type === 'EXPENSE') return 'expense'
-    if (tx.type === 'TRANSFER') return 'transfer'
-    return 'other'
-  }
-
-  // Get transaction description
-  function getTransactionDescription(tx: TransactionNode): string {
-    const borrowerName = tx.loan?.borrower?.personalData?.fullName
-    const leadName = tx.lead?.personalData?.fullName
-
-    if (tx.type === 'INCOME') {
-      return borrowerName ? `Abono recibido - ${borrowerName}` : 'Abono recibido'
-    }
-    if (tx.type === 'EXPENSE') {
-      if (tx.expenseSource === 'LOAN_GRANTED') {
-        return borrowerName ? `Nuevo préstamo - ${borrowerName}` : 'Nuevo préstamo'
-      }
-      if (tx.expenseSource === 'GASOLINE') return 'Gasto de gasolina'
-      if (tx.expenseSource === 'NOMINA_SALARY') return 'Pago de nómina'
-      return tx.expenseSource || 'Gasto'
-    }
-    if (tx.type === 'TRANSFER') {
-      return leadName ? `Transferencia a ${leadName}` : 'Transferencia'
-    }
-    return 'Transacción'
-  }
-
   const monthNames = [
-    'Enero',
-    'Febrero',
-    'Marzo',
-    'Abril',
-    'Mayo',
-    'Junio',
-    'Julio',
-    'Agosto',
-    'Septiembre',
-    'Octubre',
-    'Noviembre',
-    'Diciembre',
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
   ]
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            {monthNames[currentMonth - 1]} {currentYear}
-          </p>
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+            <LayoutDashboard className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard CEO</h1>
+            <p className="text-muted-foreground">
+              {monthNames[currentMonth - 1]} {currentYear}
+            </p>
+          </div>
         </div>
 
-        {/* Route Selector */}
         <div className="flex items-center gap-3">
+          {/* Route Selector */}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <MapPin className="h-4 w-4" />
             <span className="hidden sm:inline">Ruta:</span>
           </div>
-          <Select
-            value={selectedRouteId || 'all'}
-            onValueChange={handleRouteChange}
-          >
+          <Select value={selectedRouteId || 'all'} onValueChange={handleRouteChange}>
             <SelectTrigger className="w-[200px] bg-background">
               <SelectValue placeholder="Seleccionar ruta" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-primary">
-                    <MapPin className="h-3 w-3 text-white" />
-                  </div>
+                  <MapPin className="h-4 w-4 text-primary" />
                   <span className="font-medium">Todas las rutas</span>
                 </div>
               </SelectItem>
-              {routes.map((route) => (
+              {routesData?.routes?.map((route) => (
                 <SelectItem key={route.id} value={route.id}>
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
-                      <MapPin className="h-3 w-3 text-primary" />
-                    </div>
-                    <span>{route.name}</span>
-                  </div>
+                  {route.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <Button variant="outline" size="icon" onClick={() => refetch()}>
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+          </Button>
         </div>
       </div>
 
-      {/* Stats grid */}
+      {/* Portfolio KPIs - Main Stats */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Resumen de Cartera
+          </CardTitle>
+          <CardDescription>Estado actual de clientes activos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <StatCard
+              title="Clientes Activos"
+              value={portfolioStats?.totalClientesActivos ?? stats?.activeLoans ?? 0}
+              icon={Users}
+              description="Con saldo pendiente"
+            />
+            <StatCard
+              title="Al Corriente"
+              value={portfolioStats?.clientesAlCorriente ?? stats?.activeLoansBreakdown?.alCorriente ?? 0}
+              icon={UserCheck}
+              variant="success"
+              description="Promedio semanal"
+            />
+            <StatCard
+              title="Cartera Vencida"
+              value={portfolioStats?.clientesEnCV ?? stats?.activeLoansBreakdown?.carteraVencida ?? 0}
+              icon={UserX}
+              variant="danger"
+              change={portfolioStats?.comparison?.cvChange}
+              description={
+                portfolioStats?.semanasCompletadas
+                  ? `Promedio de ${portfolioStats.semanasCompletadas} semana${portfolioStats.semanasCompletadas !== 1 ? 's' : ''}`
+                  : 'Sin semanas completadas'
+              }
+            />
+            <StatCard
+              title="Tasa de Renovacion"
+              value={renovationKPIs ? `${(renovationKPIs.tasaRenovacion * 100).toFixed(1)}%` : '0%'}
+              icon={RefreshCw}
+              variant="warning"
+            />
+          </div>
+
+          {/* Balance de Clientes */}
+          {portfolioStats?.clientBalance && (
+            <div className="rounded-lg border bg-muted/30 p-4 mt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Balance de Clientes del Mes
+                </h4>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-4">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 text-green-600 dark:text-green-400">
+                    <ArrowUpRight className="h-4 w-4" />
+                    <span className="text-xl font-bold">+{portfolioStats.clientBalance.nuevos}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Nuevos</p>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 text-red-600 dark:text-red-400">
+                    <ArrowDownRight className="h-4 w-4" />
+                    <span className="text-xl font-bold">-{portfolioStats.clientBalance.terminadosSinRenovar}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Sin Renovar</p>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1 text-blue-600 dark:text-blue-400">
+                    <RefreshCw className="h-4 w-4" />
+                    <span className="text-xl font-bold">{portfolioStats.clientBalance.renovados}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Renovados</p>
+                </div>
+                <div className="text-center border-l">
+                  <div className={cn(
+                    'flex items-center justify-center gap-1',
+                    portfolioStats.clientBalance.balance >= 0
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                  )}>
+                    <TrendIcon trend={portfolioStats.clientBalance.trend} />
+                    <span className="text-xl font-bold">
+                      {portfolioStats.clientBalance.balance >= 0 ? '+' : ''}{portfolioStats.clientBalance.balance}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">Balance Neto</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Financial Stats Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.title} className="fintech-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <div className={`rounded-full p-2 ${stat.bgColor}`}>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+        <Card className="stats-card">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/60">
+                <Wallet className="h-6 w-6 text-white" />
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <div className="flex items-center text-xs text-muted-foreground">
-                {stat.trend === 'up' ? (
-                  <ArrowUpRight className="mr-1 h-3 w-3 text-success" />
-                ) : stat.trend === 'down' ? (
-                  <ArrowDownRight className="mr-1 h-3 w-3 text-destructive" />
-                ) : null}
-                <span
-                  className={
-                    stat.trend === 'up'
-                      ? 'text-success'
-                      : stat.trend === 'down'
-                        ? 'text-destructive'
-                        : ''
-                  }
-                >
-                  {stat.change}
-                </span>
-                {stat.title === 'Cartera Total' && <span className="ml-1">vs. mes anterior</span>}
+              <div>
+                <p className="text-sm text-muted-foreground">Cartera Total</p>
+                <p className="text-2xl font-bold">{formatCurrency(stats?.totalPortfolio)}</p>
+                {stats?.trend && (
+                  <div className="flex items-center gap-1 text-xs">
+                    <TrendIcon trend={stats.trend} />
+                    <span className={cn(
+                      stats.trend === 'UP' ? 'text-green-600' : stats.trend === 'DOWN' ? 'text-red-600' : ''
+                    )}>
+                      {stats.growthPercent}% vs mes anterior
+                    </span>
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Weekly averages section */}
-      {activeWeeks > 0 && (
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="stats-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-primary">
-                  <Calendar className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Semanas Activas</p>
-                  <p className="text-2xl font-bold">{activeWeeks}</p>
-                </div>
+        <Card className="stats-card">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-green-600">
+                <TrendingUp className="h-6 w-6 text-white" />
               </div>
-            </CardContent>
-          </Card>
-          <Card className="stats-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-secondary">
-                  <TrendingUp className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Cobranza/Semana</p>
-                  <p className="text-2xl font-bold">{formatCurrency(weeklyAveragePayments)}</p>
-                </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Cobranza Mensual</p>
+                <p className="text-2xl font-bold">{formatCurrency(stats?.totalPaid)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {stats?.activeWeeks || 0} semanas activas
+                </p>
               </div>
-            </CardContent>
-          </Card>
-          <Card className="stats-card">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-unicorn">
-                  <DollarSign className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Tasa Recuperación</p>
-                  <p className="text-2xl font-bold">
-                    {parseFloat(metrics?.recoveryRate || '0').toFixed(1)}%
-                  </p>
-                </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="stats-card">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600">
+                <DollarSign className="h-6 w-6 text-white" />
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              <div>
+                <p className="text-sm text-muted-foreground">Tasa Recuperacion</p>
+                <p className="text-2xl font-bold">
+                  {parseFloat(stats?.recoveryRate || '0').toFixed(1)}%
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {formatCurrency(stats?.weeklyAveragePayments)}/semana
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="stats-card">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-purple-600">
+                <PlusCircle className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Localidades Nuevas</p>
+                <p className="text-2xl font-bold">{newLocations.length}</p>
+                <p className="text-xs text-muted-foreground">
+                  Este mes
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Main content grid */}
-      <div className="grid gap-6 lg:grid-cols-7">
-        {/* Accounts */}
-        <Card className="lg:col-span-4">
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Weekly Chart */}
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" />
-              Cuentas
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Actividad Semanal
             </CardTitle>
-            <CardDescription>Balance de todas las cuentas</CardDescription>
+            <CardDescription>Monto cobrado y clientes que pagaron por semana</CardDescription>
           </CardHeader>
           <CardContent>
-            {accounts.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No hay cuentas configuradas
-              </p>
+            {weeklyChartData.length > 0 ? (
+              <ChartContainer config={weeklyChartConfig} className="min-h-[250px] w-full">
+                <ComposedChart data={weeklyChartData} margin={{ left: 0, right: 40 }}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="week"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                  />
+                  <YAxis
+                    yAxisId="left"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={4}
+                    tickFormatter={(value) =>
+                      value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value
+                    }
+                  />
+                  <YAxis
+                    yAxisId="right"
+                    orientation="right"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={4}
+                    domain={[0, 'auto']}
+                  />
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value, name) => {
+                          if (name === 'cobranza') {
+                            return [formatCurrency(value as number), 'Cobranza']
+                          }
+                          return [value, 'Clientes que pagaron']
+                        }}
+                      />
+                    }
+                  />
+                  <Bar
+                    yAxisId="left"
+                    dataKey="cobranza"
+                    fill="var(--color-cobranza)"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Line
+                    yAxisId="right"
+                    type="monotone"
+                    dataKey="clientesPagaron"
+                    stroke="var(--color-clientesPagaron)"
+                    strokeWidth={3}
+                    dot={{ fill: 'var(--color-clientesPagaron)', strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <ChartLegend content={<ChartLegendContent />} />
+                </ComposedChart>
+              </ChartContainer>
             ) : (
-              <div className="space-y-4">
-                {accounts.map((account) => (
+              <div className="flex flex-col items-center justify-center h-[250px] text-muted-foreground">
+                <Calendar className="h-12 w-12 mb-4 opacity-50" />
+                <p>Sin datos semanales</p>
+              </div>
+            )}
+
+            {/* Weekly Comparison Summary */}
+            {weeklyComparison && (
+              <div className="mt-4 pt-4 border-t">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold">
+                    Promedio Semanal ({weeklyComparison.currentWeeksCount} semana{weeklyComparison.currentWeeksCount !== 1 ? 's' : ''} completada{weeklyComparison.currentWeeksCount !== 1 ? 's' : ''})
+                  </h4>
+                  <Badge variant="outline" className="text-xs">
+                    vs {monthNames[weeklyComparison.prevMonthLabel - 1]}
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Cobranza Promedio */}
+                  <div className="rounded-lg border p-3 bg-muted/30">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Cobranza/Semana</span>
+                      {weeklyComparison.avgCobranzaChange !== 0 && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-xs',
+                            weeklyComparison.avgCobranzaChange > 0
+                              ? 'bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400'
+                              : 'bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400'
+                          )}
+                        >
+                          {weeklyComparison.avgCobranzaChange > 0 ? '+' : ''}
+                          {weeklyComparison.avgCobranzaChange.toFixed(1)}%
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-lg font-bold mt-1">
+                      {formatCurrency(weeklyComparison.currentAvgCobranza)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Anterior: {formatCurrency(weeklyComparison.prevAvgCobranza)}
+                    </p>
+                  </div>
+
+                  {/* Clientes Promedio */}
+                  <div className="rounded-lg border p-3 bg-muted/30">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Clientes/Semana</span>
+                      {weeklyComparison.avgClientesChange !== 0 && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-xs',
+                            weeklyComparison.avgClientesChange > 0
+                              ? 'bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400'
+                              : 'bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400'
+                          )}
+                        >
+                          {weeklyComparison.avgClientesChange > 0 ? '+' : ''}
+                          {weeklyComparison.avgClientesChange.toFixed(1)}%
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-lg font-bold mt-1">
+                      {weeklyComparison.currentAvgClientes.toFixed(0)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Anterior: {weeklyComparison.prevAvgClientes.toFixed(0)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Monthly Totals Comparison */}
+                <div className="mt-3 pt-3 border-t">
+                  <h4 className="text-xs font-medium text-muted-foreground mb-2">
+                    Acumulado del mes (semanas completadas)
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Cobranza</span>
+                      <span className="text-sm font-bold">{formatCurrency(weeklyComparison.currentTotalCobranza)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Pagos</span>
+                      <span className="text-sm font-bold">{weeklyComparison.currentTotalClientes}</span>
+                    </div>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {monthNames[weeklyComparison.prevMonthLabel - 1]} completo: {formatCurrency(weeklyComparison.prevTotalCobranza)} / {weeklyComparison.prevTotalClientes} pagos
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* New Locations */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              Localidades Nuevas
+            </CardTitle>
+            <CardDescription>
+              {newLocations.length > 0
+                ? `${newLocations.length} localidad${newLocations.length > 1 ? 'es' : ''} creada${newLocations.length > 1 ? 's' : ''} este mes`
+                : 'No se han creado localidades este mes'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {newLocations.length > 0 ? (
+              <div className="space-y-3">
+                {newLocations.map((location) => (
                   <div
-                    key={account.id}
-                    className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                    key={location.id}
+                    className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                        <Wallet className="h-5 w-5 text-primary" />
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-950">
+                        <MapPin className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                       </div>
                       <div>
-                        <p className="font-medium">{account.name}</p>
+                        <p className="font-medium">{location.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {getAccountTypeLabel(account.type)}
+                          {location.municipality.name}, {location.municipality.state.name}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold">{formatCurrency(account.accountBalance)}</p>
-                      <Badge variant="outline" className="text-xs">
-                        {account.type}
-                      </Badge>
+                      {location.route && (
+                        <Badge variant="outline">{location.route.name}</Badge>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(location.createdAt).toLocaleDateString('es-MX')}
+                      </p>
                     </div>
                   </div>
                 ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
+                <Building2 className="h-12 w-12 mb-4 opacity-50" />
+                <p>Sin localidades nuevas</p>
+                <p className="text-sm">Este mes no se han abierto nuevas localidades</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Bottom grid - Top Locations and Recent Activity */}
+      <div className="grid gap-6 lg:grid-cols-7">
+        {/* Top Locations */}
+        <Card className="lg:col-span-4">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              Top Localidades por Clientes
+            </CardTitle>
+            <CardDescription>Localidades con mas clientes activos</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {topLocations.length > 0 ? (
+              <div className="space-y-3">
+                {topLocations.map((location, index) => (
+                  <div
+                    key={location.locationId}
+                    className="flex items-center justify-between rounded-lg border p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        'flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold',
+                        index === 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400' :
+                        index === 1 ? 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400' :
+                        index === 2 ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400' :
+                        'bg-muted text-muted-foreground'
+                      )}>
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="font-medium">{location.locationName}</p>
+                        {location.routeName && (
+                          <p className="text-sm text-muted-foreground">{location.routeName}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="text-right">
+                        <p className="font-bold">{location.clientesActivos}</p>
+                        <p className="text-xs text-muted-foreground">Activos</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-green-600">{location.clientesAlCorriente}</p>
+                        <p className="text-xs text-muted-foreground">Corriente</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-red-600">{location.clientesEnCV}</p>
+                        <p className="text-xs text-muted-foreground">CV</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
+                <MapPin className="h-12 w-12 mb-4 opacity-50" />
+                <p>Sin datos de localidades</p>
               </div>
             )}
           </CardContent>
@@ -551,7 +789,7 @@ export default function DashboardPage() {
               <Receipt className="h-5 w-5 text-primary" />
               Actividad Reciente
             </CardTitle>
-            <CardDescription>Últimas transacciones</CardDescription>
+            <CardDescription>Ultimas transacciones</CardDescription>
           </CardHeader>
           <CardContent>
             {transactions.length === 0 ? (
@@ -559,42 +797,55 @@ export default function DashboardPage() {
                 No hay transacciones recientes
               </p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {transactions.map(({ node: tx }) => {
-                  const activityType = getActivityType(tx)
                   const isPositive = tx.type === 'INCOME'
+                  const borrowerName = tx.loan?.borrower?.personalData?.fullName
+                  const leadName = tx.lead?.personalData?.fullName
+
+                  let description = 'Transaccion'
+                  if (tx.type === 'INCOME') {
+                    description = borrowerName ? `Abono - ${borrowerName}` : 'Abono recibido'
+                  } else if (tx.type === 'EXPENSE') {
+                    if (tx.expenseSource === 'LOAN_GRANTED') {
+                      description = borrowerName ? `Prestamo - ${borrowerName}` : 'Nuevo prestamo'
+                    } else {
+                      description = tx.expenseSource || 'Gasto'
+                    }
+                  } else if (tx.type === 'TRANSFER') {
+                    description = leadName ? `Transferencia a ${leadName}` : 'Transferencia'
+                  }
+
                   return (
                     <div
                       key={tx.id}
-                      className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
+                      className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className={`flex h-8 w-8 items-center justify-center rounded-full ${
-                            activityType === 'payment'
-                              ? 'bg-success/10'
-                              : activityType === 'loan'
-                                ? 'bg-info/10'
-                                : activityType === 'expense'
-                                  ? 'bg-warning/10'
-                                  : 'bg-muted'
-                          }`}
+                          className={cn(
+                            'flex h-8 w-8 items-center justify-center rounded-full',
+                            isPositive ? 'bg-green-100 dark:bg-green-950' : 'bg-muted'
+                          )}
                         >
                           {isPositive ? (
-                            <ArrowUpRight className="h-4 w-4 text-success" />
+                            <ArrowUpRight className="h-4 w-4 text-green-600" />
                           ) : (
                             <ArrowDownRight className="h-4 w-4 text-muted-foreground" />
                           )}
                         </div>
                         <div>
-                          <p className="text-sm font-medium">{getTransactionDescription(tx)}</p>
+                          <p className="text-sm font-medium truncate max-w-[180px]">{description}</p>
                           <p className="text-xs text-muted-foreground">
                             {formatRelativeTime(tx.date)}
                           </p>
                         </div>
                       </div>
                       <p
-                        className={`font-medium ${isPositive ? 'text-success' : 'text-foreground'}`}
+                        className={cn(
+                          'font-medium',
+                          isPositive ? 'text-green-600' : 'text-foreground'
+                        )}
                       >
                         {isPositive ? '+' : '-'}
                         {formatCurrency(tx.amount)}
@@ -608,50 +859,52 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Bottom stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="stats-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-primary">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Préstamos Terminados</p>
-                <p className="text-2xl font-bold">
-                  {metrics?.finishedLoansCount?.toLocaleString() || '0'}
-                </p>
-              </div>
+      {/* Accounts Section */}
+      {accounts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wallet className="h-5 w-5 text-primary" />
+              Balance de Cuentas
+            </CardTitle>
+            <CardDescription>Estado actual de todas las cuentas</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {accounts.map((account) => {
+                const balance = parseFloat(account.accountBalance || '0')
+                return (
+                  <div
+                    key={account.id}
+                    className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                        <Wallet className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{account.name}</p>
+                        <Badge variant="outline" className="text-xs">
+                          {account.type === 'BANK' ? 'Banco' :
+                           account.type === 'OFFICE_CASH_FUND' ? 'Caja' :
+                           account.type === 'EMPLOYEE_CASH_FUND' ? 'Fondo' :
+                           account.type}
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className={cn(
+                      'font-bold',
+                      balance < 0 ? 'text-red-600' : 'text-foreground'
+                    )}>
+                      {formatCurrency(balance)}
+                    </p>
+                  </div>
+                )
+              })}
             </div>
           </CardContent>
         </Card>
-        <Card className="stats-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-secondary">
-                <Receipt className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Ticket Promedio</p>
-                <p className="text-2xl font-bold">{formatCurrency(metrics?.averageTicket)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="stats-card">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-unicorn">
-                <DollarSign className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Pago Promedio</p>
-                <p className="text-2xl font-bold">{formatCurrency(summary?.averagePayment)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      )}
     </div>
   )
 }

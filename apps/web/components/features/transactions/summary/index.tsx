@@ -1,17 +1,21 @@
 'use client'
 
 import { useMemo, useEffect, useState } from 'react'
+import { useQuery } from '@apollo/client'
+import { format, startOfWeek, endOfWeek } from 'date-fns'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
-import { AlertCircle, Search, X, BarChart3 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { AlertCircle, Search, X, BarChart3, Banknote } from 'lucide-react'
+import { ROUTES_QUERY } from '@/graphql/queries/transactions'
 
 // Components
-import { ExecutiveSummary, LocalityCard } from './components'
+import { ExecutiveSummary, LocalityCard, BankIncomeModal } from './components'
 
 // Hooks
-import { useSummaryQueries } from './hooks'
+import { useSummaryQueries, useBankIncomeQuery } from './hooks'
 
 // Utils
 import { processTransactionsByLocality, calculateExecutiveSummary } from './utils'
@@ -27,6 +31,43 @@ export interface SummaryTabProps {
 
 export function SummaryTab({ selectedDate, selectedRoute, refreshKey = 0 }: SummaryTabProps) {
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Bank Income Modal state
+  const [bankIncomeModalOpen, setBankIncomeModalOpen] = useState(false)
+  const [bankIncomeStartDate, setBankIncomeStartDate] = useState(() => {
+    const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 })
+    return format(weekStart, 'yyyy-MM-dd')
+  })
+  const [bankIncomeEndDate, setBankIncomeEndDate] = useState(() => {
+    const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 })
+    return format(weekEnd, 'yyyy-MM-dd')
+  })
+  const [bankIncomeRouteIds, setBankIncomeRouteIds] = useState<string[]>([])
+  const [bankIncomeOnlyAbonos, setBankIncomeOnlyAbonos] = useState(false)
+
+  // Get all routes for the bank income filter
+  const { data: routesData } = useQuery<{ routes: { id: string; name: string }[] }>(ROUTES_QUERY)
+  const allRoutes = routesData?.routes || []
+
+  // Initialize route selection when routes are loaded
+  useEffect(() => {
+    if (allRoutes.length > 0 && bankIncomeRouteIds.length === 0) {
+      setBankIncomeRouteIds(allRoutes.map((r) => r.id))
+    }
+  }, [allRoutes, bankIncomeRouteIds.length])
+
+  // Query for bank income transactions
+  const {
+    transactions: bankIncomeTransactions,
+    loading: bankIncomeLoading,
+    refetch: refetchBankIncome,
+  } = useBankIncomeQuery({
+    startDate: bankIncomeStartDate,
+    endDate: bankIncomeEndDate,
+    routeIds: bankIncomeRouteIds,
+    onlyAbonos: bankIncomeOnlyAbonos,
+    skip: !bankIncomeModalOpen,
+  })
 
   // Query for all transactions
   const { transactions, totalCount, loading, error, refetch } = useSummaryQueries({
@@ -166,6 +207,34 @@ export function SummaryTab({ selectedDate, selectedRoute, refreshKey = 0 }: Summ
           )}
         </CardContent>
       </Card>
+
+      {/* Floating Button - Bank Income */}
+      <Button
+        onClick={() => setBankIncomeModalOpen(true)}
+        className="fixed bottom-6 right-6 h-14 px-6 rounded-full shadow-lg bg-green-600 hover:bg-green-700 text-white z-50"
+        size="lg"
+      >
+        <Banknote className="h-5 w-5 mr-2" />
+        Entradas al Banco
+      </Button>
+
+      {/* Bank Income Modal */}
+      <BankIncomeModal
+        isOpen={bankIncomeModalOpen}
+        onClose={() => setBankIncomeModalOpen(false)}
+        transactions={bankIncomeTransactions}
+        loading={bankIncomeLoading}
+        onRefresh={() => refetchBankIncome()}
+        startDate={bankIncomeStartDate}
+        endDate={bankIncomeEndDate}
+        onStartDateChange={setBankIncomeStartDate}
+        onEndDateChange={setBankIncomeEndDate}
+        selectedRouteIds={bankIncomeRouteIds}
+        onRouteIdsChange={setBankIncomeRouteIds}
+        availableRoutes={allRoutes}
+        onlyAbonos={bankIncomeOnlyAbonos}
+        onOnlyAbonosChange={setBankIncomeOnlyAbonos}
+      />
     </div>
   )
 }

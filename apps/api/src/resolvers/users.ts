@@ -1,7 +1,7 @@
 import { GraphQLError } from 'graphql'
 import type { GraphQLContext } from '@solufacil/graphql-schema'
 import { UserRole } from '@solufacil/database'
-import { UserService } from '../services/UserService'
+import { UserService, CreateUserInput, UpdateUserInput } from '../services/UserService'
 import { authenticateUser, requireRole } from '../middleware/auth'
 
 export const userResolvers = {
@@ -33,11 +33,20 @@ export const userResolvers = {
       authenticateUser(context)
       requireRole(context, [UserRole.ADMIN])
 
-      const userService = new UserService(context.prisma)
-      return userService.findMany({
-        role: args.role ?? undefined,
-        limit: args.limit ?? undefined,
-        offset: args.offset ?? undefined,
+      // Get users with relations for admin view
+      return context.prisma.user.findMany({
+        where: args.role ? { role: args.role } : undefined,
+        take: args.limit ?? undefined,
+        skip: args.offset ?? undefined,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          employee: {
+            include: {
+              personalDataRelation: true,
+            },
+          },
+          telegramUsers: true,
+        },
       })
     },
   },
@@ -45,7 +54,7 @@ export const userResolvers = {
   Mutation: {
     createUser: async (
       _parent: unknown,
-      args: { input: { email: string; password: string; role: UserRole } },
+      args: { input: CreateUserInput },
       context: GraphQLContext
     ) => {
       authenticateUser(context)
@@ -57,7 +66,7 @@ export const userResolvers = {
 
     updateUser: async (
       _parent: unknown,
-      args: { id: string; input: { email?: string; role?: UserRole } },
+      args: { id: string; input: UpdateUserInput },
       context: GraphQLContext
     ) => {
       authenticateUser(context)
@@ -86,7 +95,14 @@ export const userResolvers = {
         where: { user: parent.id },
         include: {
           personalDataRelation: true,
+          routes: true,
         },
+      })
+    },
+
+    telegramUser: async (parent: { id: string }, _args: unknown, context: GraphQLContext) => {
+      return context.prisma.telegramUser.findUnique({
+        where: { platformUser: parent.id },
       })
     },
   },

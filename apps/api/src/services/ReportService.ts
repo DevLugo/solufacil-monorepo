@@ -21,6 +21,7 @@ export interface WeeklyData {
   date: Date
   loansGranted: number
   paymentsReceived: Decimal
+  paymentsCount: number
   expectedPayments: Decimal
   recoveryRate: Decimal
 }
@@ -275,6 +276,7 @@ export class ReportService {
         date: new Date(currentWeekStart),
         loansGranted,
         paymentsReceived,
+        paymentsCount: payments.length,
         expectedPayments,
         recoveryRate,
       })

@@ -107,6 +107,29 @@ export type BadDebtSummary = {
   totalLoans: Scalars['Int']['output'];
 };
 
+export type BankIncomeTransaction = {
+  __typename?: 'BankIncomeTransaction';
+  amount: Scalars['Float']['output'];
+  date: Scalars['DateTime']['output'];
+  description?: Maybe<Scalars['String']['output']>;
+  employeeName?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  incomeSource?: Maybe<Scalars['String']['output']>;
+  isClientPayment: Scalars['Boolean']['output'];
+  isLeaderPayment: Scalars['Boolean']['output'];
+  leaderLocality?: Maybe<Scalars['String']['output']>;
+  locality?: Maybe<Scalars['String']['output']>;
+  name: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+};
+
+export type BankIncomeTransactionsResponse = {
+  __typename?: 'BankIncomeTransactionsResponse';
+  message?: Maybe<Scalars['String']['output']>;
+  success: Scalars['Boolean']['output'];
+  transactions: Array<BankIncomeTransaction>;
+};
+
 export type Borrower = {
   __typename?: 'Borrower';
   createdAt: Scalars['DateTime']['output'];
@@ -365,6 +388,15 @@ export type CreatePortfolioCleanupInput = {
   routeId?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type CreateReportConfigInput = {
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  name: Scalars['String']['input'];
+  recipientIds: Array<Scalars['ID']['input']>;
+  reportType: ReportType;
+  routeIds: Array<Scalars['ID']['input']>;
+  schedule: ReportScheduleInput;
+};
+
 export type CreateRouteInput = {
   name: Scalars['String']['input'];
 };
@@ -399,9 +431,132 @@ export type CreateTransactionInput = {
 };
 
 export type CreateUserInput = {
+  createEmployee?: InputMaybe<Scalars['Boolean']['input']>;
   email: Scalars['String']['input'];
+  employeeId?: InputMaybe<Scalars['ID']['input']>;
+  employeeType?: InputMaybe<EmployeeType>;
+  name: Scalars['String']['input'];
   password: Scalars['String']['input'];
   role: UserRole;
+  telegramChatId?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type DeadDebtBorrower = {
+  __typename?: 'DeadDebtBorrower';
+  clientCode: Scalars['String']['output'];
+  fullName: Scalars['String']['output'];
+};
+
+export type DeadDebtCriteria = {
+  __typename?: 'DeadDebtCriteria';
+  badDebtStatus?: Maybe<Scalars['String']['output']>;
+  localities: Array<Scalars['String']['output']>;
+  weeksSinceLoanMin?: Maybe<Scalars['Int']['output']>;
+  weeksWithoutPaymentMin?: Maybe<Scalars['Int']['output']>;
+};
+
+export type DeadDebtLead = {
+  __typename?: 'DeadDebtLead';
+  fullName: Scalars['String']['output'];
+  locality: Scalars['String']['output'];
+  route: Scalars['String']['output'];
+};
+
+export type DeadDebtLoan = {
+  __typename?: 'DeadDebtLoan';
+  amountGived: Scalars['Decimal']['output'];
+  badDebtCandidate: Scalars['Decimal']['output'];
+  badDebtDate?: Maybe<Scalars['DateTime']['output']>;
+  borrower: DeadDebtBorrower;
+  id: Scalars['ID']['output'];
+  lead: DeadDebtLead;
+  payments: Array<DeadDebtPayment>;
+  pendingAmountStored: Scalars['Decimal']['output'];
+  signDate: Scalars['DateTime']['output'];
+  weeksSinceLoan: Scalars['Int']['output'];
+  weeksWithoutPayment: Scalars['Int']['output'];
+};
+
+export type DeadDebtMonthSummary = {
+  __typename?: 'DeadDebtMonthSummary';
+  criteria: DeadDebtCriteria;
+  evaluationPeriod: EvaluationPeriod;
+  loans: Array<DeadDebtLoan>;
+  month: MonthInfo;
+  summary: DeadDebtTotals;
+};
+
+export type DeadDebtMonthlySummaryResult = {
+  __typename?: 'DeadDebtMonthlySummaryResult';
+  monthlySummary: Array<DeadDebtMonthSummary>;
+  routesInfo: Array<RouteInfo>;
+  year: Scalars['Int']['output'];
+  yearTotals: DeadDebtTotals;
+};
+
+export type DeadDebtPayment = {
+  __typename?: 'DeadDebtPayment';
+  amount: Scalars['Decimal']['output'];
+  receivedAt?: Maybe<Scalars['DateTime']['output']>;
+};
+
+export type DeadDebtQueryResult = {
+  __typename?: 'DeadDebtQueryResult';
+  loans: Array<DeadDebtLoan>;
+  localities: Array<Scalars['String']['output']>;
+  summary: DeadDebtTotals;
+};
+
+export enum DeadDebtStatus {
+  All = 'ALL',
+  Marked = 'MARKED',
+  Unmarked = 'UNMARKED'
+}
+
+export type DeadDebtSummaryByLocality = {
+  __typename?: 'DeadDebtSummaryByLocality';
+  loanCount: Scalars['Int']['output'];
+  locality: Scalars['String']['output'];
+  totalBadDebtCandidate: Scalars['Decimal']['output'];
+  totalPending: Scalars['Decimal']['output'];
+};
+
+export type DeadDebtTotals = {
+  __typename?: 'DeadDebtTotals';
+  totalBadDebtCandidate: Scalars['Decimal']['output'];
+  totalLoans: Scalars['Int']['output'];
+  totalPendingAmount: Scalars['Decimal']['output'];
+};
+
+export type DocumentNotificationLog = {
+  __typename?: 'DocumentNotificationLog';
+  createdAt: Scalars['DateTime']['output'];
+  description?: Maybe<Scalars['String']['output']>;
+  documentId: Scalars['String']['output'];
+  documentType: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  issueType: IssueType;
+  lastRetryAt?: Maybe<Scalars['DateTime']['output']>;
+  loanId?: Maybe<Scalars['String']['output']>;
+  localityName?: Maybe<Scalars['String']['output']>;
+  messageContent: Scalars['String']['output'];
+  notes?: Maybe<Scalars['String']['output']>;
+  personName: Scalars['String']['output'];
+  personalDataId: Scalars['String']['output'];
+  responseTimeMs?: Maybe<Scalars['Int']['output']>;
+  retryCount: Scalars['Int']['output'];
+  routeId: Scalars['String']['output'];
+  routeLeadId?: Maybe<Scalars['String']['output']>;
+  routeLeadName?: Maybe<Scalars['String']['output']>;
+  routeName: Scalars['String']['output'];
+  sentAt?: Maybe<Scalars['DateTime']['output']>;
+  status: NotificationStatus;
+  telegramChatId: Scalars['String']['output'];
+  telegramErrorCode?: Maybe<Scalars['Int']['output']>;
+  telegramErrorMessage?: Maybe<Scalars['String']['output']>;
+  telegramResponse?: Maybe<Scalars['String']['output']>;
+  telegramUserId: Scalars['String']['output'];
+  telegramUsername?: Maybe<Scalars['String']['output']>;
 };
 
 export type DocumentPhoto = {
@@ -429,6 +584,13 @@ export enum DocumentType {
   Pagare = 'PAGARE'
 }
 
+export type DocumentWithNotificationStatus = {
+  __typename?: 'DocumentWithNotificationStatus';
+  document: DocumentPhoto;
+  lastNotification?: Maybe<DocumentNotificationLog>;
+  notificationSent: Scalars['Boolean']['output'];
+};
+
 export type Employee = {
   __typename?: 'Employee';
   commissionPayments: Array<CommissionPayment>;
@@ -442,6 +604,7 @@ export type Employee = {
   transactions: Array<Transaction>;
   type: EmployeeType;
   updatedAt: Scalars['DateTime']['output'];
+  user?: Maybe<User>;
 };
 
 export enum EmployeeType {
@@ -459,6 +622,13 @@ export type EmployeeWithStats = {
   id: Scalars['ID']['output'];
   personalData?: Maybe<PersonalData>;
   type: EmployeeType;
+};
+
+export type EvaluationPeriod = {
+  __typename?: 'EvaluationPeriod';
+  description: Scalars['String']['output'];
+  from: Scalars['DateTime']['output'];
+  to: Scalars['DateTime']['output'];
 };
 
 export type ExistingLeaderInfo = {
@@ -492,6 +662,11 @@ export type FirstPaymentInput = {
   paymentMethod: PaymentMethod;
 };
 
+export enum IssueType {
+  Error = 'ERROR',
+  Missing = 'MISSING'
+}
+
 export type LeadPaymentReceived = {
   __typename?: 'LeadPaymentReceived';
   agent: Employee;
@@ -516,6 +691,11 @@ export type LeaderInfo = {
   phone?: Maybe<Scalars['String']['output']>;
   route: Scalars['String']['output'];
   state?: Maybe<Scalars['String']['output']>;
+};
+
+export type LinkTelegramToUserInput = {
+  platformUserId: Scalars['ID']['input'];
+  telegramUserId: Scalars['ID']['input'];
 };
 
 export type Loan = {
@@ -713,6 +893,7 @@ export type LocalityWeekData = {
 export type Location = {
   __typename?: 'Location';
   addresses: Array<Address>;
+  createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
   municipality: Municipality;
   name: Scalars['String']['output'];
@@ -731,10 +912,26 @@ export type LocationBreakdown = {
   routeName?: Maybe<Scalars['String']['output']>;
 };
 
+export type MarkDeadDebtResult = {
+  __typename?: 'MarkDeadDebtResult';
+  count: Scalars['Int']['output'];
+  message: Scalars['String']['output'];
+  success: Scalars['Boolean']['output'];
+};
+
 export type MarkDocumentAsMissingInput = {
   documentType: DocumentType;
   loanId: Scalars['ID']['input'];
   personalDataId: Scalars['ID']['input'];
+};
+
+export type MonthInfo = {
+  __typename?: 'MonthInfo';
+  endDate: Scalars['DateTime']['output'];
+  month: Scalars['Int']['output'];
+  name: Scalars['String']['output'];
+  startDate: Scalars['DateTime']['output'];
+  year: Scalars['Int']['output'];
 };
 
 export type MonthlyFinancialData = {
@@ -784,6 +981,7 @@ export type Municipality = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  activateTelegramUser: TelegramUser;
   cancelLoan: Loan;
   cancelLoanWithAccountRestore: Loan;
   changePassword: Scalars['Boolean']['output'];
@@ -798,24 +996,36 @@ export type Mutation = {
   createLocation: Location;
   createNewLeader: CreateNewLeaderResult;
   createPortfolioCleanup: PortfolioCleanup;
+  createReportConfig: ReportConfig;
   createRoute: Route;
   createTransaction: Transaction;
   createUser: User;
+  deactivateTelegramUser: TelegramUser;
   deleteDocumentPhoto: Scalars['Boolean']['output'];
   deleteLoanPayment: LoanPayment;
   deletePortfolioCleanup: Scalars['Boolean']['output'];
+  deleteReportConfig: Scalars['Boolean']['output'];
+  deleteTelegramUser: Scalars['Boolean']['output'];
   deleteTransaction: Scalars['Boolean']['output'];
   deleteUser: Scalars['Boolean']['output'];
+  executeReportManually: ReportExecutionResult;
   finishLoan: Loan;
   generatePortfolioReportPDF: PdfGenerationResult;
+  linkTelegramToUser: TelegramUser;
   login: AuthPayload;
   logout: Scalars['Boolean']['output'];
   markDocumentAsMissing: DocumentPhoto;
   markLoanAsBadDebt: Loan;
+  markLoansAsDeadDebt: MarkDeadDebtResult;
   promoteToLead: Employee;
   refreshToken: AuthPayload;
   renewLoan: Loan;
+  retryFailedNotification: SendNotificationResult;
+  sendBulkDocumentNotifications: Array<SendNotificationResult>;
+  sendDocumentNotification: SendNotificationResult;
+  toggleReportConfig: ReportConfig;
   transferBetweenAccounts: Transaction;
+  unlinkTelegramFromUser: TelegramUser;
   updateAccount: Account;
   updateBorrower: Borrower;
   updateDocumentPhoto: DocumentPhoto;
@@ -828,10 +1038,17 @@ export type Mutation = {
   updatePersonalData: PersonalData;
   updatePhone: Phone;
   updatePortfolioCleanup: PortfolioCleanup;
+  updateReportConfig: ReportConfig;
   updateRoute: Route;
+  updateTelegramUser: TelegramUser;
   updateTransaction: Transaction;
   updateUser: User;
   uploadDocumentPhoto: DocumentPhoto;
+};
+
+
+export type MutationActivateTelegramUserArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -907,6 +1124,11 @@ export type MutationCreatePortfolioCleanupArgs = {
 };
 
 
+export type MutationCreateReportConfigArgs = {
+  input: CreateReportConfigInput;
+};
+
+
 export type MutationCreateRouteArgs = {
   input: CreateRouteInput;
 };
@@ -919,6 +1141,11 @@ export type MutationCreateTransactionArgs = {
 
 export type MutationCreateUserArgs = {
   input: CreateUserInput;
+};
+
+
+export type MutationDeactivateTelegramUserArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -937,6 +1164,16 @@ export type MutationDeletePortfolioCleanupArgs = {
 };
 
 
+export type MutationDeleteReportConfigArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationDeleteTelegramUserArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type MutationDeleteTransactionArgs = {
   id: Scalars['ID']['input'];
 };
@@ -944,6 +1181,11 @@ export type MutationDeleteTransactionArgs = {
 
 export type MutationDeleteUserArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationExecuteReportManuallyArgs = {
+  reportConfigId: Scalars['ID']['input'];
 };
 
 
@@ -958,6 +1200,11 @@ export type MutationGeneratePortfolioReportPdfArgs = {
   periodType: PeriodType;
   weekNumber?: InputMaybe<Scalars['Int']['input']>;
   year: Scalars['Int']['input'];
+};
+
+
+export type MutationLinkTelegramToUserArgs = {
+  input: LinkTelegramToUserInput;
 };
 
 
@@ -978,6 +1225,12 @@ export type MutationMarkLoanAsBadDebtArgs = {
 };
 
 
+export type MutationMarkLoansAsDeadDebtArgs = {
+  deadDebtDate: Scalars['DateTime']['input'];
+  loanIds: Array<Scalars['ID']['input']>;
+};
+
+
 export type MutationPromoteToLeadArgs = {
   employeeId: Scalars['ID']['input'];
 };
@@ -994,8 +1247,35 @@ export type MutationRenewLoanArgs = {
 };
 
 
+export type MutationRetryFailedNotificationArgs = {
+  notificationId: Scalars['ID']['input'];
+};
+
+
+export type MutationSendBulkDocumentNotificationsArgs = {
+  documentIds: Array<Scalars['ID']['input']>;
+  includePhoto?: InputMaybe<Scalars['Boolean']['input']>;
+  recipientChatIds: Array<Scalars['String']['input']>;
+};
+
+
+export type MutationSendDocumentNotificationArgs = {
+  input: SendDocumentNotificationInput;
+};
+
+
+export type MutationToggleReportConfigArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type MutationTransferBetweenAccountsArgs = {
   input: TransferInput;
+};
+
+
+export type MutationUnlinkTelegramFromUserArgs = {
+  telegramUserId: Scalars['ID']['input'];
 };
 
 
@@ -1070,9 +1350,21 @@ export type MutationUpdatePortfolioCleanupArgs = {
 };
 
 
+export type MutationUpdateReportConfigArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateReportConfigInput;
+};
+
+
 export type MutationUpdateRouteArgs = {
   id: Scalars['ID']['input'];
   input: UpdateRouteInput;
+};
+
+
+export type MutationUpdateTelegramUserArgs = {
+  id: Scalars['ID']['input'];
+  input: UpdateTelegramUserInput;
 };
 
 
@@ -1101,6 +1393,13 @@ export type NoPaymentPeriod = {
   startDateFormatted: Scalars['String']['output'];
   weekCount: Scalars['Int']['output'];
 };
+
+export enum NotificationStatus {
+  Failed = 'FAILED',
+  Pending = 'PENDING',
+  Retry = 'RETRY',
+  Sent = 'SENT'
+}
 
 export type PdfGenerationResult = {
   __typename?: 'PDFGenerationResult';
@@ -1233,12 +1532,18 @@ export type Query = {
   checkExistingLeader?: Maybe<ExistingLeaderInfo>;
   currentActiveWeek: WeekRange;
   currentWeek: WeekInfo;
+  deadDebtLoans: DeadDebtQueryResult;
+  deadDebtMonthlySummary: DeadDebtMonthlySummaryResult;
+  deadDebtSummaryByLocality: Array<DeadDebtSummaryByLocality>;
+  documentNotificationLogs: Array<DocumentNotificationLog>;
   documentPhoto?: Maybe<DocumentPhoto>;
   documentPhotos: Array<DocumentPhoto>;
   documentsWithErrors: Array<DocumentPhoto>;
+  documentsWithNotificationStatus: Array<DocumentWithNotificationStatus>;
   employee?: Maybe<Employee>;
   employees: Array<Employee>;
   financialReport: FinancialReport;
+  getBankIncomeTransactions: BankIncomeTransactionsResponse;
   getClientHistory: ClientHistoryData;
   getFinancialReportAnnual: AnnualFinancialReport;
   leadPaymentReceivedByLeadAndDate?: Maybe<LeadPaymentReceived>;
@@ -1252,6 +1557,7 @@ export type Query = {
   loantypes: Array<Loantype>;
   localityClients: Array<LocalityClientDetail>;
   locations: Array<Location>;
+  locationsCreatedInPeriod: Array<Location>;
   me?: Maybe<User>;
   municipalities: Array<Municipality>;
   portfolioByLocality: LocalityReport;
@@ -1259,12 +1565,19 @@ export type Query = {
   portfolioReportMonthly: PortfolioReport;
   portfolioReportWeekly: PortfolioReport;
   previewPortfolioCleanup: CleanupPreview;
+  reportConfig?: Maybe<ReportConfig>;
+  reportConfigs: Array<ReportConfig>;
+  reportExecutionLogs: Array<ReportExecutionLog>;
   route?: Maybe<Route>;
   routes: Array<Route>;
   routesWithStats: Array<RouteWithStats>;
   searchBorrowers: Array<BorrowerSearchResult>;
   searchClients: Array<ClientSearchResult>;
   searchPersonalData: Array<PersonalData>;
+  telegramUser?: Maybe<TelegramUser>;
+  telegramUserByChatId?: Maybe<TelegramUser>;
+  telegramUserStats: TelegramUserStats;
+  telegramUsers: Array<TelegramUser>;
   transactions: TransactionConnection;
   user?: Maybe<User>;
   users: Array<User>;
@@ -1298,6 +1611,49 @@ export type QueryCheckExistingLeaderArgs = {
 };
 
 
+export type QueryDeadDebtLoansArgs = {
+  badDebtStatus?: InputMaybe<DeadDebtStatus>;
+  fromDate?: InputMaybe<Scalars['DateTime']['input']>;
+  localities?: InputMaybe<Array<Scalars['String']['input']>>;
+  routeId?: InputMaybe<Scalars['ID']['input']>;
+  toDate?: InputMaybe<Scalars['DateTime']['input']>;
+  weeksSinceLoanMin?: InputMaybe<Scalars['Int']['input']>;
+  weeksWithoutPaymentMin?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryDeadDebtMonthlySummaryArgs = {
+  badDebtStatus?: InputMaybe<DeadDebtStatus>;
+  fromDate?: InputMaybe<Scalars['DateTime']['input']>;
+  localities?: InputMaybe<Array<Scalars['String']['input']>>;
+  routeId?: InputMaybe<Scalars['ID']['input']>;
+  toDate?: InputMaybe<Scalars['DateTime']['input']>;
+  weeksSinceLoanMin?: InputMaybe<Scalars['Int']['input']>;
+  weeksWithoutPaymentMin?: InputMaybe<Scalars['Int']['input']>;
+  year: Scalars['Int']['input'];
+};
+
+
+export type QueryDeadDebtSummaryByLocalityArgs = {
+  badDebtStatus?: InputMaybe<DeadDebtStatus>;
+  localities?: InputMaybe<Array<Scalars['String']['input']>>;
+  routeId?: InputMaybe<Scalars['ID']['input']>;
+  weeksSinceLoanMin?: InputMaybe<Scalars['Int']['input']>;
+  weeksWithoutPaymentMin?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryDocumentNotificationLogsArgs = {
+  fromDate?: InputMaybe<Scalars['DateTime']['input']>;
+  issueType?: InputMaybe<IssueType>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  routeId?: InputMaybe<Scalars['ID']['input']>;
+  status?: InputMaybe<NotificationStatus>;
+  toDate?: InputMaybe<Scalars['DateTime']['input']>;
+};
+
+
 export type QueryDocumentPhotoArgs = {
   id: Scalars['ID']['input'];
 };
@@ -1318,6 +1674,15 @@ export type QueryDocumentsWithErrorsArgs = {
 };
 
 
+export type QueryDocumentsWithNotificationStatusArgs = {
+  hasErrors?: InputMaybe<Scalars['Boolean']['input']>;
+  hasMissing?: InputMaybe<Scalars['Boolean']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  routeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
 export type QueryEmployeeArgs = {
   id: Scalars['ID']['input'];
 };
@@ -1333,6 +1698,14 @@ export type QueryFinancialReportArgs = {
   month: Scalars['Int']['input'];
   routeIds: Array<Scalars['ID']['input']>;
   year: Scalars['Int']['input'];
+};
+
+
+export type QueryGetBankIncomeTransactionsArgs = {
+  endDate: Scalars['String']['input'];
+  onlyAbonos?: InputMaybe<Scalars['Boolean']['input']>;
+  routeIds: Array<Scalars['ID']['input']>;
+  startDate: Scalars['String']['input'];
 };
 
 
@@ -1426,6 +1799,13 @@ export type QueryLocationsArgs = {
 };
 
 
+export type QueryLocationsCreatedInPeriodArgs = {
+  fromDate: Scalars['DateTime']['input'];
+  routeId?: InputMaybe<Scalars['ID']['input']>;
+  toDate: Scalars['DateTime']['input'];
+};
+
+
 export type QueryPortfolioByLocalityArgs = {
   filters?: InputMaybe<PortfolioFiltersInput>;
   month: Scalars['Int']['input'];
@@ -1456,6 +1836,26 @@ export type QueryPortfolioReportWeeklyArgs = {
 export type QueryPreviewPortfolioCleanupArgs = {
   maxSignDate: Scalars['DateTime']['input'];
   routeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type QueryReportConfigArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryReportConfigsArgs = {
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+export type QueryReportExecutionLogsArgs = {
+  fromDate?: InputMaybe<Scalars['DateTime']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  reportConfigId?: InputMaybe<Scalars['ID']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+  toDate?: InputMaybe<Scalars['DateTime']['input']>;
 };
 
 
@@ -1491,6 +1891,23 @@ export type QuerySearchPersonalDataArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   locationId?: InputMaybe<Scalars['ID']['input']>;
   searchTerm: Scalars['String']['input'];
+};
+
+
+export type QueryTelegramUserArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type QueryTelegramUserByChatIdArgs = {
+  chatId: Scalars['String']['input'];
+};
+
+
+export type QueryTelegramUsersArgs = {
+  filters?: InputMaybe<TelegramUserFiltersInput>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -1531,6 +1948,65 @@ export type RenovationKpIs = {
   totalRenovaciones: Scalars['Int']['output'];
 };
 
+export type ReportConfig = {
+  __typename?: 'ReportConfig';
+  createdAt: Scalars['DateTime']['output'];
+  executionLogs: Array<ReportExecutionLog>;
+  id: Scalars['ID']['output'];
+  isActive: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  reportType: Scalars['String']['output'];
+  routes: Array<Route>;
+  schedule?: Maybe<ReportSchedule>;
+  telegramRecipients: Array<TelegramUser>;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type ReportExecutionLog = {
+  __typename?: 'ReportExecutionLog';
+  createdAt: Scalars['DateTime']['output'];
+  cronExpression?: Maybe<Scalars['String']['output']>;
+  duration?: Maybe<Scalars['Int']['output']>;
+  endTime?: Maybe<Scalars['DateTime']['output']>;
+  errorDetails?: Maybe<Scalars['String']['output']>;
+  executionType: Scalars['String']['output'];
+  failedDeliveries?: Maybe<Scalars['Int']['output']>;
+  id: Scalars['ID']['output'];
+  message?: Maybe<Scalars['String']['output']>;
+  recipientsCount?: Maybe<Scalars['Int']['output']>;
+  reportConfig: ReportConfig;
+  startTime: Scalars['DateTime']['output'];
+  status: Scalars['String']['output'];
+  successfulDeliveries?: Maybe<Scalars['Int']['output']>;
+  timezone?: Maybe<Scalars['String']['output']>;
+};
+
+export type ReportExecutionResult = {
+  __typename?: 'ReportExecutionResult';
+  errors?: Maybe<Array<Scalars['String']['output']>>;
+  message: Scalars['String']['output'];
+  recipientsNotified: Scalars['Int']['output'];
+  success: Scalars['Boolean']['output'];
+};
+
+export type ReportSchedule = {
+  __typename?: 'ReportSchedule';
+  days: Array<Scalars['String']['output']>;
+  hour: Scalars['String']['output'];
+  timezone: Scalars['String']['output'];
+};
+
+export type ReportScheduleInput = {
+  days: Array<Scalars['String']['input']>;
+  hour: Scalars['String']['input'];
+  timezone?: InputMaybe<Scalars['String']['input']>;
+};
+
+export enum ReportType {
+  CreditosConErrores = 'CREDITOS_CON_ERRORES',
+  NotificacionTiempoReal = 'NOTIFICACION_TIEMPO_REAL'
+}
+
 export type Route = {
   __typename?: 'Route';
   accounts: Array<Account>;
@@ -1560,11 +2036,60 @@ export type RouteWithStats = {
   totalActivos: Scalars['Int']['output'];
 };
 
+export type SendDocumentNotificationInput = {
+  customMessage?: InputMaybe<Scalars['String']['input']>;
+  documentId: Scalars['ID']['input'];
+  includePhoto?: InputMaybe<Scalars['Boolean']['input']>;
+  recipientChatIds: Array<Scalars['String']['input']>;
+};
+
+export type SendNotificationResult = {
+  __typename?: 'SendNotificationResult';
+  message: Scalars['String']['output'];
+  notificationId?: Maybe<Scalars['ID']['output']>;
+  success: Scalars['Boolean']['output'];
+  telegramResponse?: Maybe<Scalars['String']['output']>;
+};
+
 export type State = {
   __typename?: 'State';
   id: Scalars['ID']['output'];
   municipalities: Array<Municipality>;
   name: Scalars['String']['output'];
+};
+
+export type TelegramUser = {
+  __typename?: 'TelegramUser';
+  chatId: Scalars['String']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  isActive: Scalars['Boolean']['output'];
+  isInRecipientsList: Scalars['Boolean']['output'];
+  lastActivity: Scalars['DateTime']['output'];
+  name: Scalars['String']['output'];
+  notes?: Maybe<Scalars['String']['output']>;
+  platformUser?: Maybe<User>;
+  registeredAt: Scalars['DateTime']['output'];
+  reportConfigs: Array<ReportConfig>;
+  reportsReceived: Scalars['Int']['output'];
+  updatedAt: Scalars['DateTime']['output'];
+  username?: Maybe<Scalars['String']['output']>;
+};
+
+export type TelegramUserFiltersInput = {
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isInRecipientsList?: InputMaybe<Scalars['Boolean']['input']>;
+  isLinkedToUser?: InputMaybe<Scalars['Boolean']['input']>;
+  searchTerm?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type TelegramUserStats = {
+  __typename?: 'TelegramUserStats';
+  activeUsers: Scalars['Int']['output'];
+  inRecipientsList: Scalars['Int']['output'];
+  inactiveUsers: Scalars['Int']['output'];
+  linkedToPlataform: Scalars['Int']['output'];
+  totalUsers: Scalars['Int']['output'];
 };
 
 export type Transaction = {
@@ -1714,9 +2239,23 @@ export type UpdatePortfolioCleanupInput = {
   name?: InputMaybe<Scalars['String']['input']>;
 };
 
+export type UpdateReportConfigInput = {
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  recipientIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  routeIds?: InputMaybe<Array<Scalars['ID']['input']>>;
+  schedule?: InputMaybe<ReportScheduleInput>;
+};
+
 export type UpdateRouteInput = {
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateTelegramUserInput = {
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isInRecipientsList?: InputMaybe<Scalars['Boolean']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateTransactionInput = {
@@ -1729,7 +2268,11 @@ export type UpdateTransactionInput = {
 
 export type UpdateUserInput = {
   email?: InputMaybe<Scalars['String']['input']>;
+  employeeId?: InputMaybe<Scalars['ID']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  password?: InputMaybe<Scalars['String']['input']>;
   role?: InputMaybe<UserRole>;
+  telegramChatId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UploadDocumentInput = {
@@ -1750,8 +2293,9 @@ export type User = {
   email: Scalars['String']['output'];
   employee?: Maybe<Employee>;
   id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
   role: UserRole;
-  updatedAt: Scalars['DateTime']['output'];
+  telegramUser?: Maybe<TelegramUser>;
 };
 
 export enum UserRole {
@@ -1781,6 +2325,7 @@ export type WeeklyData = {
   date: Scalars['DateTime']['output'];
   expectedPayments: Scalars['Decimal']['output'];
   loansGranted: Scalars['Int']['output'];
+  paymentsCount: Scalars['Int']['output'];
   paymentsReceived: Scalars['Decimal']['output'];
   recoveryRate: Scalars['Decimal']['output'];
   week: Scalars['Int']['output'];
@@ -1877,6 +2422,8 @@ export type ResolversTypes = ResolversObject<{
   AuthPayload: ResolverTypeWrapper<AuthPayload>;
   BadDebtData: ResolverTypeWrapper<BadDebtData>;
   BadDebtSummary: ResolverTypeWrapper<BadDebtSummary>;
+  BankIncomeTransaction: ResolverTypeWrapper<BankIncomeTransaction>;
+  BankIncomeTransactionsResponse: ResolverTypeWrapper<BankIncomeTransactionsResponse>;
   Boolean: ResolverTypeWrapper<Scalars['Boolean']['output']>;
   Borrower: ResolverTypeWrapper<Borrower>;
   BorrowerSearchResult: ResolverTypeWrapper<BorrowerSearchResult>;
@@ -1907,17 +2454,32 @@ export type ResolversTypes = ResolversObject<{
   CreatePersonalDataInput: CreatePersonalDataInput;
   CreatePhoneInput: CreatePhoneInput;
   CreatePortfolioCleanupInput: CreatePortfolioCleanupInput;
+  CreateReportConfigInput: CreateReportConfigInput;
   CreateRouteInput: CreateRouteInput;
   CreateSingleLoanInput: CreateSingleLoanInput;
   CreateTransactionInput: CreateTransactionInput;
   CreateUserInput: CreateUserInput;
   DateTime: ResolverTypeWrapper<Scalars['DateTime']['output']>;
+  DeadDebtBorrower: ResolverTypeWrapper<DeadDebtBorrower>;
+  DeadDebtCriteria: ResolverTypeWrapper<DeadDebtCriteria>;
+  DeadDebtLead: ResolverTypeWrapper<DeadDebtLead>;
+  DeadDebtLoan: ResolverTypeWrapper<DeadDebtLoan>;
+  DeadDebtMonthSummary: ResolverTypeWrapper<DeadDebtMonthSummary>;
+  DeadDebtMonthlySummaryResult: ResolverTypeWrapper<DeadDebtMonthlySummaryResult>;
+  DeadDebtPayment: ResolverTypeWrapper<DeadDebtPayment>;
+  DeadDebtQueryResult: ResolverTypeWrapper<DeadDebtQueryResult>;
+  DeadDebtStatus: DeadDebtStatus;
+  DeadDebtSummaryByLocality: ResolverTypeWrapper<DeadDebtSummaryByLocality>;
+  DeadDebtTotals: ResolverTypeWrapper<DeadDebtTotals>;
   Decimal: ResolverTypeWrapper<Scalars['Decimal']['output']>;
+  DocumentNotificationLog: ResolverTypeWrapper<DocumentNotificationLog>;
   DocumentPhoto: ResolverTypeWrapper<DocumentPhoto>;
   DocumentType: DocumentType;
+  DocumentWithNotificationStatus: ResolverTypeWrapper<DocumentWithNotificationStatus>;
   Employee: ResolverTypeWrapper<Employee>;
   EmployeeType: EmployeeType;
   EmployeeWithStats: ResolverTypeWrapper<EmployeeWithStats>;
+  EvaluationPeriod: ResolverTypeWrapper<EvaluationPeriod>;
   ExistingLeaderInfo: ResolverTypeWrapper<ExistingLeaderInfo>;
   FinancialReport: ResolverTypeWrapper<FinancialReport>;
   FinancialSummary: ResolverTypeWrapper<FinancialSummary>;
@@ -1925,9 +2487,11 @@ export type ResolversTypes = ResolversObject<{
   Float: ResolverTypeWrapper<Scalars['Float']['output']>;
   ID: ResolverTypeWrapper<Scalars['ID']['output']>;
   Int: ResolverTypeWrapper<Scalars['Int']['output']>;
+  IssueType: IssueType;
   JSON: ResolverTypeWrapper<Scalars['JSON']['output']>;
   LeadPaymentReceived: ResolverTypeWrapper<LeadPaymentReceived>;
   LeaderInfo: ResolverTypeWrapper<LeaderInfo>;
+  LinkTelegramToUserInput: LinkTelegramToUserInput;
   Loan: ResolverTypeWrapper<Loan>;
   LoanConnection: ResolverTypeWrapper<LoanConnection>;
   LoanEdge: ResolverTypeWrapper<LoanEdge>;
@@ -1943,11 +2507,14 @@ export type ResolversTypes = ResolversObject<{
   LocalityWeekData: ResolverTypeWrapper<LocalityWeekData>;
   Location: ResolverTypeWrapper<Location>;
   LocationBreakdown: ResolverTypeWrapper<LocationBreakdown>;
+  MarkDeadDebtResult: ResolverTypeWrapper<MarkDeadDebtResult>;
   MarkDocumentAsMissingInput: MarkDocumentAsMissingInput;
+  MonthInfo: ResolverTypeWrapper<MonthInfo>;
   MonthlyFinancialData: ResolverTypeWrapper<MonthlyFinancialData>;
   Municipality: ResolverTypeWrapper<Municipality>;
   Mutation: ResolverTypeWrapper<{}>;
   NoPaymentPeriod: ResolverTypeWrapper<NoPaymentPeriod>;
+  NotificationStatus: NotificationStatus;
   PDFGenerationResult: ResolverTypeWrapper<PdfGenerationResult>;
   PageInfo: ResolverTypeWrapper<PageInfo>;
   PaymentForLeadInput: PaymentForLeadInput;
@@ -1964,11 +2531,22 @@ export type ResolversTypes = ResolversObject<{
   Query: ResolverTypeWrapper<{}>;
   RenewLoanInput: RenewLoanInput;
   RenovationKPIs: ResolverTypeWrapper<RenovationKpIs>;
+  ReportConfig: ResolverTypeWrapper<ReportConfig>;
+  ReportExecutionLog: ResolverTypeWrapper<ReportExecutionLog>;
+  ReportExecutionResult: ResolverTypeWrapper<ReportExecutionResult>;
+  ReportSchedule: ResolverTypeWrapper<ReportSchedule>;
+  ReportScheduleInput: ReportScheduleInput;
+  ReportType: ReportType;
   Route: ResolverTypeWrapper<Route>;
   RouteInfo: ResolverTypeWrapper<RouteInfo>;
   RouteWithStats: ResolverTypeWrapper<RouteWithStats>;
+  SendDocumentNotificationInput: SendDocumentNotificationInput;
+  SendNotificationResult: ResolverTypeWrapper<SendNotificationResult>;
   State: ResolverTypeWrapper<State>;
   String: ResolverTypeWrapper<Scalars['String']['output']>;
+  TelegramUser: ResolverTypeWrapper<TelegramUser>;
+  TelegramUserFiltersInput: TelegramUserFiltersInput;
+  TelegramUserStats: ResolverTypeWrapper<TelegramUserStats>;
   Transaction: ResolverTypeWrapper<Transaction>;
   TransactionConnection: ResolverTypeWrapper<TransactionConnection>;
   TransactionEdge: ResolverTypeWrapper<TransactionEdge>;
@@ -1988,7 +2566,9 @@ export type ResolversTypes = ResolversObject<{
   UpdatePersonalDataInput: UpdatePersonalDataInput;
   UpdatePhoneInput: UpdatePhoneInput;
   UpdatePortfolioCleanupInput: UpdatePortfolioCleanupInput;
+  UpdateReportConfigInput: UpdateReportConfigInput;
   UpdateRouteInput: UpdateRouteInput;
+  UpdateTelegramUserInput: UpdateTelegramUserInput;
   UpdateTransactionInput: UpdateTransactionInput;
   UpdateUserInput: UpdateUserInput;
   Upload: ResolverTypeWrapper<Scalars['Upload']['output']>;
@@ -2011,6 +2591,8 @@ export type ResolversParentTypes = ResolversObject<{
   AuthPayload: AuthPayload;
   BadDebtData: BadDebtData;
   BadDebtSummary: BadDebtSummary;
+  BankIncomeTransaction: BankIncomeTransaction;
+  BankIncomeTransactionsResponse: BankIncomeTransactionsResponse;
   Boolean: Scalars['Boolean']['output'];
   Borrower: Borrower;
   BorrowerSearchResult: BorrowerSearchResult;
@@ -2039,15 +2621,29 @@ export type ResolversParentTypes = ResolversObject<{
   CreatePersonalDataInput: CreatePersonalDataInput;
   CreatePhoneInput: CreatePhoneInput;
   CreatePortfolioCleanupInput: CreatePortfolioCleanupInput;
+  CreateReportConfigInput: CreateReportConfigInput;
   CreateRouteInput: CreateRouteInput;
   CreateSingleLoanInput: CreateSingleLoanInput;
   CreateTransactionInput: CreateTransactionInput;
   CreateUserInput: CreateUserInput;
   DateTime: Scalars['DateTime']['output'];
+  DeadDebtBorrower: DeadDebtBorrower;
+  DeadDebtCriteria: DeadDebtCriteria;
+  DeadDebtLead: DeadDebtLead;
+  DeadDebtLoan: DeadDebtLoan;
+  DeadDebtMonthSummary: DeadDebtMonthSummary;
+  DeadDebtMonthlySummaryResult: DeadDebtMonthlySummaryResult;
+  DeadDebtPayment: DeadDebtPayment;
+  DeadDebtQueryResult: DeadDebtQueryResult;
+  DeadDebtSummaryByLocality: DeadDebtSummaryByLocality;
+  DeadDebtTotals: DeadDebtTotals;
   Decimal: Scalars['Decimal']['output'];
+  DocumentNotificationLog: DocumentNotificationLog;
   DocumentPhoto: DocumentPhoto;
+  DocumentWithNotificationStatus: DocumentWithNotificationStatus;
   Employee: Employee;
   EmployeeWithStats: EmployeeWithStats;
+  EvaluationPeriod: EvaluationPeriod;
   ExistingLeaderInfo: ExistingLeaderInfo;
   FinancialReport: FinancialReport;
   FinancialSummary: FinancialSummary;
@@ -2058,6 +2654,7 @@ export type ResolversParentTypes = ResolversObject<{
   JSON: Scalars['JSON']['output'];
   LeadPaymentReceived: LeadPaymentReceived;
   LeaderInfo: LeaderInfo;
+  LinkTelegramToUserInput: LinkTelegramToUserInput;
   Loan: Loan;
   LoanConnection: LoanConnection;
   LoanEdge: LoanEdge;
@@ -2072,7 +2669,9 @@ export type ResolversParentTypes = ResolversObject<{
   LocalityWeekData: LocalityWeekData;
   Location: Location;
   LocationBreakdown: LocationBreakdown;
+  MarkDeadDebtResult: MarkDeadDebtResult;
   MarkDocumentAsMissingInput: MarkDocumentAsMissingInput;
+  MonthInfo: MonthInfo;
   MonthlyFinancialData: MonthlyFinancialData;
   Municipality: Municipality;
   Mutation: {};
@@ -2091,11 +2690,21 @@ export type ResolversParentTypes = ResolversObject<{
   Query: {};
   RenewLoanInput: RenewLoanInput;
   RenovationKPIs: RenovationKpIs;
+  ReportConfig: ReportConfig;
+  ReportExecutionLog: ReportExecutionLog;
+  ReportExecutionResult: ReportExecutionResult;
+  ReportSchedule: ReportSchedule;
+  ReportScheduleInput: ReportScheduleInput;
   Route: Route;
   RouteInfo: RouteInfo;
   RouteWithStats: RouteWithStats;
+  SendDocumentNotificationInput: SendDocumentNotificationInput;
+  SendNotificationResult: SendNotificationResult;
   State: State;
   String: Scalars['String']['output'];
+  TelegramUser: TelegramUser;
+  TelegramUserFiltersInput: TelegramUserFiltersInput;
+  TelegramUserStats: TelegramUserStats;
   Transaction: Transaction;
   TransactionConnection: TransactionConnection;
   TransactionEdge: TransactionEdge;
@@ -2113,7 +2722,9 @@ export type ResolversParentTypes = ResolversObject<{
   UpdatePersonalDataInput: UpdatePersonalDataInput;
   UpdatePhoneInput: UpdatePhoneInput;
   UpdatePortfolioCleanupInput: UpdatePortfolioCleanupInput;
+  UpdateReportConfigInput: UpdateReportConfigInput;
   UpdateRouteInput: UpdateRouteInput;
+  UpdateTelegramUserInput: UpdateTelegramUserInput;
   UpdateTransactionInput: UpdateTransactionInput;
   UpdateUserInput: UpdateUserInput;
   Upload: Scalars['Upload']['output'];
@@ -2210,6 +2821,29 @@ export type BadDebtSummaryResolvers<ContextType = GraphQLContext, ParentType ext
   byRoute?: Resolver<Array<ResolversTypes['BadDebtData']>, ParentType, ContextType>;
   totalAmount?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
   totalLoans?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type BankIncomeTransactionResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['BankIncomeTransaction'] = ResolversParentTypes['BankIncomeTransaction']> = ResolversObject<{
+  amount?: Resolver<ResolversTypes['Float'], ParentType, ContextType>;
+  date?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  employeeName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  incomeSource?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  isClientPayment?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  isLeaderPayment?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  leaderLocality?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  locality?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  type?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type BankIncomeTransactionsResponseResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['BankIncomeTransactionsResponse'] = ResolversParentTypes['BankIncomeTransactionsResponse']> = ResolversObject<{
+  message?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  transactions?: Resolver<Array<ResolversTypes['BankIncomeTransaction']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -2349,9 +2983,121 @@ export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<ResolversT
   name: 'DateTime';
 }
 
+export type DeadDebtBorrowerResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeadDebtBorrower'] = ResolversParentTypes['DeadDebtBorrower']> = ResolversObject<{
+  clientCode?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  fullName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type DeadDebtCriteriaResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeadDebtCriteria'] = ResolversParentTypes['DeadDebtCriteria']> = ResolversObject<{
+  badDebtStatus?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  localities?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  weeksSinceLoanMin?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  weeksWithoutPaymentMin?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type DeadDebtLeadResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeadDebtLead'] = ResolversParentTypes['DeadDebtLead']> = ResolversObject<{
+  fullName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  locality?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  route?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type DeadDebtLoanResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeadDebtLoan'] = ResolversParentTypes['DeadDebtLoan']> = ResolversObject<{
+  amountGived?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+  badDebtCandidate?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+  badDebtDate?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
+  borrower?: Resolver<ResolversTypes['DeadDebtBorrower'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  lead?: Resolver<ResolversTypes['DeadDebtLead'], ParentType, ContextType>;
+  payments?: Resolver<Array<ResolversTypes['DeadDebtPayment']>, ParentType, ContextType>;
+  pendingAmountStored?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+  signDate?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  weeksSinceLoan?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  weeksWithoutPayment?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type DeadDebtMonthSummaryResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeadDebtMonthSummary'] = ResolversParentTypes['DeadDebtMonthSummary']> = ResolversObject<{
+  criteria?: Resolver<ResolversTypes['DeadDebtCriteria'], ParentType, ContextType>;
+  evaluationPeriod?: Resolver<ResolversTypes['EvaluationPeriod'], ParentType, ContextType>;
+  loans?: Resolver<Array<ResolversTypes['DeadDebtLoan']>, ParentType, ContextType>;
+  month?: Resolver<ResolversTypes['MonthInfo'], ParentType, ContextType>;
+  summary?: Resolver<ResolversTypes['DeadDebtTotals'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type DeadDebtMonthlySummaryResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeadDebtMonthlySummaryResult'] = ResolversParentTypes['DeadDebtMonthlySummaryResult']> = ResolversObject<{
+  monthlySummary?: Resolver<Array<ResolversTypes['DeadDebtMonthSummary']>, ParentType, ContextType>;
+  routesInfo?: Resolver<Array<ResolversTypes['RouteInfo']>, ParentType, ContextType>;
+  year?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  yearTotals?: Resolver<ResolversTypes['DeadDebtTotals'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type DeadDebtPaymentResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeadDebtPayment'] = ResolversParentTypes['DeadDebtPayment']> = ResolversObject<{
+  amount?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+  receivedAt?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type DeadDebtQueryResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeadDebtQueryResult'] = ResolversParentTypes['DeadDebtQueryResult']> = ResolversObject<{
+  loans?: Resolver<Array<ResolversTypes['DeadDebtLoan']>, ParentType, ContextType>;
+  localities?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  summary?: Resolver<ResolversTypes['DeadDebtTotals'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type DeadDebtSummaryByLocalityResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeadDebtSummaryByLocality'] = ResolversParentTypes['DeadDebtSummaryByLocality']> = ResolversObject<{
+  loanCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  locality?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  totalBadDebtCandidate?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+  totalPending?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type DeadDebtTotalsResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DeadDebtTotals'] = ResolversParentTypes['DeadDebtTotals']> = ResolversObject<{
+  totalBadDebtCandidate?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+  totalLoans?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  totalPendingAmount?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export interface DecimalScalarConfig extends GraphQLScalarTypeConfig<ResolversTypes['Decimal'], any> {
   name: 'Decimal';
 }
+
+export type DocumentNotificationLogResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DocumentNotificationLog'] = ResolversParentTypes['DocumentNotificationLog']> = ResolversObject<{
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  description?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  documentId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  documentType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  issueType?: Resolver<ResolversTypes['IssueType'], ParentType, ContextType>;
+  lastRetryAt?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
+  loanId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  localityName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  messageContent?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  notes?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  personName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  personalDataId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  responseTimeMs?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  retryCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  routeId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  routeLeadId?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  routeLeadName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  routeName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  sentAt?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['NotificationStatus'], ParentType, ContextType>;
+  telegramChatId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  telegramErrorCode?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  telegramErrorMessage?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  telegramResponse?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  telegramUserId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  telegramUsername?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
 
 export type DocumentPhotoResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DocumentPhoto'] = ResolversParentTypes['DocumentPhoto']> = ResolversObject<{
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
@@ -2371,6 +3117,13 @@ export type DocumentPhotoResolvers<ContextType = GraphQLContext, ParentType exte
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
+export type DocumentWithNotificationStatusResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['DocumentWithNotificationStatus'] = ResolversParentTypes['DocumentWithNotificationStatus']> = ResolversObject<{
+  document?: Resolver<ResolversTypes['DocumentPhoto'], ParentType, ContextType>;
+  lastNotification?: Resolver<Maybe<ResolversTypes['DocumentNotificationLog']>, ParentType, ContextType>;
+  notificationSent?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type EmployeeResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Employee'] = ResolversParentTypes['Employee']> = ResolversObject<{
   commissionPayments?: Resolver<Array<ResolversTypes['CommissionPayment']>, ParentType, ContextType>;
   createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
@@ -2383,6 +3136,7 @@ export type EmployeeResolvers<ContextType = GraphQLContext, ParentType extends R
   transactions?: Resolver<Array<ResolversTypes['Transaction']>, ParentType, ContextType>;
   type?: Resolver<ResolversTypes['EmployeeType'], ParentType, ContextType>;
   updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -2393,6 +3147,13 @@ export type EmployeeWithStatsResolvers<ContextType = GraphQLContext, ParentType 
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   personalData?: Resolver<Maybe<ResolversTypes['PersonalData']>, ParentType, ContextType>;
   type?: Resolver<ResolversTypes['EmployeeType'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type EvaluationPeriodResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['EvaluationPeriod'] = ResolversParentTypes['EvaluationPeriod']> = ResolversObject<{
+  description?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  from?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  to?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -2637,6 +3398,7 @@ export type LocalityWeekDataResolvers<ContextType = GraphQLContext, ParentType e
 
 export type LocationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Location'] = ResolversParentTypes['Location']> = ResolversObject<{
   addresses?: Resolver<Array<ResolversTypes['Address']>, ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   municipality?: Resolver<ResolversTypes['Municipality'], ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
@@ -2653,6 +3415,22 @@ export type LocationBreakdownResolvers<ContextType = GraphQLContext, ParentType 
   locationName?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   routeId?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
   routeName?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type MarkDeadDebtResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['MarkDeadDebtResult'] = ResolversParentTypes['MarkDeadDebtResult']> = ResolversObject<{
+  count?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type MonthInfoResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['MonthInfo'] = ResolversParentTypes['MonthInfo']> = ResolversObject<{
+  endDate?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  month?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  startDate?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  year?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -2702,6 +3480,7 @@ export type MunicipalityResolvers<ContextType = GraphQLContext, ParentType exten
 }>;
 
 export type MutationResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['Mutation'] = ResolversParentTypes['Mutation']> = ResolversObject<{
+  activateTelegramUser?: Resolver<ResolversTypes['TelegramUser'], ParentType, ContextType, RequireFields<MutationActivateTelegramUserArgs, 'id'>>;
   cancelLoan?: Resolver<ResolversTypes['Loan'], ParentType, ContextType, RequireFields<MutationCancelLoanArgs, 'id'>>;
   cancelLoanWithAccountRestore?: Resolver<ResolversTypes['Loan'], ParentType, ContextType, RequireFields<MutationCancelLoanWithAccountRestoreArgs, 'accountId' | 'id'>>;
   changePassword?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationChangePasswordArgs, 'newPassword' | 'oldPassword'>>;
@@ -2716,24 +3495,36 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   createLocation?: Resolver<ResolversTypes['Location'], ParentType, ContextType, RequireFields<MutationCreateLocationArgs, 'input'>>;
   createNewLeader?: Resolver<ResolversTypes['CreateNewLeaderResult'], ParentType, ContextType, RequireFields<MutationCreateNewLeaderArgs, 'input'>>;
   createPortfolioCleanup?: Resolver<ResolversTypes['PortfolioCleanup'], ParentType, ContextType, RequireFields<MutationCreatePortfolioCleanupArgs, 'input'>>;
+  createReportConfig?: Resolver<ResolversTypes['ReportConfig'], ParentType, ContextType, RequireFields<MutationCreateReportConfigArgs, 'input'>>;
   createRoute?: Resolver<ResolversTypes['Route'], ParentType, ContextType, RequireFields<MutationCreateRouteArgs, 'input'>>;
   createTransaction?: Resolver<ResolversTypes['Transaction'], ParentType, ContextType, RequireFields<MutationCreateTransactionArgs, 'input'>>;
   createUser?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationCreateUserArgs, 'input'>>;
+  deactivateTelegramUser?: Resolver<ResolversTypes['TelegramUser'], ParentType, ContextType, RequireFields<MutationDeactivateTelegramUserArgs, 'id'>>;
   deleteDocumentPhoto?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteDocumentPhotoArgs, 'id'>>;
   deleteLoanPayment?: Resolver<ResolversTypes['LoanPayment'], ParentType, ContextType, RequireFields<MutationDeleteLoanPaymentArgs, 'id'>>;
   deletePortfolioCleanup?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeletePortfolioCleanupArgs, 'id'>>;
+  deleteReportConfig?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteReportConfigArgs, 'id'>>;
+  deleteTelegramUser?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteTelegramUserArgs, 'id'>>;
   deleteTransaction?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteTransactionArgs, 'id'>>;
   deleteUser?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationDeleteUserArgs, 'id'>>;
+  executeReportManually?: Resolver<ResolversTypes['ReportExecutionResult'], ParentType, ContextType, RequireFields<MutationExecuteReportManuallyArgs, 'reportConfigId'>>;
   finishLoan?: Resolver<ResolversTypes['Loan'], ParentType, ContextType, RequireFields<MutationFinishLoanArgs, 'loanId'>>;
   generatePortfolioReportPDF?: Resolver<ResolversTypes['PDFGenerationResult'], ParentType, ContextType, RequireFields<MutationGeneratePortfolioReportPdfArgs, 'periodType' | 'year'>>;
+  linkTelegramToUser?: Resolver<ResolversTypes['TelegramUser'], ParentType, ContextType, RequireFields<MutationLinkTelegramToUserArgs, 'input'>>;
   login?: Resolver<ResolversTypes['AuthPayload'], ParentType, ContextType, RequireFields<MutationLoginArgs, 'email' | 'password'>>;
   logout?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
   markDocumentAsMissing?: Resolver<ResolversTypes['DocumentPhoto'], ParentType, ContextType, RequireFields<MutationMarkDocumentAsMissingArgs, 'input'>>;
   markLoanAsBadDebt?: Resolver<ResolversTypes['Loan'], ParentType, ContextType, RequireFields<MutationMarkLoanAsBadDebtArgs, 'badDebtDate' | 'loanId'>>;
+  markLoansAsDeadDebt?: Resolver<ResolversTypes['MarkDeadDebtResult'], ParentType, ContextType, RequireFields<MutationMarkLoansAsDeadDebtArgs, 'deadDebtDate' | 'loanIds'>>;
   promoteToLead?: Resolver<ResolversTypes['Employee'], ParentType, ContextType, RequireFields<MutationPromoteToLeadArgs, 'employeeId'>>;
   refreshToken?: Resolver<ResolversTypes['AuthPayload'], ParentType, ContextType, RequireFields<MutationRefreshTokenArgs, 'refreshToken'>>;
   renewLoan?: Resolver<ResolversTypes['Loan'], ParentType, ContextType, RequireFields<MutationRenewLoanArgs, 'input' | 'loanId'>>;
+  retryFailedNotification?: Resolver<ResolversTypes['SendNotificationResult'], ParentType, ContextType, RequireFields<MutationRetryFailedNotificationArgs, 'notificationId'>>;
+  sendBulkDocumentNotifications?: Resolver<Array<ResolversTypes['SendNotificationResult']>, ParentType, ContextType, RequireFields<MutationSendBulkDocumentNotificationsArgs, 'documentIds' | 'recipientChatIds'>>;
+  sendDocumentNotification?: Resolver<ResolversTypes['SendNotificationResult'], ParentType, ContextType, RequireFields<MutationSendDocumentNotificationArgs, 'input'>>;
+  toggleReportConfig?: Resolver<ResolversTypes['ReportConfig'], ParentType, ContextType, RequireFields<MutationToggleReportConfigArgs, 'id'>>;
   transferBetweenAccounts?: Resolver<ResolversTypes['Transaction'], ParentType, ContextType, RequireFields<MutationTransferBetweenAccountsArgs, 'input'>>;
+  unlinkTelegramFromUser?: Resolver<ResolversTypes['TelegramUser'], ParentType, ContextType, RequireFields<MutationUnlinkTelegramFromUserArgs, 'telegramUserId'>>;
   updateAccount?: Resolver<ResolversTypes['Account'], ParentType, ContextType, RequireFields<MutationUpdateAccountArgs, 'id' | 'input'>>;
   updateBorrower?: Resolver<ResolversTypes['Borrower'], ParentType, ContextType, RequireFields<MutationUpdateBorrowerArgs, 'id' | 'input'>>;
   updateDocumentPhoto?: Resolver<ResolversTypes['DocumentPhoto'], ParentType, ContextType, RequireFields<MutationUpdateDocumentPhotoArgs, 'id' | 'input'>>;
@@ -2746,7 +3537,9 @@ export type MutationResolvers<ContextType = GraphQLContext, ParentType extends R
   updatePersonalData?: Resolver<ResolversTypes['PersonalData'], ParentType, ContextType, RequireFields<MutationUpdatePersonalDataArgs, 'fullName' | 'id'>>;
   updatePhone?: Resolver<ResolversTypes['Phone'], ParentType, ContextType, RequireFields<MutationUpdatePhoneArgs, 'input'>>;
   updatePortfolioCleanup?: Resolver<ResolversTypes['PortfolioCleanup'], ParentType, ContextType, RequireFields<MutationUpdatePortfolioCleanupArgs, 'id' | 'input'>>;
+  updateReportConfig?: Resolver<ResolversTypes['ReportConfig'], ParentType, ContextType, RequireFields<MutationUpdateReportConfigArgs, 'id' | 'input'>>;
   updateRoute?: Resolver<ResolversTypes['Route'], ParentType, ContextType, RequireFields<MutationUpdateRouteArgs, 'id' | 'input'>>;
+  updateTelegramUser?: Resolver<ResolversTypes['TelegramUser'], ParentType, ContextType, RequireFields<MutationUpdateTelegramUserArgs, 'id' | 'input'>>;
   updateTransaction?: Resolver<ResolversTypes['Transaction'], ParentType, ContextType, RequireFields<MutationUpdateTransactionArgs, 'id' | 'input'>>;
   updateUser?: Resolver<ResolversTypes['User'], ParentType, ContextType, RequireFields<MutationUpdateUserArgs, 'id' | 'input'>>;
   uploadDocumentPhoto?: Resolver<ResolversTypes['DocumentPhoto'], ParentType, ContextType, RequireFields<MutationUploadDocumentPhotoArgs, 'input'>>;
@@ -2866,12 +3659,18 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   checkExistingLeader?: Resolver<Maybe<ResolversTypes['ExistingLeaderInfo']>, ParentType, ContextType, RequireFields<QueryCheckExistingLeaderArgs, 'locationId'>>;
   currentActiveWeek?: Resolver<ResolversTypes['WeekRange'], ParentType, ContextType>;
   currentWeek?: Resolver<ResolversTypes['WeekInfo'], ParentType, ContextType>;
+  deadDebtLoans?: Resolver<ResolversTypes['DeadDebtQueryResult'], ParentType, ContextType, Partial<QueryDeadDebtLoansArgs>>;
+  deadDebtMonthlySummary?: Resolver<ResolversTypes['DeadDebtMonthlySummaryResult'], ParentType, ContextType, RequireFields<QueryDeadDebtMonthlySummaryArgs, 'year'>>;
+  deadDebtSummaryByLocality?: Resolver<Array<ResolversTypes['DeadDebtSummaryByLocality']>, ParentType, ContextType, Partial<QueryDeadDebtSummaryByLocalityArgs>>;
+  documentNotificationLogs?: Resolver<Array<ResolversTypes['DocumentNotificationLog']>, ParentType, ContextType, Partial<QueryDocumentNotificationLogsArgs>>;
   documentPhoto?: Resolver<Maybe<ResolversTypes['DocumentPhoto']>, ParentType, ContextType, RequireFields<QueryDocumentPhotoArgs, 'id'>>;
   documentPhotos?: Resolver<Array<ResolversTypes['DocumentPhoto']>, ParentType, ContextType, Partial<QueryDocumentPhotosArgs>>;
   documentsWithErrors?: Resolver<Array<ResolversTypes['DocumentPhoto']>, ParentType, ContextType, Partial<QueryDocumentsWithErrorsArgs>>;
+  documentsWithNotificationStatus?: Resolver<Array<ResolversTypes['DocumentWithNotificationStatus']>, ParentType, ContextType, Partial<QueryDocumentsWithNotificationStatusArgs>>;
   employee?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType, RequireFields<QueryEmployeeArgs, 'id'>>;
   employees?: Resolver<Array<ResolversTypes['Employee']>, ParentType, ContextType, Partial<QueryEmployeesArgs>>;
   financialReport?: Resolver<ResolversTypes['FinancialReport'], ParentType, ContextType, RequireFields<QueryFinancialReportArgs, 'month' | 'routeIds' | 'year'>>;
+  getBankIncomeTransactions?: Resolver<ResolversTypes['BankIncomeTransactionsResponse'], ParentType, ContextType, RequireFields<QueryGetBankIncomeTransactionsArgs, 'endDate' | 'routeIds' | 'startDate'>>;
   getClientHistory?: Resolver<ResolversTypes['ClientHistoryData'], ParentType, ContextType, RequireFields<QueryGetClientHistoryArgs, 'clientId'>>;
   getFinancialReportAnnual?: Resolver<ResolversTypes['AnnualFinancialReport'], ParentType, ContextType, RequireFields<QueryGetFinancialReportAnnualArgs, 'routeIds' | 'year'>>;
   leadPaymentReceivedByLeadAndDate?: Resolver<Maybe<ResolversTypes['LeadPaymentReceived']>, ParentType, ContextType, RequireFields<QueryLeadPaymentReceivedByLeadAndDateArgs, 'endDate' | 'leadId' | 'startDate'>>;
@@ -2885,6 +3684,7 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   loantypes?: Resolver<Array<ResolversTypes['Loantype']>, ParentType, ContextType, Partial<QueryLoantypesArgs>>;
   localityClients?: Resolver<Array<ResolversTypes['LocalityClientDetail']>, ParentType, ContextType, RequireFields<QueryLocalityClientsArgs, 'localityId' | 'month' | 'year'>>;
   locations?: Resolver<Array<ResolversTypes['Location']>, ParentType, ContextType, Partial<QueryLocationsArgs>>;
+  locationsCreatedInPeriod?: Resolver<Array<ResolversTypes['Location']>, ParentType, ContextType, RequireFields<QueryLocationsCreatedInPeriodArgs, 'fromDate' | 'toDate'>>;
   me?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType>;
   municipalities?: Resolver<Array<ResolversTypes['Municipality']>, ParentType, ContextType>;
   portfolioByLocality?: Resolver<ResolversTypes['LocalityReport'], ParentType, ContextType, RequireFields<QueryPortfolioByLocalityArgs, 'month' | 'year'>>;
@@ -2892,12 +3692,19 @@ export type QueryResolvers<ContextType = GraphQLContext, ParentType extends Reso
   portfolioReportMonthly?: Resolver<ResolversTypes['PortfolioReport'], ParentType, ContextType, RequireFields<QueryPortfolioReportMonthlyArgs, 'month' | 'year'>>;
   portfolioReportWeekly?: Resolver<ResolversTypes['PortfolioReport'], ParentType, ContextType, RequireFields<QueryPortfolioReportWeeklyArgs, 'weekNumber' | 'year'>>;
   previewPortfolioCleanup?: Resolver<ResolversTypes['CleanupPreview'], ParentType, ContextType, RequireFields<QueryPreviewPortfolioCleanupArgs, 'maxSignDate'>>;
+  reportConfig?: Resolver<Maybe<ResolversTypes['ReportConfig']>, ParentType, ContextType, RequireFields<QueryReportConfigArgs, 'id'>>;
+  reportConfigs?: Resolver<Array<ResolversTypes['ReportConfig']>, ParentType, ContextType, Partial<QueryReportConfigsArgs>>;
+  reportExecutionLogs?: Resolver<Array<ResolversTypes['ReportExecutionLog']>, ParentType, ContextType, Partial<QueryReportExecutionLogsArgs>>;
   route?: Resolver<Maybe<ResolversTypes['Route']>, ParentType, ContextType, RequireFields<QueryRouteArgs, 'id'>>;
   routes?: Resolver<Array<ResolversTypes['Route']>, ParentType, ContextType>;
   routesWithStats?: Resolver<Array<ResolversTypes['RouteWithStats']>, ParentType, ContextType, RequireFields<QueryRoutesWithStatsArgs, 'month' | 'year'>>;
   searchBorrowers?: Resolver<Array<ResolversTypes['BorrowerSearchResult']>, ParentType, ContextType, RequireFields<QuerySearchBorrowersArgs, 'searchTerm'>>;
   searchClients?: Resolver<Array<ResolversTypes['ClientSearchResult']>, ParentType, ContextType, RequireFields<QuerySearchClientsArgs, 'searchTerm'>>;
   searchPersonalData?: Resolver<Array<ResolversTypes['PersonalData']>, ParentType, ContextType, RequireFields<QuerySearchPersonalDataArgs, 'searchTerm'>>;
+  telegramUser?: Resolver<Maybe<ResolversTypes['TelegramUser']>, ParentType, ContextType, RequireFields<QueryTelegramUserArgs, 'id'>>;
+  telegramUserByChatId?: Resolver<Maybe<ResolversTypes['TelegramUser']>, ParentType, ContextType, RequireFields<QueryTelegramUserByChatIdArgs, 'chatId'>>;
+  telegramUserStats?: Resolver<ResolversTypes['TelegramUserStats'], ParentType, ContextType>;
+  telegramUsers?: Resolver<Array<ResolversTypes['TelegramUser']>, ParentType, ContextType, Partial<QueryTelegramUsersArgs>>;
   transactions?: Resolver<ResolversTypes['TransactionConnection'], ParentType, ContextType, Partial<QueryTransactionsArgs>>;
   user?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType, RequireFields<QueryUserArgs, 'id'>>;
   users?: Resolver<Array<ResolversTypes['User']>, ParentType, ContextType, Partial<QueryUsersArgs>>;
@@ -2908,6 +3715,54 @@ export type RenovationKpIsResolvers<ContextType = GraphQLContext, ParentType ext
   tendencia?: Resolver<ResolversTypes['Trend'], ParentType, ContextType>;
   totalCierresSinRenovar?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   totalRenovaciones?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ReportConfigResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ReportConfig'] = ResolversParentTypes['ReportConfig']> = ResolversObject<{
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  executionLogs?: Resolver<Array<ResolversTypes['ReportExecutionLog']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  isActive?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  reportType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  routes?: Resolver<Array<ResolversTypes['Route']>, ParentType, ContextType>;
+  schedule?: Resolver<Maybe<ResolversTypes['ReportSchedule']>, ParentType, ContextType>;
+  telegramRecipients?: Resolver<Array<ResolversTypes['TelegramUser']>, ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ReportExecutionLogResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ReportExecutionLog'] = ResolversParentTypes['ReportExecutionLog']> = ResolversObject<{
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  cronExpression?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  duration?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  endTime?: Resolver<Maybe<ResolversTypes['DateTime']>, ParentType, ContextType>;
+  errorDetails?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  executionType?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  failedDeliveries?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  message?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  recipientsCount?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  reportConfig?: Resolver<ResolversTypes['ReportConfig'], ParentType, ContextType>;
+  startTime?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  status?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  successfulDeliveries?: Resolver<Maybe<ResolversTypes['Int']>, ParentType, ContextType>;
+  timezone?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ReportExecutionResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ReportExecutionResult'] = ResolversParentTypes['ReportExecutionResult']> = ResolversObject<{
+  errors?: Resolver<Maybe<Array<ResolversTypes['String']>>, ParentType, ContextType>;
+  message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  recipientsNotified?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ReportScheduleResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['ReportSchedule'] = ResolversParentTypes['ReportSchedule']> = ResolversObject<{
+  days?: Resolver<Array<ResolversTypes['String']>, ParentType, ContextType>;
+  hour?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  timezone?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -2939,10 +3794,45 @@ export type RouteWithStatsResolvers<ContextType = GraphQLContext, ParentType ext
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
+export type SendNotificationResultResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['SendNotificationResult'] = ResolversParentTypes['SendNotificationResult']> = ResolversObject<{
+  message?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  notificationId?: Resolver<Maybe<ResolversTypes['ID']>, ParentType, ContextType>;
+  success?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  telegramResponse?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type StateResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['State'] = ResolversParentTypes['State']> = ResolversObject<{
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
   municipalities?: Resolver<Array<ResolversTypes['Municipality']>, ParentType, ContextType>;
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type TelegramUserResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['TelegramUser'] = ResolversParentTypes['TelegramUser']> = ResolversObject<{
+  chatId?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  createdAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  isActive?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  isInRecipientsList?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>;
+  lastActivity?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
+  notes?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  platformUser?: Resolver<Maybe<ResolversTypes['User']>, ParentType, ContextType>;
+  registeredAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  reportConfigs?: Resolver<Array<ResolversTypes['ReportConfig']>, ParentType, ContextType>;
+  reportsReceived?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  username?: Resolver<Maybe<ResolversTypes['String']>, ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type TelegramUserStatsResolvers<ContextType = GraphQLContext, ParentType extends ResolversParentTypes['TelegramUserStats'] = ResolversParentTypes['TelegramUserStats']> = ResolversObject<{
+  activeUsers?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  inRecipientsList?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  inactiveUsers?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  linkedToPlataform?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  totalUsers?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -2988,8 +3878,9 @@ export type UserResolvers<ContextType = GraphQLContext, ParentType extends Resol
   email?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   employee?: Resolver<Maybe<ResolversTypes['Employee']>, ParentType, ContextType>;
   id?: Resolver<ResolversTypes['ID'], ParentType, ContextType>;
+  name?: Resolver<ResolversTypes['String'], ParentType, ContextType>;
   role?: Resolver<ResolversTypes['UserRole'], ParentType, ContextType>;
-  updatedAt?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
+  telegramUser?: Resolver<Maybe<ResolversTypes['TelegramUser']>, ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -3013,6 +3904,7 @@ export type WeeklyDataResolvers<ContextType = GraphQLContext, ParentType extends
   date?: Resolver<ResolversTypes['DateTime'], ParentType, ContextType>;
   expectedPayments?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
   loansGranted?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
+  paymentsCount?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
   paymentsReceived?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
   recoveryRate?: Resolver<ResolversTypes['Decimal'], ParentType, ContextType>;
   week?: Resolver<ResolversTypes['Int'], ParentType, ContextType>;
@@ -3037,6 +3929,8 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   AuthPayload?: AuthPayloadResolvers<ContextType>;
   BadDebtData?: BadDebtDataResolvers<ContextType>;
   BadDebtSummary?: BadDebtSummaryResolvers<ContextType>;
+  BankIncomeTransaction?: BankIncomeTransactionResolvers<ContextType>;
+  BankIncomeTransactionsResponse?: BankIncomeTransactionsResponseResolvers<ContextType>;
   Borrower?: BorrowerResolvers<ContextType>;
   BorrowerSearchResult?: BorrowerSearchResultResolvers<ContextType>;
   CleanupLoanPreview?: CleanupLoanPreviewResolvers<ContextType>;
@@ -3051,10 +3945,23 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   ComparisonData?: ComparisonDataResolvers<ContextType>;
   CreateNewLeaderResult?: CreateNewLeaderResultResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
+  DeadDebtBorrower?: DeadDebtBorrowerResolvers<ContextType>;
+  DeadDebtCriteria?: DeadDebtCriteriaResolvers<ContextType>;
+  DeadDebtLead?: DeadDebtLeadResolvers<ContextType>;
+  DeadDebtLoan?: DeadDebtLoanResolvers<ContextType>;
+  DeadDebtMonthSummary?: DeadDebtMonthSummaryResolvers<ContextType>;
+  DeadDebtMonthlySummaryResult?: DeadDebtMonthlySummaryResultResolvers<ContextType>;
+  DeadDebtPayment?: DeadDebtPaymentResolvers<ContextType>;
+  DeadDebtQueryResult?: DeadDebtQueryResultResolvers<ContextType>;
+  DeadDebtSummaryByLocality?: DeadDebtSummaryByLocalityResolvers<ContextType>;
+  DeadDebtTotals?: DeadDebtTotalsResolvers<ContextType>;
   Decimal?: GraphQLScalarType;
+  DocumentNotificationLog?: DocumentNotificationLogResolvers<ContextType>;
   DocumentPhoto?: DocumentPhotoResolvers<ContextType>;
+  DocumentWithNotificationStatus?: DocumentWithNotificationStatusResolvers<ContextType>;
   Employee?: EmployeeResolvers<ContextType>;
   EmployeeWithStats?: EmployeeWithStatsResolvers<ContextType>;
+  EvaluationPeriod?: EvaluationPeriodResolvers<ContextType>;
   ExistingLeaderInfo?: ExistingLeaderInfoResolvers<ContextType>;
   FinancialReport?: FinancialReportResolvers<ContextType>;
   FinancialSummary?: FinancialSummaryResolvers<ContextType>;
@@ -3075,6 +3982,8 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   LocalityWeekData?: LocalityWeekDataResolvers<ContextType>;
   Location?: LocationResolvers<ContextType>;
   LocationBreakdown?: LocationBreakdownResolvers<ContextType>;
+  MarkDeadDebtResult?: MarkDeadDebtResultResolvers<ContextType>;
+  MonthInfo?: MonthInfoResolvers<ContextType>;
   MonthlyFinancialData?: MonthlyFinancialDataResolvers<ContextType>;
   Municipality?: MunicipalityResolvers<ContextType>;
   Mutation?: MutationResolvers<ContextType>;
@@ -3090,10 +3999,17 @@ export type Resolvers<ContextType = GraphQLContext> = ResolversObject<{
   PortfolioSummary?: PortfolioSummaryResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   RenovationKPIs?: RenovationKpIsResolvers<ContextType>;
+  ReportConfig?: ReportConfigResolvers<ContextType>;
+  ReportExecutionLog?: ReportExecutionLogResolvers<ContextType>;
+  ReportExecutionResult?: ReportExecutionResultResolvers<ContextType>;
+  ReportSchedule?: ReportScheduleResolvers<ContextType>;
   Route?: RouteResolvers<ContextType>;
   RouteInfo?: RouteInfoResolvers<ContextType>;
   RouteWithStats?: RouteWithStatsResolvers<ContextType>;
+  SendNotificationResult?: SendNotificationResultResolvers<ContextType>;
   State?: StateResolvers<ContextType>;
+  TelegramUser?: TelegramUserResolvers<ContextType>;
+  TelegramUserStats?: TelegramUserStatsResolvers<ContextType>;
   Transaction?: TransactionResolvers<ContextType>;
   TransactionConnection?: TransactionConnectionResolvers<ContextType>;
   TransactionEdge?: TransactionEdgeResolvers<ContextType>;

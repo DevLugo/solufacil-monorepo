@@ -1,5 +1,19 @@
 /**
- * Opciones para formateo de moneda
+ * Safely converts Prisma Decimal or any value to a number
+ * Handles null, undefined, Decimal objects, strings, and numbers
+ */
+export function toDecimal(value: unknown): number {
+  if (value === null || value === undefined) return 0
+  if (typeof value === 'object' && value !== null && 'toNumber' in value) {
+    return (value as { toNumber: () => number }).toNumber()
+  }
+  if (typeof value === 'string') return parseFloat(value) || 0
+  if (typeof value === 'number') return value
+  return 0
+}
+
+/**
+ * Currency format options
  */
 export interface CurrencyFormatOptions {
   decimals?: number
