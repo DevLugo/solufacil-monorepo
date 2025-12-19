@@ -1,8 +1,8 @@
 import { useQuery } from '@apollo/client'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { SearchableSelect } from '@/components/ui/searchable-select'
+import type { SearchableSelectOption } from '@/components/ui/searchable-select'
 import { GET_ROUTES } from '@/graphql/queries/leader'
-import { Loader2 } from 'lucide-react'
 
 interface LocationFilterProps {
   selectedRouteId: string
@@ -30,70 +30,50 @@ export function LocationFilter({
   const { data: routesData, loading: routesLoading } = useQuery(GET_ROUTES)
   const routes = routesData?.routes || []
 
+  const routeOptions: SearchableSelectOption[] = routes.map((route: { id: string; name: string }) => ({
+    value: route.id,
+    label: route.name,
+  }))
+
+  const locationOptions: SearchableSelectOption[] = locations.map((location) => ({
+    value: location.id,
+    label: location.name,
+  }))
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="route-select">
           Ruta <span className="text-destructive">*</span>
         </Label>
-        <Select
-          value={selectedRouteId}
-          onValueChange={onRouteChange}
-          disabled={disabled || routesLoading}
-        >
-          <SelectTrigger id="route-select">
-            {routesLoading ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Cargando rutas...</span>
-              </div>
-            ) : (
-              <SelectValue placeholder="Selecciona una ruta..." />
-            )}
-          </SelectTrigger>
-          <SelectContent>
-            {routes.map((route: { id: string; name: string }) => (
-              <SelectItem key={route.id} value={route.id}>
-                {route.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          options={routeOptions}
+          value={selectedRouteId || null}
+          onValueChange={(value) => onRouteChange(value || '')}
+          placeholder="Selecciona una ruta..."
+          searchPlaceholder="Buscar ruta..."
+          emptyText="No se encontraron rutas"
+          disabled={disabled}
+          loading={routesLoading}
+          className="w-full"
+        />
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="location-select">
           Localidad <span className="text-destructive">*</span>
         </Label>
-        <Select
-          value={selectedLocationId}
-          onValueChange={onLocationChange}
-          disabled={disabled || !selectedRouteId || locationsLoading}
-        >
-          <SelectTrigger id="location-select">
-            {locationsLoading ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Cargando localidades...</span>
-              </div>
-            ) : (
-              <SelectValue placeholder={selectedRouteId ? 'Selecciona una localidad...' : 'Primero selecciona una ruta'} />
-            )}
-          </SelectTrigger>
-          <SelectContent>
-            {locations.length === 0 && selectedRouteId && !locationsLoading ? (
-              <div className="p-2 text-sm text-muted-foreground text-center">
-                No hay localidades disponibles
-              </div>
-            ) : (
-              locations.map((location) => (
-                <SelectItem key={location.id} value={location.id}>
-                  {location.name}
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          options={locationOptions}
+          value={selectedLocationId || null}
+          onValueChange={(value) => onLocationChange(value || '')}
+          placeholder={selectedRouteId ? 'Selecciona una localidad...' : 'Primero selecciona una ruta'}
+          searchPlaceholder="Buscar localidad..."
+          emptyText={selectedRouteId ? 'No hay localidades disponibles' : 'Primero selecciona una ruta'}
+          disabled={disabled || !selectedRouteId}
+          loading={locationsLoading}
+          className="w-full"
+        />
       </div>
 
       {!selectedRouteId && (

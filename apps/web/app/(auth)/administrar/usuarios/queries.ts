@@ -7,6 +7,24 @@ export const GET_USERS = gql`
       name
       email
       role
+      employee {
+        id
+        type
+        personalData {
+          id
+          fullName
+        }
+        routes {
+          id
+          name
+        }
+      }
+      telegramUser {
+        id
+        chatId
+        name
+        isActive
+      }
       createdAt
     }
   }

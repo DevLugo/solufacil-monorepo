@@ -13,13 +13,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { SearchableSelect } from '@/components/ui/searchable-select'
+import type { SearchableSelectOption } from '@/components/ui/searchable-select'
 import { useTransactionContext } from './transaction-context'
 import { ROUTES_WITH_ACCOUNTS_QUERY } from '@/graphql/queries/transactions'
 import { cn, formatCurrency } from '@/lib/utils'
@@ -117,6 +112,21 @@ export function TransactionSelectors() {
   const leads = leadsData?.employees || []
   const selectedRoute = routes.find(r => r.id === selectedRouteId)
 
+  // Convert routes to SearchableSelect options
+  const routeOptions: SearchableSelectOption[] = routes.map((route) => ({
+    value: route.id,
+    label: route.name,
+  }))
+
+  // Convert leads to SearchableSelect options
+  const leadOptions: SearchableSelectOption[] = [
+    { value: 'all', label: 'Todas las localidades' },
+    ...leads.map((lead) => ({
+      value: lead.id,
+      label: getLeadLabel(lead),
+    })),
+  ]
+
   // Sort accounts: EMPLOYEE_CASH_FUND first, then BANK, then others
   const accounts = (selectedRoute?.accounts || []).slice().sort((a, b) => {
     const order: Record<string, number> = {
@@ -149,32 +159,21 @@ export function TransactionSelectors() {
         {/* Route Selector */}
         <div className="flex items-center gap-2">
           <MapPin className="h-4 w-4 text-muted-foreground" />
-          <Select
-            value={selectedRouteId || ''}
+          <SearchableSelect
+            options={routeOptions}
+            value={selectedRouteId}
             onValueChange={(value) => {
-              setSelectedRouteId(value || null)
+              setSelectedRouteId(value)
               setSelectedLeadId(null) // Reset lead when route changes
               setSelectedLocationId(null) // Reset location when route changes
               setSelectedLocationName(null)
             }}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Seleccionar ruta" />
-            </SelectTrigger>
-            <SelectContent>
-              {routesLoading ? (
-                <div className="flex items-center justify-center py-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                </div>
-              ) : (
-                routes.map((route) => (
-                  <SelectItem key={route.id} value={route.id}>
-                    {route.name}
-                  </SelectItem>
-                ))
-              )}
-            </SelectContent>
-          </Select>
+            placeholder="Seleccionar ruta"
+            searchPlaceholder="Buscar ruta..."
+            emptyText="No se encontraron rutas"
+            loading={routesLoading}
+            className="w-[200px]"
+          />
         </div>
 
         {/* Date Picker */}
@@ -212,7 +211,8 @@ export function TransactionSelectors() {
         {selectedRouteId && (
           <div className="flex items-center gap-2">
             <User className="h-4 w-4 text-muted-foreground" />
-            <Select
+            <SearchableSelect
+              options={leadOptions}
               value={selectedLeadId || 'all'}
               onValueChange={(value) => {
                 const leadId = value === 'all' ? null : value
@@ -223,29 +223,12 @@ export function TransactionSelectors() {
                 setSelectedLocationId(location?.id || null)
                 setSelectedLocationName(location?.name || null)
               }}
-            >
-              <SelectTrigger className="w-[300px]">
-                <SelectValue placeholder="Seleccionar localidad" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las localidades</SelectItem>
-                {leadsLoading ? (
-                  <div className="flex items-center justify-center py-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
-                ) : leads.length === 0 ? (
-                  <div className="py-2 px-3 text-sm text-muted-foreground">
-                    No hay localidades en esta ruta
-                  </div>
-                ) : (
-                  leads.map((lead) => (
-                    <SelectItem key={lead.id} value={lead.id}>
-                      {getLeadLabel(lead)}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+              placeholder="Seleccionar localidad"
+              searchPlaceholder="Buscar localidad..."
+              emptyText="No hay localidades en esta ruta"
+              loading={leadsLoading}
+              className="w-[300px]"
+            />
             {/* Botón para limpiar selección */}
             {selectedLeadId && (
               <Button
