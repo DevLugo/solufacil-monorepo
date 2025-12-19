@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/use-auth'
 import { saveRedirectUrl } from '@/hooks/use-redirect-url'
-import { tieneAcceso } from '@/lib/permissions'
+import { tieneAcceso, getHomePage } from '@/lib/permissions'
 import { UserRoleType } from '@solufacil/shared'
 import { Loader2 } from 'lucide-react'
 
@@ -41,8 +41,9 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
     const rolUsuario = user.role as UserRoleType
     if (!tieneAcceso(rolUsuario, pathname)) {
-      // Redirigir a dashboard si no tiene permiso
-      router.replace('/dashboard')
+      // Redirigir a la página de inicio del usuario si no tiene permiso
+      const homePage = getHomePage(rolUsuario)
+      router.replace(homePage)
     }
   }, [isMounted, isLoading, isAuthenticated, user, pathname, router])
 
@@ -68,6 +69,21 @@ export function AuthGuard({ children }: AuthGuardProps) {
         </div>
       </div>
     )
+  }
+
+  // Bloquear renderizado si el usuario no tiene permiso (redirect ocurrira en useEffect)
+  if (user) {
+    const rolUsuario = user.role as UserRoleType
+    if (!tieneAcceso(rolUsuario, pathname)) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Redirigiendo...</p>
+          </div>
+        </div>
+      )
+    }
   }
 
   return <>{children}</>

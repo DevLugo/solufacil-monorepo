@@ -43,9 +43,9 @@ export const userResolvers = {
           employee: {
             include: {
               personalDataRelation: true,
+              routes: true,
             },
           },
-          telegramUsers: true,
         },
       })
     },

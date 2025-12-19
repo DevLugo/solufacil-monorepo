@@ -26,10 +26,32 @@ export const employeeResolvers = {
       authenticateUser(context)
 
       const employeeService = new EmployeeService(context.prisma)
-      return employeeService.findMany({
+      const employees = await employeeService.findMany({
         type: args.type ?? undefined,
         routeId: args.routeId ?? undefined,
       })
+
+      console.log('🔍 [BACKEND] Employees query returned:', {
+        total: employees.length,
+        sample: employees.slice(0, 2).map(emp => ({
+          id: emp.id,
+          type: emp.type,
+          hasPersonalData: !!emp.personalDataRelation,
+          personalDataId: emp.personalData,
+          personalDataFull: emp.personalDataRelation,
+          hasUser: !!emp.user,
+          userId: emp.user,
+          loansGrantedCount: emp.loansGranted?.length || 0,
+          loansManagedCount: emp.loansManagedAsLead?.length || 0,
+        }))
+      })
+
+      // Log the raw first employee to see the exact structure
+      if (employees.length > 0) {
+        console.log('🔍 [BACKEND] First employee RAW:', JSON.stringify(employees[0], null, 2))
+      }
+
+      return employees
     },
   },
 
@@ -94,8 +116,22 @@ export const employeeResolvers = {
   },
 
   Employee: {
-    personalData: async (parent: { personalData: string | null; personalDataRelation?: unknown }, _args: unknown, context: GraphQLContext) => {
-      return resolvePersonalData(parent, context)
+    personalData: (parent: { personalData: string; personalDataRelation?: any }) => {
+      const result = parent.personalDataRelation || null
+
+      // Ensure id is always present
+      if (result && !result.id) {
+        console.warn('⚠️ [BACKEND] PersonalData missing id, adding it:', {
+          parentPersonalDataId: parent.personalData,
+          resultKeys: Object.keys(result),
+        })
+        return {
+          ...result,
+          id: parent.personalData,
+        }
+      }
+
+      return result
     },
 
     user: async (parent: { user?: string | null }, _args: unknown, context: GraphQLContext) => {

@@ -1,6 +1,7 @@
 import type { GraphQLContext } from '@solufacil/graphql-schema'
 import { ClientHistoryService } from '../services/ClientHistoryService'
 import { authenticateUser } from '../middleware/auth'
+import { USER_ROLES } from '@solufacil/shared'
 
 export const clientResolvers = {
   Query: {
@@ -15,14 +16,18 @@ export const clientResolvers = {
       context: GraphQLContext
     ) => {
       authenticateUser(context)
+      const isAdmin = context.user?.role === USER_ROLES.ADMIN
 
       const clientHistoryService = new ClientHistoryService(context.prisma)
-      return clientHistoryService.searchClients({
-        searchTerm: args.searchTerm,
-        routeId: args.routeId,
-        locationId: args.locationId,
-        limit: args.limit,
-      })
+      return clientHistoryService.searchClients(
+        {
+          searchTerm: args.searchTerm,
+          routeId: args.routeId,
+          locationId: args.locationId,
+          limit: args.limit,
+        },
+        { isAdmin }
+      )
     },
 
     getClientHistory: async (
@@ -35,12 +40,14 @@ export const clientResolvers = {
       context: GraphQLContext
     ) => {
       authenticateUser(context)
+      const isAdmin = context.user?.role === USER_ROLES.ADMIN
 
       const clientHistoryService = new ClientHistoryService(context.prisma)
       return clientHistoryService.getClientHistory(
         args.clientId,
         args.routeId,
-        args.locationId
+        args.locationId,
+        { isAdmin }
       )
     },
   },

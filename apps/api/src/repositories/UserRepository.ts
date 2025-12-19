@@ -198,20 +198,40 @@ export class UserRepository {
     return count > 0
   }
 
-  async createEmployee(data: { type: EmployeeType; fullName: string }) {
-    // Create personal data first
-    const personalData = await this.prisma.personalData.create({
-      data: {
-        fullName: data.fullName,
-        clientCode: `EMP-${Date.now()}`,
-      },
-    })
+  async createEmployee(data: {
+    type: EmployeeType
+    fullName: string
+    personalDataId?: string
+  }) {
+    let personalDataId = data.personalDataId
+
+    // Si no se proporciona personalDataId, crear uno nuevo
+    if (!personalDataId) {
+      const personalData = await this.prisma.personalData.create({
+        data: {
+          fullName: data.fullName,
+          clientCode: `EMP-${Date.now()}`,
+        },
+      })
+      personalDataId = personalData.id
+    } else {
+      // Verificar que el personalData existe y no está ya asociado a un empleado
+      const existingEmployee = await this.prisma.employee.findUnique({
+        where: { personalData: personalDataId },
+      })
+
+      if (existingEmployee) {
+        throw new Error(
+          'Esta persona ya está registrada como empleado'
+        )
+      }
+    }
 
     // Create employee linked to personal data
     return this.prisma.employee.create({
       data: {
         type: data.type,
-        personalData: personalData.id,
+        personalData: personalDataId,
       },
     })
   }

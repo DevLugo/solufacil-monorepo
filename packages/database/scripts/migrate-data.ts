@@ -283,7 +283,9 @@ async function migrateTable(tableName: string): Promise<MigrationResult> {
           SELECT l.id, l."oldId", COALESCE(l."requestedAmount", 0), COALESCE(l."amountGived", 0), l."signDate", l."finishedDate", l."renewedDate", l."badDebtDate", COALESCE(l."isDeceased", false), COALESCE(l."profitAmount", 0), COALESCE(l."totalDebtAcquired", 0), COALESCE(l."expectedWeeklyPayment", 0), COALESCE(l."totalPaid", 0), COALESCE(l."pendingAmountStored", 0), COALESCE(l."comissionAmount", 0), l.status::text::"${TARGET_SCHEMA}"."LoanStatus", l.borrower, l.loantype,
             CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Employee" WHERE id = l.grantor) THEN l.grantor ELSE NULL END,
             CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Employee" WHERE id = l.lead) THEN l.lead ELSE NULL END,
-            COALESCE(l."snapshotLeadId", ''), l."snapshotLeadAssignedAt", COALESCE(l."snapshotRouteId", ''), COALESCE(l."snapshotRouteName", ''), NULL,
+            COALESCE(l."snapshotLeadId", ''), l."snapshotLeadAssignedAt",
+            CASE WHEN l."snapshotRouteId" IS NOT NULL AND l."snapshotRouteId" != '' AND EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."Route" WHERE id = l."snapshotRouteId") THEN l."snapshotRouteId" ELSE NULL END,
+            COALESCE(l."snapshotRouteName", ''), NULL,
             CASE WHEN EXISTS (SELECT 1 FROM "${TARGET_SCHEMA}"."PortfolioCleanup" WHERE id = l."excludedByCleanup") THEN l."excludedByCleanup" ELSE NULL END,
             l."createdAt", COALESCE(l."updatedAt", l."createdAt", NOW())
           FROM "${SOURCE_SCHEMA}"."Loan" l

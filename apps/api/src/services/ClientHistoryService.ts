@@ -114,6 +114,11 @@ export interface NoPaymentPeriod {
   weekCount: number
 }
 
+export interface ClientHistoryOptions {
+  /** If true, allows viewing employee/user data (admin only) */
+  isAdmin?: boolean
+}
+
 export class ClientHistoryService {
   constructor(private prisma: ExtendedPrismaClient) {}
 
@@ -125,19 +130,40 @@ export class ClientHistoryService {
     })
   }
 
-  async searchClients(input: SearchClientsInput): Promise<ClientSearchResult[]> {
+  async searchClients(
+    input: SearchClientsInput,
+    options: ClientHistoryOptions = {}
+  ): Promise<ClientSearchResult[]> {
     const { searchTerm, routeId, locationId, limit = 20 } = input
+    const { isAdmin = false } = options
 
     if (searchTerm.length < 2) {
       return []
     }
 
     // Search in PersonalData
+    // If NOT admin, exclude personalData associated with Users (through Employee -> User)
     const personalDataResults = await this.prisma.personalData.findMany({
       where: {
-        OR: [
-          { fullName: { contains: searchTerm, mode: 'insensitive' } },
-          { clientCode: { contains: searchTerm, mode: 'insensitive' } },
+        AND: [
+          // Search filter
+          {
+            OR: [
+              { fullName: { contains: searchTerm, mode: 'insensitive' } },
+              { clientCode: { contains: searchTerm, mode: 'insensitive' } },
+            ],
+          },
+          // Security: Non-admin users cannot see data of people with User accounts
+          ...(isAdmin
+            ? []
+            : [
+                {
+                  OR: [
+                    { employee: null },
+                    { employee: { user: null } },
+                  ],
+                },
+              ]),
         ],
       },
       take: limit * 2,
@@ -265,11 +291,26 @@ export class ClientHistoryService {
   async getClientHistory(
     clientId: string,
     _routeId?: string,
-    _locationId?: string
+    _locationId?: string,
+    options: ClientHistoryOptions = {}
   ): Promise<ClientHistoryData> {
+    const { isAdmin = false } = options
+
     // Get PersonalData with all related info
-    const personalData = await this.prisma.personalData.findUnique({
-      where: { id: clientId },
+    // If NOT admin, exclude personalData associated with Users (through Employee -> User)
+    const personalData = await this.prisma.personalData.findFirst({
+      where: {
+        id: clientId,
+        // Security: Non-admin users cannot see data of people with User accounts
+        ...(isAdmin
+          ? {}
+          : {
+              OR: [
+                { employee: null },
+                { employee: { user: null } },
+              ],
+            }),
+      },
       include: {
         phones: true,
         addresses: {
@@ -327,7 +368,22 @@ export class ClientHistoryService {
     })
 
     if (!personalData) {
-      throw new Error('Client not found')
+      // Check if the client exists but has an associated User account (for non-admin users)
+      if (!isAdmin) {
+        const existsWithUser = await this.prisma.personalData.findFirst({
+          where: {
+            id: clientId,
+            employee: {
+              user: { not: null },
+            },
+          },
+          select: { id: true },
+        })
+        if (existsWithUser) {
+          throw new Error('Acceso denegado: Información privada de usuario')
+        }
+      }
+      throw new Error('Cliente no encontrado')
     }
 
     // Get loans where this person is a collateral

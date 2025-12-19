@@ -115,6 +115,7 @@ export default function AdministrarUsuariosPage() {
               employeeId: formData.employeeId || undefined,
               createEmployee: formData.createEmployee || undefined,
               employeeType: formData.createEmployee ? formData.employeeType : undefined,
+              personalDataId: formData.createEmployee ? formData.personalDataId : undefined,
             },
           },
         })
@@ -168,8 +169,8 @@ export default function AdministrarUsuariosPage() {
   const stats = {
     total: users.length,
     admins: users.filter((u) => u.role === 'ADMIN').length,
-    withTelegram: users.filter((u) => u.telegramUser).length,
-    withEmployee: users.filter((u) => u.employee).length,
+    withTelegram: 0, // Temporarily disabled
+    withEmployee: 0, // Temporarily disabled
   }
 
   return (

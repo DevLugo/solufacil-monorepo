@@ -7,23 +7,6 @@ export const GET_USERS = gql`
       name
       email
       role
-      employee {
-        id
-        type
-        personalData {
-          fullName
-        }
-        routes {
-          id
-          name
-        }
-      }
-      telegramUser {
-        id
-        chatId
-        name
-        isActive
-      }
       createdAt
     }
   }
@@ -35,7 +18,9 @@ export const GET_EMPLOYEES_FOR_LINKING = gql`
       id
       type
       personalData {
+        id
         fullName
+        clientCode
       }
       routes {
         id
@@ -43,6 +28,20 @@ export const GET_EMPLOYEES_FOR_LINKING = gql`
       }
       user {
         id
+      }
+      loansGranted {
+        id
+        requestedAmount
+        amountGived
+        status
+        signDate
+      }
+      loansManagedAsLead {
+        id
+        requestedAmount
+        amountGived
+        status
+        signDate
       }
     }
   }

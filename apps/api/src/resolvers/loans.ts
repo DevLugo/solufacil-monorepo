@@ -316,6 +316,35 @@ export const loanResolvers = {
     },
   },
 
+  Borrower: {
+    personalData: async (
+      parent: { personalData: string; personalDataRelation?: any },
+      _args: unknown,
+      context: GraphQLContext
+    ) => {
+      // Si personalDataRelation ya está incluido, asegurar que tenga id
+      if (parent.personalDataRelation) {
+        const result = parent.personalDataRelation
+        // Ensure id is always present
+        if (!result.id) {
+          console.warn('⚠️ [BACKEND] Borrower.PersonalData missing id, adding it:', {
+            parentPersonalDataId: parent.personalData,
+            resultKeys: Object.keys(result),
+          })
+          return {
+            ...result,
+            id: parent.personalData,
+          }
+        }
+        return result
+      }
+      // Si no, buscarlo
+      return context.prisma.personalData.findUnique({
+        where: { id: parent.personalData },
+      })
+    },
+  },
+
   Loan: {
     borrower: async (
       parent: { borrower: string; borrowerRelation?: unknown },

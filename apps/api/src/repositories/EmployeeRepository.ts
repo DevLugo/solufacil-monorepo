@@ -44,8 +44,17 @@ export class EmployeeRepository {
       },
       include: {
         personalDataRelation: {
-          include: {
-            phones: true,
+          select: {
+            id: true,
+            fullName: true,
+            clientCode: true,
+            birthDate: true,
+            phones: {
+              select: {
+                id: true,
+                number: true,
+              },
+            },
             addresses: {
               include: {
                 locationRelation: true,
@@ -53,8 +62,39 @@ export class EmployeeRepository {
             },
           },
         },
-        routes: true,
-        userRelation: true,
+        routes: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        userRelation: {
+          select: {
+            id: true,
+          },
+        },
+        loansGranted: {
+          select: {
+            id: true,
+            requestedAmount: true,
+            amountGived: true,
+            status: true,
+            signDate: true,
+            borrower: true,
+          },
+          orderBy: { signDate: 'desc' },
+        },
+        loansManagedAsLead: {
+          select: {
+            id: true,
+            requestedAmount: true,
+            amountGived: true,
+            status: true,
+            signDate: true,
+            borrower: true,
+          },
+          orderBy: { signDate: 'desc' },
+        },
       },
       orderBy: { createdAt: 'desc' },
     })

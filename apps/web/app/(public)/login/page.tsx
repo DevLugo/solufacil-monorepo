@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/card'
 import { LOGIN_MUTATION } from '@/graphql/mutations/auth'
 import { getRedirectUrl } from '@/hooks/use-redirect-url'
+import { getHomePage } from '@/lib/permissions'
+import { UserRoleType } from '@solufacil/shared'
 
 interface LoginResult {
   login: {
@@ -50,7 +52,10 @@ export default function LoginPage() {
         localStorage.setItem('accessToken', data.login.accessToken)
         localStorage.setItem('refreshToken', data.login.refreshToken)
         setIsNavigating(true)
-        const redirectTo = getRedirectUrl() || '/dashboard'
+        // Redirect to saved URL or user's role-appropriate home page
+        const userRole = data.login.user.role as UserRoleType
+        const defaultHome = getHomePage(userRole)
+        const redirectTo = getRedirectUrl() || defaultHome
         await router.push(redirectTo)
       }
     },

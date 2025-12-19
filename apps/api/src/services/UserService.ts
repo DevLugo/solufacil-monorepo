@@ -13,6 +13,7 @@ export interface CreateUserInput {
   // Para crear empleado junto con el usuario
   createEmployee?: boolean
   employeeType?: EmployeeType
+  personalDataId?: string
 }
 
 export interface UpdateUserInput {
@@ -70,6 +71,7 @@ export class UserService {
       const newEmployee = await this.userRepository.createEmployee({
         type: input.employeeType,
         fullName: input.name,
+        personalDataId: input.personalDataId, // Vincular PersonalData existente si se proporciona
       })
       employeeId = newEmployee.id
     }

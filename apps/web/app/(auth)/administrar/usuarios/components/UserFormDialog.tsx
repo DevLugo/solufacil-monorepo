@@ -24,6 +24,8 @@ import { Loader2, Eye, EyeOff } from 'lucide-react'
 import type { User, Employee } from '../types'
 import { ROLE_LABELS, EMPLOYEE_TYPE_LABELS } from '../types'
 import { GET_EMPLOYEES_FOR_LINKING } from '../queries'
+import { EmployeeSelector } from './EmployeeSelector'
+import { PersonalDataSelector } from './PersonalDataSelector'
 
 interface UserFormDialogProps {
   open: boolean
@@ -43,6 +45,8 @@ export interface UserFormData {
   // Para crear nuevo empleado
   createEmployee?: boolean
   employeeType?: 'ROUTE_LEAD' | 'LEAD' | 'ROUTE_ASSISTENT'
+  // Para vincular PersonalData existente al crear empleado
+  personalDataId?: string
 }
 
 const EMPLOYEE_TYPE_OPTIONS = [
@@ -67,17 +71,53 @@ export function UserFormDialog({
     employeeId: '',
     createEmployee: false,
     employeeType: 'LEAD',
+    personalDataId: '',
   })
   const [showPassword, setShowPassword] = useState(false)
   const [employeeMode, setEmployeeMode] = useState<'none' | 'link' | 'create'>('none')
+  const [selectedPersonalDataName, setSelectedPersonalDataName] = useState('')
 
-  const { data: employeesData, loading: loadingEmployees } = useQuery<{
+  const { data: employeesData, loading: loadingEmployees, error: employeesError } = useQuery<{
     employees: Employee[]
   }>(GET_EMPLOYEES_FOR_LINKING, { skip: !open })
 
   // Filter employees without a user (or include the current user's employee)
   const availableEmployees =
     employeesData?.employees?.filter((emp) => !emp.user || emp.user?.id === user?.id) || []
+
+  // Debug logging
+  useEffect(() => {
+    if (open) {
+      console.log('🔍 Employees Query Debug:', {
+        loading: loadingEmployees,
+        total: employeesData?.employees?.length || 0,
+        available: availableEmployees.length,
+        hasError: !!employeesError,
+        errorMessage: employeesError?.message,
+        errorDetails: employeesError,
+        rawData: employeesData,
+        currentUserId: user?.id,
+      })
+
+      // Log each employee
+      if (employeesData?.employees) {
+        console.log('📋 All employees:', employeesData.employees.map(emp => ({
+          id: emp.id,
+          name: emp.personalData?.fullName,
+          type: emp.type,
+          hasUser: !!emp.user,
+          userId: emp.user?.id,
+        })))
+      }
+
+      // Log filtered employees
+      console.log('✅ Available employees:', availableEmployees.map(emp => ({
+        id: emp.id,
+        name: emp.personalData?.fullName,
+        type: emp.type,
+      })))
+    }
+  }, [open, loadingEmployees, employeesData, availableEmployees, employeesError, user])
 
   useEffect(() => {
     if (user) {
@@ -103,8 +143,10 @@ export function UserFormDialog({
         employeeId: '',
         createEmployee: false,
         employeeType: 'LEAD',
+        personalDataId: '',
       })
       setEmployeeMode('none')
+      setSelectedPersonalDataName('')
     }
   }, [user, open])
 
@@ -231,14 +273,34 @@ export function UserFormDialog({
                 </Label>
               </div>
 
-              {availableEmployees.length > 0 && (
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="link" id="emp-link" />
-                  <Label htmlFor="emp-link" className="font-normal cursor-pointer">
-                    Vincular a empleado existente
-                  </Label>
-                </div>
-              )}
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem
+                  value="link"
+                  id="emp-link"
+                  disabled={availableEmployees.length === 0}
+                />
+                <Label
+                  htmlFor="emp-link"
+                  className={`font-normal cursor-pointer ${
+                    availableEmployees.length === 0 ? 'text-muted-foreground' : ''
+                  }`}
+                >
+                  Vincular a empleado existente
+                  {loadingEmployees && (
+                    <span className="text-xs text-muted-foreground ml-2">(Cargando...)</span>
+                  )}
+                  {!loadingEmployees && employeesError && (
+                    <span className="text-xs text-red-500 ml-2">
+                      (Error: {employeesError.message})
+                    </span>
+                  )}
+                  {!loadingEmployees && !employeesError && availableEmployees.length === 0 && (
+                    <span className="text-xs text-muted-foreground ml-2">
+                      (No hay empleados disponibles - Total: {employeesData?.employees?.length || 0})
+                    </span>
+                  )}
+                </Label>
+              </div>
 
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="create" id="emp-create" />
@@ -248,57 +310,64 @@ export function UserFormDialog({
               </div>
             </RadioGroup>
 
-            {/* Dropdown para vincular existente */}
+            {/* Selector para vincular existente */}
             {employeeMode === 'link' && (
-              <Select
-                value={formData.employeeId || ''}
-                onValueChange={(value) => setFormData({ ...formData, employeeId: value })}
-                disabled={loadingEmployees}
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={loadingEmployees ? 'Cargando...' : 'Seleccionar empleado'}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableEmployees.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.personalData?.fullName || 'Sin nombre'} -{' '}
-                      {EMPLOYEE_TYPE_LABELS[emp.type] || emp.type}
-                      {emp.routes?.length > 0 && ` (${emp.routes[0].name})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <EmployeeSelector
+                employees={availableEmployees}
+                selectedEmployeeId={formData.employeeId}
+                onSelectEmployee={(id) => setFormData({ ...formData, employeeId: id })}
+                loading={loadingEmployees}
+              />
             )}
 
-            {/* Tipo de empleado para crear nuevo */}
+            {/* Opciones para crear nuevo empleado */}
             {employeeMode === 'create' && (
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Tipo de empleado</Label>
-                <Select
-                  value={formData.employeeType}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      employeeType: value as UserFormData['employeeType'],
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {EMPLOYEE_TYPE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Se creara con el nombre &quot;{formData.name || '...'}&quot;
-                </p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Tipo de empleado</Label>
+                  <Select
+                    value={formData.employeeType}
+                    onValueChange={(value) =>
+                      setFormData({
+                        ...formData,
+                        employeeType: value as UserFormData['employeeType'],
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {EMPLOYEE_TYPE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Selector de PersonalData existente */}
+                <div className="space-y-2">
+                  <PersonalDataSelector
+                    selectedPersonalDataId={formData.personalDataId}
+                    onSelectPersonalData={(id, name) => {
+                      setFormData({ ...formData, personalDataId: id })
+                      setSelectedPersonalDataName(name)
+                    }}
+                  />
+                  {!formData.personalDataId && (
+                    <p className="text-xs text-muted-foreground">
+                      Si no seleccionas una persona existente, se creará con el nombre &quot;
+                      {formData.name || '...'}&quot;
+                    </p>
+                  )}
+                  {formData.personalDataId && selectedPersonalDataName && (
+                    <p className="text-xs text-green-600">
+                      Se vinculará al empleado existente: {selectedPersonalDataName}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </div>

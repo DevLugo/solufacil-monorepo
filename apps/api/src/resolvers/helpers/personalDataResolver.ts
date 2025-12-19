@@ -18,13 +18,16 @@ export async function resolvePersonalData(
     return null
   }
 
-  // If personalDataRelation is already included, check if it's valid
+  // If personalDataRelation is already included, return it with id
   if (parent.personalDataRelation) {
     // Type guard: check if it's an object with id property
     const relation = parent.personalDataRelation as { id?: string | null }
-    // If the relation object has no id, return null
+    // If the relation object has no id, add it from parent.personalData
     if (!relation.id) {
-      return null
+      return {
+        ...parent.personalDataRelation,
+        id: parent.personalData,
+      }
     }
     return parent.personalDataRelation
   }

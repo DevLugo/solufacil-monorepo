@@ -25,19 +25,31 @@ export interface User {
   createdAt: string
 }
 
+export interface Loan {
+  id: string
+  requestedAmount: string
+  amountGived: string
+  status: string
+  signDate: string
+}
+
 export interface Employee {
   id: string
   type: 'ROUTE_LEAD' | 'LEAD' | 'ROUTE_ASSISTENT'
-  personalData: {
+  personalData?: {
+    id?: string
     fullName: string
+    clientCode?: string
   }
-  routes: {
+  routes?: {
     id: string
     name: string
   }[]
   user?: {
     id: string
   } | null
+  loansGranted?: Loan[]
+  loansManagedAsLead?: Loan[]
 }
 
 // Re-export from shared for convenience
