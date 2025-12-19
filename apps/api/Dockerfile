@@ -27,10 +27,12 @@ COPY packages/business-logic ./packages/business-logic
 COPY packages/shared ./packages/shared
 
 # Generate Prisma client
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
 RUN pnpm --filter @solufacil/database db:generate
 
-# Build all packages
-RUN pnpm turbo run build --filter=@solufacil/api
+# Build all packages (exclude web to avoid frontend env var requirements)
+RUN pnpm turbo run build --filter=@solufacil/api --filter=!@solufacil/web
 
 # Production stage
 FROM node:20-alpine AS runner
