@@ -16,10 +16,10 @@ COPY packages/graphql-schema/package.json ./packages/graphql-schema/
 COPY packages/business-logic/package.json ./packages/business-logic/
 COPY packages/shared/package.json ./packages/shared/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies (only for API and its packages)
+RUN pnpm install --frozen-lockfile --filter @solufacil/api...
 
-# Copy source code
+# Copy source code (ONLY API and packages, NOT web)
 COPY apps/api ./apps/api
 COPY packages/database ./packages/database
 COPY packages/graphql-schema ./packages/graphql-schema
@@ -31,8 +31,8 @@ ARG DATABASE_URL
 ENV DATABASE_URL=$DATABASE_URL
 RUN pnpm --filter @solufacil/database db:generate
 
-# Build all packages (exclude web to avoid frontend env var requirements)
-RUN pnpm turbo run build --filter=@solufacil/api --filter=!@solufacil/web
+# Build only API and its dependencies
+RUN pnpm turbo run build --filter=@solufacil/api...
 
 # Production stage
 FROM node:20-alpine AS runner
