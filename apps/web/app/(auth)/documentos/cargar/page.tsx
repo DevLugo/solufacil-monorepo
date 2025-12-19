@@ -47,7 +47,7 @@ export default function CargarDocumentosPage() {
   }
 
   // Get selected loan info
-  const selectedLoan = loans.find((loan: any) => loan.id === selectedLoanId)
+  const selectedLoan = loans.find((loan: { id: string }) => loan.id === selectedLoanId)
 
   return (
     <div className="w-full mx-auto py-4 md:py-6 px-4 md:px-4 md:max-w-4xl"  style={{maxWidth: '100vw', overflowX: 'hidden'}}>
@@ -113,8 +113,8 @@ export default function CargarDocumentosPage() {
             <CardTitle>Préstamos</CardTitle>
             <CardDescription>
               Préstamos de la semana {weekInfo.weekNumber}, {weekInfo.year}
-              {selectedLocation && locations.find((l: any) => l.id === selectedLocation) &&
-                ` - ${locations.find((l: any) => l.id === selectedLocation)?.name}`}
+              {selectedLocation && locations.find((l: { id: string }) => l.id === selectedLocation) &&
+                ` - ${locations.find((l: { id: string; name?: string }) => l.id === selectedLocation)?.name}`}
             </CardDescription>
           </CardHeader>
           <CardContent className="px-3 md:px-6 w-full" style={{maxWidth: '100%', boxSizing: 'border-box'}}>

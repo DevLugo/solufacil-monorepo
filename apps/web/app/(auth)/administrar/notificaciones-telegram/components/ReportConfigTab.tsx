@@ -202,8 +202,8 @@ export function ReportConfigTab() {
       }
       setDialogOpen(false)
       refetch()
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' })
+    } catch (error: unknown) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' })
     }
   }
 
@@ -213,8 +213,8 @@ export function ReportConfigTab() {
       await deleteConfig({ variables: { id } })
       toast({ title: 'Configuracion eliminada' })
       refetch()
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' })
+    } catch (error: unknown) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' })
     }
   }
 
@@ -222,8 +222,8 @@ export function ReportConfigTab() {
     try {
       await toggleConfig({ variables: { id } })
       refetch()
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' })
+    } catch (error: unknown) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' })
     }
   }
 
@@ -244,8 +244,8 @@ export function ReportConfigTab() {
         })
       }
       refetch()
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' })
+    } catch (error: unknown) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' })
     }
   }
 
@@ -427,7 +427,7 @@ export function ReportConfigTab() {
                 <Label>Tipo de Reporte</Label>
                 <Select
                   value={formData.reportType}
-                  onValueChange={(v: any) => setFormData((p) => ({ ...p, reportType: v }))}
+                  onValueChange={(v) => setFormData((p) => ({ ...p, reportType: v }))}
                 >
                   <SelectTrigger>
                     <SelectValue />

@@ -39,7 +39,7 @@ export function WeekSelector({
     const currentYear = today.getFullYear()
 
     // Start from January 1st of the selected year
-    let date = new Date(year, 0, 1)
+    const date = new Date(year, 0, 1)
 
     // Find the first Monday of the year
     const dayOfWeek = date.getDay()

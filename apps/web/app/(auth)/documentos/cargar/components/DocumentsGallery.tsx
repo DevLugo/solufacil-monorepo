@@ -335,7 +335,7 @@ export function DocumentsGallery({ loan, onUploadSuccess }: DocumentsGalleryProp
               documentPhotos(existingDocs = [], { readField }) {
                 // Check if document already exists
                 const existingIndex = existingDocs.findIndex(
-                  (docRef: any) => {
+                  (docRef: { __ref: string }) => {
                     const docPersonalDataId = readField('id', readField('personalData', docRef))
                     return (
                       readField('documentType', docRef) === docType &&

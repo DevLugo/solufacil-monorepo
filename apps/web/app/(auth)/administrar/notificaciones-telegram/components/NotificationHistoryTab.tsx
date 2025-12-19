@@ -105,8 +105,8 @@ export function NotificationHistoryTab() {
         })
       }
       refetch()
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' })
+    } catch (error: unknown) {
+      toast({ title: 'Error', description: error instanceof Error ? error.message : 'Unknown error', variant: 'destructive' })
     }
   }
 

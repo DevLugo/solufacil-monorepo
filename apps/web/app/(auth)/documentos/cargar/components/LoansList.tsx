@@ -8,8 +8,15 @@ import { Loader2, FileX, Search, X, Filter } from 'lucide-react'
 import { LoanDocumentCard } from './LoanDocumentCard'
 import { calculateLoanDocumentStats } from '@/lib/documents'
 
+interface LoanWithDocuments {
+  id: string
+  borrower?: { personalData?: { fullName?: string } } | null
+  documentPhotos?: unknown[]
+  [key: string]: unknown
+}
+
 interface LoansListProps {
-  loans: any[]
+  loans: LoanWithDocuments[]
   loading: boolean
   onViewDocuments: (loanId: string) => void
 }
@@ -207,7 +214,7 @@ export function LoansList({
         </div>
       ) : (
         <ScrollArea className="h-[500px] md:h-[600px] w-full max-w-full loans-scroll-area">
-          <div className="space-y-3 md:space-y-4 pr-4 pb-2 w-full loans-container" style={{maxWidth: '100%', display: 'block !important' as any}}>
+          <div className="space-y-3 md:space-y-4 pr-4 pb-2 w-full loans-container" style={{maxWidth: '100%', display: 'block'}}>
             {filteredLoans.map((loan) => (
               <LoanDocumentCard
                 key={loan.id}

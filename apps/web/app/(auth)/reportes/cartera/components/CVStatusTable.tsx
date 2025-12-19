@@ -157,11 +157,12 @@ export function CVStatusTable({ clients, loading }: CVStatusTableProps) {
         case 'pendingAmount':
           comparison = a.pendingAmount - b.pendingAmount
           break
-        case 'daysSinceLastPayment':
+        case 'daysSinceLastPayment': {
           const daysA = a.daysSinceLastPayment ?? 999
           const daysB = b.daysSinceLastPayment ?? 999
           comparison = daysA - daysB
           break
+        }
         case 'routeName':
           comparison = a.routeName.localeCompare(b.routeName)
           break

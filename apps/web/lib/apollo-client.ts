@@ -280,7 +280,7 @@ export function resetApolloClient(): void {
 export async function uploadFileWithGraphQL(options: {
   file: File
   query: string
-  variables: Record<string, any>
+  variables: Record<string, unknown>
   operationName: string
 }) {
   const { file, query, variables, operationName } = options

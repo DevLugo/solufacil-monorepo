@@ -751,7 +751,7 @@ export default function CarteraMuertaPage() {
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Estado</Label>
-              <Select value={badDebtStatus} onValueChange={(v) => setBadDebtStatus(v as any)}>
+              <Select value={badDebtStatus} onValueChange={(v) => setBadDebtStatus(v as 'UNMARKED' | 'MARKED' | 'ALL')}>
                 <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>

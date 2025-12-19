@@ -16,7 +16,7 @@ export function distributeAmount(
 
   const perRoute = Math.floor((total / routeIds.length) * 100) / 100
   const distributed = new Map<string, number>()
-  let remainder = parseFloat((total - perRoute * routeIds.length).toFixed(2))
+  const remainder = parseFloat((total - perRoute * routeIds.length).toFixed(2))
 
   routeIds.forEach((id, index) => {
     // El ultimo elemento recibe el residuo
