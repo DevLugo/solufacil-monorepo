@@ -6,8 +6,8 @@ RUN corepack enable && corepack prepare pnpm@8.15.1 --activate
 
 WORKDIR /app
 
-# Copy root package files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+# Copy root package files (exclude turbo.json to avoid workspace-wide builds)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Copy all package.json files to leverage Docker cache
 COPY apps/api/package.json ./apps/api/
@@ -31,8 +31,11 @@ ARG DATABASE_URL
 ENV DATABASE_URL=$DATABASE_URL
 RUN pnpm --filter @solufacil/database db:generate
 
-# Build only API and its dependencies
-RUN pnpm turbo run build --filter=@solufacil/api...
+# Build packages in dependency order (without turbo to avoid workspace issues)
+RUN pnpm --filter @solufacil/shared build && \
+    pnpm --filter @solufacil/graphql-schema build && \
+    pnpm --filter @solufacil/business-logic build && \
+    pnpm --filter @solufacil/api build
 
 # Production stage
 FROM node:20-alpine AS runner
