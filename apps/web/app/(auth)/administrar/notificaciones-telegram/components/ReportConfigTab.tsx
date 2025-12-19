@@ -427,7 +427,7 @@ export function ReportConfigTab() {
                 <Label>Tipo de Reporte</Label>
                 <Select
                   value={formData.reportType}
-                  onValueChange={(v) => setFormData((p) => ({ ...p, reportType: v }))}
+                  onValueChange={(v) => setFormData((p) => ({ ...p, reportType: v as ConfigFormData['reportType'] }))}
                 >
                   <SelectTrigger>
                     <SelectValue />

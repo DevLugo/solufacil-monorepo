@@ -7,16 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Loader2, FileX, Search, X, Filter } from 'lucide-react'
 import { LoanDocumentCard } from './LoanDocumentCard'
 import { calculateLoanDocumentStats } from '@/lib/documents'
-
-interface LoanWithDocuments {
-  id: string
-  borrower?: { personalData?: { fullName?: string } } | null
-  documentPhotos?: unknown[]
-  [key: string]: unknown
-}
+import type { LoanDocument } from '@/types/documents'
 
 interface LoansListProps {
-  loans: LoanWithDocuments[]
+  loans: LoanDocument[]
   loading: boolean
   onViewDocuments: (loanId: string) => void
 }

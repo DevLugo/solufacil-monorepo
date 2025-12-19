@@ -288,12 +288,13 @@ export async function uploadFileWithGraphQL(options: {
   const formData = new FormData()
 
   // GraphQL multipart request spec
+  const inputVar = variables.input as Record<string, unknown> | undefined
   const operations = {
     query,
     variables: {
       ...variables,
       input: {
-        ...variables.input,
+        ...(inputVar || {}),
         file: null, // Will be mapped
       },
     },
