@@ -28,31 +28,31 @@ value = "15m"
 name = "JWT_REFRESH_EXPIRES_IN"
 value = "7d"
 
-# Secrets - Railway te pedirá que los llenes manualmente
+# Secrets - DEBES CAMBIAR ESTOS VALORES
 [[env]]
 name = "DATABASE_URL"
-value = ""
+value = "CAMBIAR_postgresql://neondb_owner:password@ep-xxx.neon.tech/neondb?schema=solufacil_mono&sslmode=require"
 
 [[env]]
 name = "JWT_SECRET"
-value = ""
+value = "CAMBIAR_zX+xsmZUTHR4/6J6Qxu6ZvVM+Q/6sx+38GdqQcBCGWU="
 
 [[env]]
 name = "JWT_REFRESH_SECRET"
-value = ""
+value = "CAMBIAR_d9posQOWTreAo2fR7vtQMulIaVWK6Jsq+dKBD5OPfTI="
 
 [[env]]
 name = "CORS_ORIGIN"
-value = ""
+value = "CAMBIAR_https://tu-app.vercel.app"
 
 [[env]]
 name = "CLOUDINARY_CLOUD_NAME"
-value = ""
+value = "CAMBIAR_tu-cloud-name"
 
 [[env]]
 name = "CLOUDINARY_API_KEY"
-value = ""
+value = "CAMBIAR_tu-api-key"
 
 [[env]]
 name = "CLOUDINARY_API_SECRET"
-value = ""
+value = "CAMBIAR_tu-api-secret"
