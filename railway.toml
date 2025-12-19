@@ -4,6 +4,7 @@ dockerfilePath = "apps/api/Dockerfile"
 watchPaths = ["apps/api/**", "packages/**"]
 
 [deploy]
+rootDirectory = "/"
 startCommand = "node dist/server.js"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
