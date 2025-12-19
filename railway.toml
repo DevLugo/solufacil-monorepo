@@ -2,6 +2,7 @@
 builder = "DOCKERFILE"
 dockerfilePath = "apps/api/Dockerfile"
 watchPaths = ["apps/api/**", "packages/**"]
+buildArgs = ["DATABASE_URL"]
 
 [deploy]
 rootDirectory = "/"
@@ -30,9 +31,11 @@ name = "JWT_REFRESH_EXPIRES_IN"
 value = "7d"
 
 # Secrets - DEBES CAMBIAR ESTOS VALORES
+# DATABASE_URL necesita estar disponible durante build para prisma generate
 [[env]]
 name = "DATABASE_URL"
 value = "CAMBIAR_postgresql://neondb_owner:password@ep-xxx.neon.tech/neondb?schema=solufacil_mono&sslmode=require"
+availableDuringBuild = true
 
 [[env]]
 name = "JWT_SECRET"
