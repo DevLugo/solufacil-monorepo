@@ -11,6 +11,7 @@ import { prisma } from '@solufacil/database'
 import { ClientHistoryService } from './services/ClientHistoryService'
 import { PdfService } from './services/PdfService'
 import { ListadoPDFService } from './services/ListadoPDFService'
+import { PdfExportService } from './services/PdfExportService'
 
 async function startServer() {
   const app = express()
@@ -56,7 +57,11 @@ async function startServer() {
   // PDF Export endpoints
   const clientHistoryService = new ClientHistoryService(prisma)
   const pdfService = new PdfService()
+  const pdfExportService = new PdfExportService(prisma)
   const listadoPDFService = new ListadoPDFService(prisma)
+
+  // Handle preflight OPTIONS request for PDF export
+  app.options('/api/export-client-history-pdf', cors(corsOptions))
 
   app.post(
     '/api/export-client-history-pdf',
@@ -66,23 +71,30 @@ async function startServer() {
       try {
         const { clientId, detailed = false } = req.body
 
+        console.log('📄 Generando PDF del historial del cliente')
+        console.log('   Cliente ID:', clientId)
+        console.log('   Modo:', detailed ? 'Detallado' : 'Resumen')
+
         if (!clientId) {
           res.status(400).json({ error: 'clientId is required' })
           return
         }
 
-        const historyData = await clientHistoryService.getClientHistory(clientId)
-        const pdfBuffer = await pdfService.generateClientHistoryPdf(historyData, { detailed })
+        const pdfBuffer = await pdfExportService.generateClientHistoryPDF(clientId, detailed)
+
+        const filename = `historial-cliente-${clientId.slice(0, 8)}-${detailed ? 'detallado' : 'resumen'}.pdf`
 
         res.setHeader('Content-Type', 'application/pdf')
-        res.setHeader(
-          'Content-Disposition',
-          `attachment; filename="historial-${historyData.client.clientCode}-${Date.now()}.pdf"`
-        )
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
         res.send(pdfBuffer)
+
+        console.log('✅ PDF generado exitosamente')
       } catch (error) {
-        console.error('PDF generation error:', error)
-        res.status(500).json({ error: 'Failed to generate PDF' })
+        console.error('❌ Error al generar PDF:', error)
+        res.status(500).json({
+          error: 'Failed to generate PDF',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        })
       }
     }
   )
