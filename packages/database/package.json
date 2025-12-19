@@ -6,7 +6,7 @@
   "types": "./src/index.ts",
   "scripts": {
     "postinstall": "test -n \"$DATABASE_URL\" && prisma generate || echo 'Skipped prisma generate (no DATABASE_URL)'",
-    "build": "prisma generate && tsc",
+    "build": "DATABASE_URL=${DATABASE_URL:-postgresql://dummy:dummy@localhost:5432/dummy} prisma generate && tsc",
     "dev": "tsc --watch",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
