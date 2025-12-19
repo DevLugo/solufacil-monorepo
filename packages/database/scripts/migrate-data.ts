@@ -1,10 +1,32 @@
 /**
  * Script de migración de datos desde schema "public" a "solufacil_mono"
  *
- * Uso: npx tsx scripts/migrate-data.ts
+ * Uso:
+ *   npx tsx scripts/migrate-data.ts           # Ejecutar migración
+ *   npx tsx scripts/migrate-data.ts --dry-run # Solo mostrar qué se migraría
+ *   npx tsx scripts/migrate-data.ts --count   # Solo contar registros
+ *
+ * Variables de entorno:
+ *   DATABASE_URL        - URL de conexión (usada para ambos si no se especifican las otras)
+ *   SOURCE_DATABASE_URL - URL de la DB origen (opcional, default: DATABASE_URL)
+ *   TARGET_DATABASE_URL - URL de la DB destino (opcional, default: DATABASE_URL)
+ *   SOURCE_SCHEMA       - Schema origen (default: 'public')
+ *   TARGET_SCHEMA       - Schema destino (default: 'solufacil_mono')
+ *
+ * Ejemplos:
+ *   # Local a local (misma DB, diferentes schemas)
+ *   DATABASE_URL="postgresql://localhost/solufacil" npx tsx scripts/migrate-data.ts
+ *
+ *   # Producción a producción (misma DB remota)
+ *   DATABASE_URL="postgresql://user:pass@neon.tech/db" npx tsx scripts/migrate-data.ts
+ *
+ *   # Producción a local (diferentes DBs)
+ *   SOURCE_DATABASE_URL="postgresql://user:pass@neon.tech/db" \
+ *   TARGET_DATABASE_URL="postgresql://localhost/solufacil" \
+ *   npx tsx scripts/migrate-data.ts
  *
  * Este script:
- * 1. Conecta a ambos schemas en la misma base de datos
+ * 1. Conecta a ambos schemas (pueden ser misma DB o diferentes)
  * 2. Copia datos mapeando nombres de columnas diferentes
  * 3. Reporta diferencias y errores encontrados
  */
@@ -12,11 +34,22 @@
 import 'dotenv/config'
 import { Pool } from 'pg'
 
-const SOURCE_SCHEMA = 'public'
-const TARGET_SCHEMA = 'solufacil_mono'
+const SOURCE_SCHEMA = process.env.SOURCE_SCHEMA || 'public'
+const TARGET_SCHEMA = process.env.TARGET_SCHEMA || 'solufacil_mono'
 
+// Support for different source and target databases
+const SOURCE_DB_URL = process.env.SOURCE_DATABASE_URL || process.env.DATABASE_URL
+const TARGET_DB_URL = process.env.TARGET_DATABASE_URL || process.env.DATABASE_URL
+const SAME_DATABASE = SOURCE_DB_URL === TARGET_DB_URL
+
+// Parse command line arguments
+const args = process.argv.slice(2)
+const DRY_RUN = args.includes('--dry-run')
+const COUNT_ONLY = args.includes('--count')
+
+// Create connection pool (same DB for both schemas)
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: SOURCE_DB_URL,
 })
 
 interface MigrationResult {
@@ -674,10 +707,99 @@ async function cleanTargetSchema(): Promise<void> {
   console.log('')
 }
 
+async function countSourceRecords(): Promise<void> {
+  console.log('📊 Contando registros en schema origen...\n')
+
+  let totalRecords = 0
+  for (const tableName of MIGRATION_ORDER) {
+    try {
+      const checkSource = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_schema = $1 AND table_name = $2
+        )
+      `, [SOURCE_SCHEMA, tableName])
+
+      if (checkSource.rows[0].exists) {
+        const countResult = await pool.query(`SELECT COUNT(*) as count FROM "${SOURCE_SCHEMA}"."${tableName}"`)
+        const count = parseInt(countResult.rows[0].count, 10)
+        totalRecords += count
+        console.log(`   ${tableName}: ${count.toLocaleString()} registros`)
+      } else {
+        console.log(`   ${tableName}: (no existe)`)
+      }
+    } catch (error) {
+      console.log(`   ${tableName}: ❌ Error`)
+    }
+  }
+
+  console.log(`\n   TOTAL: ${totalRecords.toLocaleString()} registros`)
+}
+
+function maskConnectionString(url: string | undefined): string {
+  if (!url) return '(no definida)'
+  try {
+    const parsed = new URL(url)
+    return `${parsed.protocol}//${parsed.username}:****@${parsed.host}${parsed.pathname}`
+  } catch {
+    return url.replace(/:[^:@]+@/, ':****@')
+  }
+}
+
 async function main() {
-  console.log('🚀 Iniciando migración de datos...\n')
-  console.log(`   Origen: ${SOURCE_SCHEMA}`)
-  console.log(`   Destino: ${TARGET_SCHEMA}\n`)
+  console.log('═'.repeat(60))
+  console.log('🚀 Script de Migración de Datos')
+  console.log('═'.repeat(60))
+  console.log('')
+  console.log('📍 Configuración:')
+  console.log(`   Source DB:     ${maskConnectionString(SOURCE_DB_URL)}`)
+  console.log(`   Source Schema: ${SOURCE_SCHEMA}`)
+  console.log(`   Target DB:     ${SAME_DATABASE ? '(misma DB)' : maskConnectionString(TARGET_DB_URL)}`)
+  console.log(`   Target Schema: ${TARGET_SCHEMA}`)
+  console.log('')
+
+  // Warning for different databases
+  if (!SAME_DATABASE) {
+    console.log('⚠️  ADVERTENCIA: Se detectaron bases de datos diferentes.')
+    console.log('   Este script usa queries cross-schema que solo funcionan')
+    console.log('   cuando ambos schemas están en la MISMA base de datos.')
+    console.log('')
+    console.log('   Para sincronizar entre DBs diferentes, considera:')
+    console.log('   1. pg_dump del schema origen')
+    console.log('   2. Modificar el dump para cambiar el schema')
+    console.log('   3. pg_restore en la DB destino')
+    console.log('')
+    process.exit(1)
+  }
+
+  if (DRY_RUN) {
+    console.log(`📋 Modo: 🔍 DRY-RUN (no se ejecutarán cambios)\n`)
+  } else if (COUNT_ONLY) {
+    console.log(`📋 Modo: 📊 CONTEO SOLAMENTE\n`)
+    await countSourceRecords()
+    await pool.end()
+    return
+  } else {
+    console.log(`📋 Modo: ⚡ EJECUCIÓN REAL\n`)
+  }
+
+  // Verificar conexión
+  try {
+    await pool.query('SELECT 1')
+    console.log('   ✅ Conexión a base de datos OK\n')
+  } catch (error) {
+    console.error('   ❌ Error de conexión:', error)
+    process.exit(1)
+  }
+
+  // En modo DRY-RUN, solo mostrar qué se haría
+  if (DRY_RUN) {
+    await countSourceRecords()
+    console.log('\n⚠️  Modo DRY-RUN: No se ejecutaron cambios.')
+    console.log('   Para ejecutar la migración real, ejecuta sin --dry-run\n')
+    await pool.end()
+    return
+  }
 
   // PASO 1: Limpiar todas las tablas del destino
   await cleanTargetSchema()

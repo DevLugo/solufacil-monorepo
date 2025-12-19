@@ -5,7 +5,8 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "build": "tsc",
+    "postinstall": "prisma generate",
+    "build": "prisma generate && tsc",
     "dev": "tsc --watch",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
@@ -13,7 +14,7 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate-data": "tsx scripts/migrate-data.ts",
-    "clean": "rm -rf dist .turbo node_modules"
+    "clean": "rm -rf dist .turbo node_modules generated"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.0.0",
