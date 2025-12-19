@@ -1,0 +1,58 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "apps/api/Dockerfile"
+watchPaths = ["apps/api/**", "packages/**"]
+
+[deploy]
+startCommand = "node dist/server.js"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+healthcheckPath = "/graphql"
+healthcheckTimeout = 100
+
+# Variables de entorno no-secretas
+# Los secrets (DATABASE_URL, JWT_SECRET, etc.) agregalos manualmente en Railway UI
+[[env]]
+name = "NODE_ENV"
+value = "production"
+
+[[env]]
+name = "PORT"
+value = "4000"
+
+[[env]]
+name = "JWT_EXPIRES_IN"
+value = "15m"
+
+[[env]]
+name = "JWT_REFRESH_EXPIRES_IN"
+value = "7d"
+
+# Secrets - Railway te pedirá que los llenes manualmente
+[[env]]
+name = "DATABASE_URL"
+value = ""
+
+[[env]]
+name = "JWT_SECRET"
+value = ""
+
+[[env]]
+name = "JWT_REFRESH_SECRET"
+value = ""
+
+[[env]]
+name = "CORS_ORIGIN"
+value = ""
+
+[[env]]
+name = "CLOUDINARY_CLOUD_NAME"
+value = ""
+
+[[env]]
+name = "CLOUDINARY_API_KEY"
+value = ""
+
+[[env]]
+name = "CLOUDINARY_API_SECRET"
+value = ""
